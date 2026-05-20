@@ -23,7 +23,11 @@ data class UserProfile(
     // Guardian (Wali) Fields
     val guardianName: String? = null,
     val guardianEmail: String? = null,
-    val guardianStatus: String? = null // "None", "Pending", "Verified"
+    val guardianStatus: String? = null, // "None", "Pending", "Verified"
+
+    // Photo modesty locks
+    val photoAccessApprovedUsers: List<String> = emptyList(),
+    val photoAccessRequests: List<String> = emptyList()
 )
 
 enum class Gender {
