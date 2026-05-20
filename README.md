@@ -31,14 +31,19 @@ This repository contains the core clean-architecture MVVM & Jetpack Compose upda
 - **`SecureScreen`**: A lifecycle-aware Composable wrapper that applies `FLAG_SECURE` to the active window, blocking screenshotting or screen recording on sensitive views (e.g. Chat logs, profiles).
 - **`modestyBlur`**: Compose modifier applying modesty blur overlay on images utilizing hardware-accelerated `RenderEffect` (Android 12+) and standard backward-compatible blur fallbacks.
 
-### 7. Wali Chaperoned Chat (Phase 2 Additions) 🛡️
+### 7. Wali Chaperoned Chat (`com.mithaq.app.ui.chat`)
 - **`ChatRoom`**: Extended room metadata representing membership and active chaperonage flags (`isChaperoned`, `waliEmail`).
 - **`ChaperonedChatBanner`**: Top-anchored warning header notifying both participants that a guardian has direct transcript permissions.
 - **`ChaperonedChatViewModel`**: Seamlessly duplicates chat history writes to a dedicated `waliLogs` Firestore path for Wali reviews.
 
-### 8. Multi-Stage Modesty Photo Unlock (Phase 2 Additions) 🔒
+### 8. Multi-Stage Modesty Photo Unlock (`com.mithaq.app.ui.photo`)
 - **`PhotoAccessManager`**: High-level permission broker coordinating photo-viewing requests and atomic approvals in Firestore.
 - **`PhotoAccessRequestCard`**: Smart dialog controls. Prompts viewers to request photo unblur access, and notifies profile owners of incoming requests with single-tap Approve/Decline actions.
+
+### 9. Core Design System & Mithaq Theme (Phase 3 Additions) 🎨
+- **`Color.kt`**: Color scheme constants. Employs a luxurious HSL theme pairing Deep Emerald greens, warm metallic Golds/Ambers, soft eggshell backgrounds, and midnight charcoal backdrops.
+- **`Type.kt`**: Material 3 typography mappings using specialized Google Fonts (Cairo for Arabic UI elements, Amiri for Arabic titles/Quranic texts, and Outfit for Latin symbols) with safe local fallbacks.
+- **`Theme.kt`**: Main application Composable theme `MithaqTheme` managing system status bars and Light/Dark Material Design 3 color schemes.
 
 ---
 
@@ -57,6 +62,11 @@ src/main/java/com/mithaq/app/
 │   └── BlurModifier.kt          # Modesty image blur utility
 │
 ├── ui/
+│   ├── theme/
+│   │   ├── Color.kt             # Brand emerald and gold colors
+│   │   ├── Type.kt              # Typography settings (Cairo, Amiri, Outfit)
+│   │   └── Theme.kt             # MithaqTheme and Status Bar customization
+│   │
 │   ├── filter/
 │   │   ├── SearchFilterBottomSheet.kt
 │   │   └── SearchViewModel.kt
