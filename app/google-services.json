@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "82166798906",
+    "firebase_url": "https://mithaq-matchmaking-default-rtdb.firebaseio.com",
     "project_id": "mithaq-matchmaking",
     "storage_bucket": "mithaq-matchmaking.firebasestorage.app"
   },
@@ -12,7 +13,12 @@
           "package_name": "com.mithaq.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "82166798906-fcmuj2511hr81qohhrfrv0udke7nm8vf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBSfjg0w7KtWhrY4huagirATe2Tsj9dK3M"
@@ -20,7 +26,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "82166798906-fcmuj2511hr81qohhrfrv0udke7nm8vf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

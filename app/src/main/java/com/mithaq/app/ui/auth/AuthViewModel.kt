@@ -119,6 +119,54 @@ class AuthViewModel(
         }
     }
 
+    fun signInWithGoogle(idToken: String) {
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            try {
+                val isMock = auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                if (isMock) {
+                    kotlinx.coroutines.delay(800)
+                    _authState.value = AuthState.Authenticated("mock_user_google_123")
+                    return@launch
+                }
+
+                val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
+                val authResult = auth.signInWithCredential(credential).await()
+                val user = authResult.user
+                if (user != null) {
+                    val doc = firestore.collection("users").document(user.uid).get().await()
+                    if (!doc.exists()) {
+                        val name = user.displayName ?: user.email?.substringBefore("@") ?: "Google User"
+                        val userProfilePayload = mapOf(
+                            "uid" to user.uid,
+                            "name" to name,
+                            "gender" to "Male",
+                            "age" to 25,
+                            "city" to "Cairo",
+                            "country" to "Egypt",
+                            "sect" to "Sunni",
+                            "prayerFrequency" to "Always",
+                            "modestyPreference" to "High",
+                            "relocationWillingness" to "Open",
+                            "polygamyAcceptance" to false,
+                            "guardianStatus" to "None",
+                            "isPremium" to false
+                        )
+                        firestore.collection("users")
+                            .document(user.uid)
+                            .set(userProfilePayload)
+                            .await()
+                    }
+                    _authState.value = AuthState.Authenticated(user.uid)
+                } else {
+                    _authState.value = AuthState.Error("Failed to authenticate with Google.")
+                }
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to sign in with Google.")
+            }
+        }
+    }
+
     fun signOut() {
         auth.signOut()
         _authState.value = AuthState.Idle
