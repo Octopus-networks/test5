@@ -60,12 +60,16 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MithaqTheme {
+            var isArabic by remember { mutableStateOf(false) }
+            MithaqTheme(isArabic = isArabic) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MithaqAppNavigation()
+                    MithaqAppNavigation(
+                        isArabic = isArabic,
+                        onLanguageChange = { isArabic = it }
+                    )
                 }
             }
         }
@@ -73,7 +77,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MithaqAppNavigation() {
+fun MithaqAppNavigation(
+    isArabic: Boolean,
+    onLanguageChange: (Boolean) -> Unit
+) {
     var currentScreen by remember { mutableStateOf("login") }
     var currentUserId by remember { mutableStateOf("") }
 
@@ -90,7 +97,9 @@ fun MithaqAppNavigation() {
                     currentUserId = uid
                     currentScreen = "home"
                 },
-                viewModel = authViewModel
+                viewModel = authViewModel,
+                isArabic = isArabic,
+                onLanguageChange = onLanguageChange
             )
         }
         "register" -> {
@@ -100,7 +109,9 @@ fun MithaqAppNavigation() {
                     currentUserId = uid
                     currentScreen = "home"
                 },
-                viewModel = authViewModel
+                viewModel = authViewModel,
+                isArabic = isArabic,
+                onLanguageChange = onLanguageChange
             )
         }
         "home" -> {
@@ -108,6 +119,8 @@ fun MithaqAppNavigation() {
                 currentUserId = currentUserId,
                 searchViewModel = searchViewModel,
                 guardianViewModel = guardianViewModel,
+                isArabic = isArabic,
+                onLanguageChange = onLanguageChange,
                 onLogout = {
                     authViewModel.signOut()
                     currentScreen = "login"
@@ -123,18 +136,24 @@ fun HomeScreen(
     currentUserId: String,
     searchViewModel: SearchViewModel,
     guardianViewModel: GuardianViewModel,
+    isArabic: Boolean,
+    onLanguageChange: (Boolean) -> Unit,
     onLogout: () -> Unit
 ) {
+    val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Search", "Chat", "Guardian", "Modesty")
+    val tabs = listOf(strings.searchTab, strings.chatTab, strings.waliTab, "Modesty")
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mithaq ميثاق", style = MaterialTheme.typography.titleLarge) },
+                title = { Text(strings.appName, style = MaterialTheme.typography.titleLarge) },
                 actions = {
+                    TextButton(onClick = { onLanguageChange(!isArabic) }) {
+                        Text(if (isArabic) "English" else "العربية", color = MaterialTheme.colorScheme.primary)
+                    }
                     TextButton(onClick = onLogout) {
-                        Text("Logout", color = MaterialTheme.colorScheme.error)
+                        Text(if (isArabic) "خروج" else "Logout", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -340,6 +359,8 @@ fun GuardianTabContent(viewModel: GuardianViewModel) {
         }
     }
 
+    val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -348,12 +369,12 @@ fun GuardianTabContent(viewModel: GuardianViewModel) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Wali (Guardian) Integration",
+            text = strings.waliIntegration,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "To ensure a serious environment, sisters are invited to link their guardian's email for chaperonage.",
+            text = strings.waliDescription,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -366,9 +387,9 @@ fun GuardianTabContent(viewModel: GuardianViewModel) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Guardian Name: $guardianName", fontWeight = FontWeight.Bold)
-                    Text("Guardian Email: $guardianEmail")
-                    Text("Status: Pending Verification", style = MaterialTheme.typography.labelSmall)
+                    Text(if (strings.appName == "ميثاق") "اسم الولي: $guardianName" else "Guardian Name: $guardianName", fontWeight = FontWeight.Bold)
+                    Text(if (strings.appName == "ميثاق") "بريد الولي: $guardianEmail" else "Guardian Email: $guardianEmail")
+                    Text(if (strings.appName == "ميثاق") "الحالة: قيد التحقق" else "Status: Pending Verification", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -377,13 +398,22 @@ fun GuardianTabContent(viewModel: GuardianViewModel) {
             onClick = { showDialog = true },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (guardianName.isNullOrBlank()) "Invite Wali" else "Update Wali Details")
+            Text(if (guardianName.isNullOrBlank()) strings.inviteWali else if (strings.appName == "ميثاق") "تعديل بيانات الولي" else "Update Wali Details")
         }
 
         if (showDialog) {
             InviteGuardianDialog(
                 viewModel = viewModel,
-                onDismissRequest = { showDialog = false }
+                onDismissRequest = { showDialog = false },
+                titleText = strings.inviteWali,
+                subtitleText = if (strings.appName == "ميثاق") "في الزواج الإسلامي، إشراك ولي الأمر يضمن رحلة مباركة، شفافة، وآمنة." else "In Islamic matchmaking, involving a guardian ensures a blessed, transparent, and safe journey.",
+                nameLabel = strings.nameLabel,
+                emailLabel = strings.emailLabel,
+                submitButtonText = if (strings.appName == "ميثاق") "إرسال الدعوة" else "Send Invitation",
+                cancelButtonText = if (strings.appName == "ميثاق") "إلغاء" else "Cancel",
+                successTitle = if (strings.appName == "ميثاق") "تم إرسال الدعوة" else "Invitation Sent",
+                successSubtitle = if (strings.appName == "ميثاق") "تم إرسال دعوة إلى ولي أمرك. سنقوم بإشعارك بمجرد قبوله." else "An invitation has been sent to your Guardian. We will notify you once they accept.",
+                closeButtonText = if (strings.appName == "ميثاق") "إغلاق" else "Close"
             )
         }
     }

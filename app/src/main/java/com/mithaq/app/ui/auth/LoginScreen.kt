@@ -34,8 +34,11 @@ fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onLoginSuccess: (userId: String) -> Unit,
     viewModel: AuthViewModel,
+    isArabic: Boolean,
+    onLanguageChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     val authState by viewModel.authState.collectAsState()
 
     var email by remember { mutableStateOf("") }
@@ -44,10 +47,13 @@ fun LoginScreen(
 
     var localError by remember { mutableStateOf<String?>(null) }
 
-    // React to success states
+    // React to success and sign-out states
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
             onLoginSuccess((authState as AuthState.Authenticated).userId)
+        } else if (authState is AuthState.Idle) {
+            email = ""
+            password = ""
         }
     }
 
@@ -57,6 +63,20 @@ fun LoginScreen(
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Language Switcher
+        TextButton(
+            onClick = { onLanguageChange(!isArabic) },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 16.dp)
+        ) {
+            Text(
+                text = if (isArabic) "English" else "العربية",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
@@ -73,7 +93,7 @@ fun LoginScreen(
             ) {
                 // Application Logo / Header
                 Text(
-                    text = "ميثاق",
+                    text = strings.appName,
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontSize = 42.sp,
                         fontWeight = FontWeight.Bold,
@@ -90,7 +110,7 @@ fun LoginScreen(
                     modifier = Modifier.padding(top = 4.dp)
                 )
                 Text(
-                    text = "Sign in to continue serious inquiry",
+                    text = strings.loginHeader,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -104,7 +124,7 @@ fun LoginScreen(
                         email = it
                         localError = null
                     },
-                    label = { Text("Email Address") },
+                    label = { Text(strings.emailLabel) },
                     leadingIcon = {
                         Icon(imageVector = Icons.Default.Email, contentDescription = null)
                     },
@@ -126,7 +146,7 @@ fun LoginScreen(
                         password = it
                         localError = null
                     },
-                    label = { Text("Password") },
+                    label = { Text(strings.passwordLabel) },
                     leadingIcon = {
                         Icon(imageVector = Icons.Default.Lock, contentDescription = null)
                     },
@@ -195,7 +215,7 @@ fun LoginScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text(text = "Sign In", fontWeight = FontWeight.Bold)
+                        Text(text = strings.signIn, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -208,7 +228,7 @@ fun LoginScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "New to Mithaq?",
+                        text = strings.newToMithaq,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -217,7 +237,7 @@ fun LoginScreen(
                         enabled = authState !is AuthState.Loading
                     ) {
                         Text(
-                            text = "Create Account",
+                            text = strings.createAccount,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.secondary,
                             style = MaterialTheme.typography.bodySmall

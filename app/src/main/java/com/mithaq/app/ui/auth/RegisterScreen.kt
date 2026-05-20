@@ -36,8 +36,11 @@ fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onRegisterSuccess: (userId: String) -> Unit,
     viewModel: AuthViewModel,
+    isArabic: Boolean,
+    onLanguageChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     val authState by viewModel.authState.collectAsState()
     val scrollState = rememberScrollState()
 
@@ -75,6 +78,20 @@ fun RegisterScreen(
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Language Switcher
+        TextButton(
+            onClick = { onLanguageChange(!isArabic) },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 16.dp)
+        ) {
+            Text(
+                text = if (isArabic) "English" else "العربية",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -131,7 +148,7 @@ fun RegisterScreen(
                             // Step 1 Layout: Account details
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "Create Account",
+                                    text = strings.registerTitle,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -141,7 +158,7 @@ fun RegisterScreen(
                                 OutlinedTextField(
                                     value = name,
                                     onValueChange = { name = it },
-                                    label = { Text("Full Name") },
+                                    label = { Text(strings.nameLabel) },
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth()
@@ -151,7 +168,7 @@ fun RegisterScreen(
                                 OutlinedTextField(
                                     value = email,
                                     onValueChange = { email = it },
-                                    label = { Text("Email Address") },
+                                    label = { Text(strings.emailLabel) },
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth()
@@ -161,7 +178,7 @@ fun RegisterScreen(
                                 OutlinedTextField(
                                     value = password,
                                     onValueChange = { password = it },
-                                    label = { Text("Password") },
+                                    label = { Text(strings.passwordLabel) },
                                     visualTransformation = PasswordVisualTransformation(),
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
@@ -247,7 +264,7 @@ fun RegisterScreen(
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("Next: Profile Details")
+                                    Text(strings.next)
                                 }
                             }
                         }
@@ -259,7 +276,7 @@ fun RegisterScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Matchmaking Preferences",
+                                    text = strings.matchPrefs,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
@@ -268,7 +285,7 @@ fun RegisterScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 // Sect Dropdown
-                                Text("Sect", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                Text(strings.selectSect, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Sect.values().forEach { s ->
                                         FilterChip(
@@ -281,7 +298,7 @@ fun RegisterScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 // Prayer consistency Selector
-                                Text("Prayer Consistency", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                Text(strings.selectPrayer, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                 FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
                                     PrayerFrequency.values().forEach { pf ->
                                         FilterChip(
@@ -294,7 +311,7 @@ fun RegisterScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 // Modesty Preference
-                                val modestyLabel = if (gender == Gender.MALE) "Preference for Partner" else "Modesty / Hijab"
+                                val modestyLabel = if (gender == Gender.MALE) strings.selectModesty else "Modesty / Hijab"
                                 Text(modestyLabel, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                 FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
                                     ModestyPreference.values().forEach { mp ->
@@ -308,7 +325,7 @@ fun RegisterScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 // Relocation
-                                Text("Relocation Willingness", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                Text(strings.selectRelocation, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                 FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
                                     RelocationWillingness.values().forEach { rw ->
                                         FilterChip(
@@ -326,7 +343,7 @@ fun RegisterScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Open to Polygamy", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                    Text(strings.polygamyAcceptance, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                     Switch(checked = polygamyAcceptance, onCheckedChange = { polygamyAcceptance = it })
                                 }
 
@@ -361,7 +378,7 @@ fun RegisterScreen(
                                             strokeWidth = 2.dp
                                         )
                                     } else {
-                                        Text("Register Account", fontWeight = FontWeight.Bold)
+                                        Text(strings.registerAccount, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -390,7 +407,7 @@ fun RegisterScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Already have an account?",
+                        text = strings.alreadyHaveAccount,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -399,7 +416,7 @@ fun RegisterScreen(
                         enabled = authState !is AuthState.Loading
                     ) {
                         Text(
-                            text = "Sign In",
+                            text = strings.signIn,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.secondary,
                             style = MaterialTheme.typography.bodySmall

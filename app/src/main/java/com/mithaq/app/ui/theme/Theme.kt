@@ -60,6 +60,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun MithaqTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    isArabic: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
@@ -81,9 +82,13 @@ fun MithaqTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val strings = if (isArabic) ArabicStrings else EnglishStrings
+
+    androidx.compose.runtime.CompositionLocalProvider(LocalMithaqStrings provides strings) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }
