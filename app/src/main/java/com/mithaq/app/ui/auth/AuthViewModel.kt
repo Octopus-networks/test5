@@ -42,6 +42,13 @@ class AuthViewModel(
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
+                val isMock = auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                if (isMock) {
+                    kotlinx.coroutines.delay(800)
+                    _authState.value = AuthState.Authenticated("mock_user_123")
+                    return@launch
+                }
+
                 val result = auth.signInWithEmailAndPassword(email.trim(), emailPassed).await()
                 val user = result.user
                 if (user != null) {
@@ -67,6 +74,13 @@ class AuthViewModel(
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
+                val isMock = auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                if (isMock) {
+                    kotlinx.coroutines.delay(800)
+                    _authState.value = AuthState.Authenticated("mock_user_123")
+                    return@launch
+                }
+
                 // 1. Create User in Firebase Auth
                 val authResult = auth.createUserWithEmailAndPassword(email.trim(), passwordPass).await()
                 val userId = authResult.user?.uid

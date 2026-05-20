@@ -42,6 +42,62 @@ class SearchViewModel(
      * Fetches all matching users from Firestore (excluding current user and opposite gender).
      */
     fun fetchUsers() {
+        val isMock = firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
+        if (isMock) {
+            _isLoading.value = true
+            _errorMessage.value = null
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(500)
+                allUsersCache = listOf(
+                    UserProfile(
+                        uid = "mock_user_2",
+                        name = "Fatima Al-Zahra",
+                        gender = Gender.FEMALE,
+                        age = 24,
+                        city = "Riyadh",
+                        country = "Saudi Arabia",
+                        imageUrl = "",
+                        sect = Sect.SUNNI,
+                        prayerFrequency = PrayerFrequency.ALWAYS,
+                        modestyPreference = ModestyPreference.HIJAB,
+                        relocationWillingness = RelocationWillingness.YES,
+                        polygamyAcceptance = false
+                    ),
+                    UserProfile(
+                        uid = "mock_user_3",
+                        name = "Aisha Khan",
+                        gender = Gender.FEMALE,
+                        age = 27,
+                        city = "Dubai",
+                        country = "UAE",
+                        imageUrl = "",
+                        sect = Sect.SUNNI,
+                        prayerFrequency = PrayerFrequency.ALWAYS,
+                        modestyPreference = ModestyPreference.NIQAB,
+                        relocationWillingness = RelocationWillingness.OPEN,
+                        polygamyAcceptance = true
+                    ),
+                    UserProfile(
+                        uid = "mock_user_4",
+                        name = "Yasmin Masri",
+                        gender = Gender.FEMALE,
+                        age = 22,
+                        city = "Cairo",
+                        country = "Egypt",
+                        imageUrl = "",
+                        sect = Sect.SUNNI,
+                        prayerFrequency = PrayerFrequency.USUALLY,
+                        modestyPreference = ModestyPreference.HIJAB,
+                        relocationWillingness = RelocationWillingness.NO,
+                        polygamyAcceptance = false
+                    )
+                )
+                applyLocalFilters()
+                _isLoading.value = false
+            }
+            return
+        }
+
         val currentUser = auth.currentUser
         if (currentUser == null) {
             _errorMessage.value = "User not authenticated."
