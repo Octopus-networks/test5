@@ -40,10 +40,15 @@ This repository contains the core clean-architecture MVVM & Jetpack Compose upda
 - **`PhotoAccessManager`**: High-level permission broker coordinating photo-viewing requests and atomic approvals in Firestore.
 - **`PhotoAccessRequestCard`**: Smart dialog controls. Prompts viewers to request photo unblur access, and notifies profile owners of incoming requests with single-tap Approve/Decline actions.
 
-### 9. Core Design System & Mithaq Theme (Phase 3 Additions) 🎨
-- **`Color.kt`**: Color scheme constants. Employs a luxurious HSL theme pairing Deep Emerald greens, warm metallic Golds/Ambers, soft eggshell backgrounds, and midnight charcoal backdrops.
-- **`Type.kt`**: Material 3 typography mappings using specialized Google Fonts (Cairo for Arabic UI elements, Amiri for Arabic titles/Quranic texts, and Outfit for Latin symbols) with safe local fallbacks.
+### 9. Core Design System & Mithaq Theme (`com.mithaq.app.ui.theme`)
+- **`Color.kt`**: Color scheme constants. Employs a luxurious HSL theme pairing Deep Emerald greens, warm gold accents, soft eggshell backgrounds, and midnight charcoal backdrops.
+- **`Type.kt`**: Material 3 typography mappings using Cairo (Arabic UI), Amiri (Arabic titles), and Outfit (Latin symbols) with fallbacks.
 - **`Theme.kt`**: Main application Composable theme `MithaqTheme` managing system status bars and Light/Dark Material Design 3 color schemes.
+
+### 10. Authentication & Onboarding (Phase 4 Additions) 🔐
+- **`AuthViewModel`**: Manages sign-in and sign-up flows. On sign-up, securely registers account credentials on Firebase Auth and stores custom Islamic/modesty preferences on Firestore.
+- **`LoginScreen`**: Curated, responsive Material 3 layout for email/password login, equipped with loading indicators, input validation, and visibility toggles.
+- **`RegisterScreen`**: A multi-step onboarding wizard. Phase 1 captures account credentials and location, while Phase 2 guides the user in selecting their religious, modesty, and relocation preferences.
 
 ---
 
@@ -66,6 +71,11 @@ src/main/java/com/mithaq/app/
 │   │   ├── Color.kt             # Brand emerald and gold colors
 │   │   ├── Type.kt              # Typography settings (Cairo, Amiri, Outfit)
 │   │   └── Theme.kt             # MithaqTheme and Status Bar customization
+│   │
+│   ├── auth/
+│   │   ├── AuthViewModel.kt     # Firebase Sign In / Sign Up logic
+│   │   ├── LoginScreen.kt       # Login Composable screen
+│   │   └── RegisterScreen.kt    # Two-step onboarding registration screen
 │   │
 │   ├── filter/
 │   │   ├── SearchFilterBottomSheet.kt

@@ -1,0 +1,411 @@
+package com.mithaq.app.ui.auth
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.mithaq.app.model.*
+
+/**
+ * A highly-polished Multi-Step Registration Wizard for Mithaq.
+ * - Step 1: Account credentials & demographics.
+ * - Step 2: Religious preferences (Sect, Prayer, Modesty, Relocation, Polygamy).
+ * Uses structured selections matching our [UserProfile] data classes.
+ */
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun RegisterScreen(
+    onNavigateToLogin: () -> Unit,
+    onRegisterSuccess: (userId: String) -> Unit,
+    viewModel: AuthViewModel,
+    modifier: Modifier = Modifier
+) {
+    val authState by viewModel.authState.collectAsState()
+    val scrollState = rememberScrollState()
+
+    // Step state: 1 = Core Credentials, 2 = Onboarding Islamic Profile Values
+    var currentStep by remember { mutableStateOf(1) }
+
+    // Account Inputs
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf(Gender.MALE) }
+
+    // Religious Inputs
+    var sect by remember { mutableStateOf(Sect.SUNNI) }
+    var prayerFrequency by remember { mutableStateOf(PrayerFrequency.ALWAYS) }
+    var modestyPreference by remember { mutableStateOf(ModestyPreference.HIJAB) }
+    var relocationWillingness by remember { mutableStateOf(RelocationWillingness.OPEN) }
+    var polygamyAcceptance by remember { mutableStateOf(false) }
+
+    var localError by remember { mutableStateOf<String?>(null) }
+
+    // React to success states
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Authenticated) {
+            onRegisterSuccess((authState as AuthState.Authenticated).userId)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Wizard Header & Progress Bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    if (currentStep > 1) {
+                        IconButton(onClick = { currentStep-- }) {
+                            Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.size(48.dp))
+                    }
+
+                    Text(
+                        text = "Step $currentStep of 2",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+
+                    Spacer(modifier = Modifier.size(48.dp))
+                }
+
+                LinearProgressIndicator(
+                    progress = currentStep / 2f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                // Animated step transitions
+                AnimatedContent(targetState = currentStep) { step ->
+                    when (step) {
+                        1 -> {
+                            // Step 1 Layout: Account details
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Create Account",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                OutlinedTextField(
+                                    value = name,
+                                    onValueChange = { name = it },
+                                    label = { Text("Full Name") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = email,
+                                    onValueChange = { email = it },
+                                    label = { Text("Email Address") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = password,
+                                    onValueChange = { password = it },
+                                    label = { Text("Password") },
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    OutlinedTextField(
+                                        value = age,
+                                        onValueChange = { age = it },
+                                        label = { Text("Age") },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(end = 6.dp)
+                                    )
+
+                                    OutlinedTextField(
+                                        value = city,
+                                        onValueChange = { city = it },
+                                        label = { Text("City") },
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(start = 6.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = country,
+                                    onValueChange = { country = it },
+                                    label = { Text("Country") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Gender Selector
+                                Text(
+                                    text = "Your Gender",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.align(Alignment.Start)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = gender == Gender.MALE,
+                                            onClick = { gender = Gender.MALE }
+                                        )
+                                        Text("Brother / Male")
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = gender == Gender.FEMALE,
+                                            onClick = { gender = Gender.FEMALE }
+                                        )
+                                        Text("Sister / Female")
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Button(
+                                    onClick = {
+                                        val parsedAge = age.toIntOrNull()
+                                        if (name.isBlank() || email.isBlank() || password.isBlank() || parsedAge == null || city.isBlank() || country.isBlank()) {
+                                            localError = "Please fill in all core fields correctly."
+                                        } else {
+                                            localError = null
+                                            currentStep = 2
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Next: Profile Details")
+                                }
+                            }
+                        }
+
+                        2 -> {
+                            // Step 2 Layout: Modesty & Religioun details
+                            Column(
+                                horizontalAlignment = Alignment.Start,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "Matchmaking Preferences",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Sect Dropdown
+                                Text("Sect", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Sect.values().forEach { s ->
+                                        FilterChip(
+                                            selected = sect == s,
+                                            onClick = { sect = s },
+                                            label = { Text(s.displayName) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Prayer consistency Selector
+                                Text("Prayer Consistency", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
+                                    PrayerFrequency.values().forEach { pf ->
+                                        FilterChip(
+                                            selected = prayerFrequency == pf,
+                                            onClick = { prayerFrequency = pf },
+                                            label = { Text(pf.displayName) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Modesty Preference
+                                val modestyLabel = if (gender == Gender.MALE) "Preference for Partner" else "Modesty / Hijab"
+                                Text(modestyLabel, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
+                                    ModestyPreference.values().forEach { mp ->
+                                        FilterChip(
+                                            selected = modestyPreference == mp,
+                                            onClick = { modestyPreference = mp },
+                                            label = { Text(mp.displayName) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Relocation
+                                Text("Relocation Willingness", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
+                                    RelocationWillingness.values().forEach { rw ->
+                                        FilterChip(
+                                            selected = relocationWillingness == rw,
+                                            onClick = { relocationWillingness = rw },
+                                            label = { Text(rw.displayName) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Polygamy Switch
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Open to Polygamy", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                    Switch(checked = polygamyAcceptance, onCheckedChange = { polygamyAcceptance = it })
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                // Finish Button
+                                Button(
+                                    onClick = {
+                                        val ageInt = age.toIntOrNull() ?: 18
+                                        val userProfile = UserProfile(
+                                            name = name,
+                                            gender = gender,
+                                            age = ageInt,
+                                            city = city,
+                                            country = country,
+                                            sect = sect,
+                                            prayerFrequency = prayerFrequency,
+                                            modestyPreference = modestyPreference,
+                                            relocationWillingness = relocationWillingness,
+                                            polygamyAcceptance = polygamyAcceptance
+                                        )
+                                        viewModel.signUp(email, password, userProfile)
+                                    },
+                                    enabled = authState !is AuthState.Loading,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    if (authState is AuthState.Loading) {
+                                        CircularProgressIndicator(
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text("Register Account", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Error Message block
+                val errorToDisplay = localError ?: (authState as? AuthState.Error)?.errorMessage
+                if (errorToDisplay != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = errorToDisplay,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Link to Login
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Already have an account?",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    TextButton(
+                        onClick = onNavigateToLogin,
+                        enabled = authState !is AuthState.Loading
+                    ) {
+                        Text(
+                            text = "Sign In",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
