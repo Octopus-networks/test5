@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "mithaq-matchmaking-mock",
-    "storage_bucket": "mithaq-matchmaking-mock.appspot.com"
+    "project_number": "82166798906",
+    "project_id": "mithaq-matchmaking",
+    "storage_bucket": "mithaq-matchmaking.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",
+        "mobilesdk_app_id": "1:82166798906:android:dfa1c40de0a46b9a753303",
         "android_client_info": {
           "package_name": "com.mithaq.app"
         }
@@ -15,12 +15,12 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "mock-api-key-for-testing"
+          "current_key": "AIzaSyBSfjg0w7KtWhrY4huagirATe2Tsj9dK3M"
         }
       ],
       "services": {
         "appinvite_service": {
-          "status": 1
+          "other_platform_oauth_client": []
         }
       }
     }
