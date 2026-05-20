@@ -31,6 +31,15 @@ This repository contains the core clean-architecture MVVM & Jetpack Compose upda
 - **`SecureScreen`**: A lifecycle-aware Composable wrapper that applies `FLAG_SECURE` to the active window, blocking screenshotting or screen recording on sensitive views (e.g. Chat logs, profiles).
 - **`modestyBlur`**: Compose modifier applying modesty blur overlay on images utilizing hardware-accelerated `RenderEffect` (Android 12+) and standard backward-compatible blur fallbacks.
 
+### 7. Wali Chaperoned Chat (Phase 2 Additions) 🛡️
+- **`ChatRoom`**: Extended room metadata representing membership and active chaperonage flags (`isChaperoned`, `waliEmail`).
+- **`ChaperonedChatBanner`**: Top-anchored warning header notifying both participants that a guardian has direct transcript permissions.
+- **`ChaperonedChatViewModel`**: Seamlessly duplicates chat history writes to a dedicated `waliLogs` Firestore path for Wali reviews.
+
+### 8. Multi-Stage Modesty Photo Unlock (Phase 2 Additions) 🔒
+- **`PhotoAccessManager`**: High-level permission broker coordinating photo-viewing requests and atomic approvals in Firestore.
+- **`PhotoAccessRequestCard`**: Smart dialog controls. Prompts viewers to request photo unblur access, and notifies profile owners of incoming requests with single-tap Approve/Decline actions.
+
 ---
 
 ## 📂 Repository File Index
@@ -39,8 +48,9 @@ This repository contains the core clean-architecture MVVM & Jetpack Compose upda
 src/main/java/com/mithaq/app/
 │
 ├── model/
-│   ├── UserProfile.kt           # Contains User profile attributes
-│   └── FilterCriteria.kt        # Search preference model
+│   ├── UserProfile.kt           # Contains User profile attributes & modesty lists
+│   ├── FilterCriteria.kt        # Search preference model
+│   └── ChatRoom.kt              # Chat room metadata model
 │
 ├── security/
 │   ├── SecurityExtensions.kt    # SecureScreen screenshot prevention wrapper
@@ -61,7 +71,13 @@ src/main/java/com/mithaq/app/
 │   │
 │   ├── chat/
 │   │   ├── ChatBubble.kt
+│   │   ├── ChaperonedChatBanner.kt
+│   │   ├── ChaperonedChatViewModel.kt
 │   │   └── TranslationHelper.kt
+│   │
+│   ├── photo/
+│   │   ├── PhotoAccessManager.kt
+│   │   └── PhotoAccessRequestCard.kt
 │   │
 │   └── limit/
 │       ├── PremiumUpgradeDialog.kt
