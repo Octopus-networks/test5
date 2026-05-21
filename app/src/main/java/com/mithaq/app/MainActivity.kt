@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -226,7 +227,7 @@ fun HomeScreen(
 ) {
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf(strings.searchTab, strings.chatTab, strings.waliTab, "Modesty")
+    val tabs = listOf(strings.searchTab, strings.chatTab, strings.waliTab, strings.profileTab)
 
     val profile = currentUserProfile ?: UserProfile(
         uid = currentUserId,
@@ -280,7 +281,7 @@ fun HomeScreen(
                         0 -> Icons.Default.Search
                         1 -> Icons.Default.Chat
                         2 -> Icons.Default.Person
-                        else -> Icons.Default.Lock
+                        else -> Icons.Default.Settings
                     }
                     NavigationBarItem(
                         selected = selectedTab == index,
