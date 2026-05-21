@@ -1645,6 +1645,36 @@ fun ModestyTabContent(
                     )
                 }
                 
+                Spacer(modifier = Modifier.height(12.dp))
+                val isMockDatabase = try {
+                    val firestoreDb = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    firestoreDb.app?.options?.apiKey == "mock-api-key-for-testing" || firestoreDb.app?.options?.apiKey?.contains("mock") == true
+                } catch (e: Exception) {
+                    true
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(if (isMockDatabase) Color(0xFFFF9800) else Color(0xFF4CAF50))
+                    )
+                    Text(
+                        text = if (isMockDatabase) {
+                            if (isArabic) "وضع الاتصال: وضع التجربة (قاعدة بيانات وهمية)" else "Connection: Demo Mode (Mock Database)"
+                        } else {
+                            if (isArabic) "وضع الاتصال: متصل بالسحابة (سيرفر حقيقي)" else "Connection: Connected to Cloud (Real Server)"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isMockDatabase) Color(0xFFFF9800) else Color(0xFF4CAF50),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
                 Spacer(modifier = Modifier.height(16.dp))
