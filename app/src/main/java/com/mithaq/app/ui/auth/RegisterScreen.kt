@@ -170,7 +170,7 @@ fun RegisterScreen(
                     }
 
                     Text(
-                        text = "Step $currentStep of 2",
+                        text = if (isArabic) "الخطوة $currentStep من 2" else "Step $currentStep of 2",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary
@@ -237,7 +237,7 @@ fun RegisterScreen(
                                     OutlinedTextField(
                                         value = age,
                                         onValueChange = { age = it },
-                                        label = { Text("Age") },
+                                        label = { Text(if (isArabic) "العمر" else "Age") },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         singleLine = true,
                                         shape = RoundedCornerShape(12.dp),
@@ -249,7 +249,7 @@ fun RegisterScreen(
                                     OutlinedTextField(
                                         value = city,
                                         onValueChange = { city = it },
-                                        label = { Text("City") },
+                                        label = { Text(if (isArabic) "المدينة" else "City") },
                                         singleLine = true,
                                         shape = RoundedCornerShape(12.dp),
                                         modifier = Modifier
@@ -262,7 +262,7 @@ fun RegisterScreen(
                                 OutlinedTextField(
                                     value = country,
                                     onValueChange = { country = it },
-                                    label = { Text("Country") },
+                                    label = { Text(if (isArabic) "البلد" else "Country") },
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth()
@@ -271,7 +271,7 @@ fun RegisterScreen(
 
                                 // Gender Selector
                                 Text(
-                                    text = "Your Gender",
+                                    text = if (isArabic) "الجنس" else "Your Gender",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.align(Alignment.Start)
@@ -285,14 +285,14 @@ fun RegisterScreen(
                                             selected = gender == Gender.MALE,
                                             onClick = { gender = Gender.MALE }
                                         )
-                                        Text("Brother / Male")
+                                        Text(if (isArabic) "أخ / ذكر" else "Brother / Male")
                                     }
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         RadioButton(
                                             selected = gender == Gender.FEMALE,
                                             onClick = { gender = Gender.FEMALE }
                                         )
-                                        Text("Sister / Female")
+                                        Text(if (isArabic) "أخت / أنثى" else "Sister / Female")
                                     }
                                 }
 
@@ -407,7 +407,7 @@ fun RegisterScreen(
                                     onClick = {
                                         val parsedAge = age.toIntOrNull()
                                         if (name.isBlank() || email.isBlank() || password.isBlank() || parsedAge == null || city.isBlank() || country.isBlank()) {
-                                            localError = "Please fill in all core fields correctly."
+                                            localError = if (isArabic) "يرجى ملء جميع الحقول الأساسية بشكل صحيح." else "Please fill in all core fields correctly."
                                         } else {
                                             localError = null
                                             currentStep = 2
@@ -422,13 +422,13 @@ fun RegisterScreen(
                         }
 
                         2 -> {
-                            // Step 2 Layout: Modesty & Religioun details
+                            // Step 2 Layout: Modesty & Religion details
                             Column(
                                 horizontalAlignment = Alignment.Start,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = strings.matchPrefs,
+                                    text = if (isArabic) "تفضيلات الشريك" else "Match Preferences",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
@@ -443,7 +443,7 @@ fun RegisterScreen(
                                         FilterChip(
                                             selected = sect == s,
                                             onClick = { sect = s },
-                                            label = { Text(s.displayName) }
+                                            label = { Text(s.getDisplayName(isArabic)) }
                                         )
                                     }
                                 }
@@ -456,21 +456,21 @@ fun RegisterScreen(
                                         FilterChip(
                                             selected = prayerFrequency == pf,
                                             onClick = { prayerFrequency = pf },
-                                            label = { Text(pf.displayName) }
+                                            label = { Text(pf.getDisplayName(isArabic)) }
                                         )
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 // Modesty Preference
-                                val modestyLabel = if (gender == Gender.MALE) strings.selectModesty else "Modesty / Hijab"
+                                val modestyLabel = if (gender == Gender.MALE) strings.selectModesty else (if (isArabic) "الالتزام بالزي الشرعي" else "Modesty / Hijab")
                                 Text(modestyLabel, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                 FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
                                     ModestyPreference.values().forEach { mp ->
                                         FilterChip(
                                             selected = modestyPreference == mp,
                                             onClick = { modestyPreference = mp },
-                                            label = { Text(mp.displayName) }
+                                            label = { Text(mp.getDisplayName(isArabic)) }
                                         )
                                     }
                                 }
@@ -483,7 +483,7 @@ fun RegisterScreen(
                                         FilterChip(
                                             selected = relocationWillingness == rw,
                                             onClick = { relocationWillingness = rw },
-                                            label = { Text(rw.displayName) }
+                                            label = { Text(rw.getDisplayName(isArabic)) }
                                         )
                                     }
                                 }

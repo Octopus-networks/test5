@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mithaq.app.model.*
+import com.mithaq.app.ui.theme.LocalMithaqStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,6 +24,8 @@ fun SearchFilterBottomSheet(
 ) {
     val filterCriteria by viewModel.filterCriteria.collectAsState()
     val scrollState = rememberScrollState()
+    val strings = LocalMithaqStrings.current
+    val isArabic = strings.appName == "ميثاق"
 
     // Temporary local state for modifications inside bottom sheet
     var ageRange by remember { mutableStateOf(filterCriteria.minAge.toFloat()..filterCriteria.maxAge.toFloat()) }
@@ -50,13 +53,13 @@ fun SearchFilterBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Search Filters",
+                    text = strings.searchFilters,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 IconButton(onClick = onDismissRequest) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                    Icon(imageVector = Icons.Default.Close, contentDescription = if (isArabic) "إغلاق" else "Close")
                 }
             }
 
@@ -69,8 +72,13 @@ fun SearchFilterBottomSheet(
                     .verticalScroll(scrollState)
             ) {
                 // 1. Age Range Filter
+                val ageRangeLabel = if (isArabic) {
+                    "الفئة العمرية: ${ageRange.start.toInt()} - ${ageRange.endInclusive.toInt()} سنة"
+                } else {
+                    "Age Range: ${ageRange.start.toInt()} - ${ageRange.endInclusive.toInt()} years"
+                }
                 Text(
-                    text = "Age Range: ${ageRange.start.toInt()} - ${ageRange.endInclusive.toInt()} years",
+                    text = ageRangeLabel,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(vertical = 8.dp)
@@ -89,7 +97,7 @@ fun SearchFilterBottomSheet(
 
                 // 2. Sect Selection
                 Text(
-                    text = "Sect",
+                    text = strings.selectSect,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(vertical = 4.dp)
@@ -104,7 +112,7 @@ fun SearchFilterBottomSheet(
                             onClick = {
                                 selectedSect = if (selectedSect == sect) null else sect
                             },
-                            label = { Text(sect.displayName) }
+                            label = { Text(sect.getDisplayName(isArabic)) }
                         )
                     }
                 }
@@ -112,7 +120,7 @@ fun SearchFilterBottomSheet(
 
                 // 3. Prayer Frequency Filter (Multiple Choice)
                 Text(
-                    text = "Prayer Frequency",
+                    text = strings.selectPrayer,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(vertical = 4.dp)
@@ -129,7 +137,7 @@ fun SearchFilterBottomSheet(
                             onClick = {
                                 if (isSelected) selectedPrayers.remove(freq) else selectedPrayers.add(freq)
                             },
-                            label = { Text(freq.displayName) }
+                            label = { Text(freq.getDisplayName(isArabic)) }
                         )
                     }
                 }
@@ -137,7 +145,7 @@ fun SearchFilterBottomSheet(
 
                 // 4. Hijab/Niqab Modesty Preference (Multiple Choice)
                 Text(
-                    text = "Modesty Preference",
+                    text = if (isArabic) "الالتزام بالزي الشرعي" else "Modesty Preference",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(vertical = 4.dp)
@@ -154,7 +162,7 @@ fun SearchFilterBottomSheet(
                             onClick = {
                                 if (isSelected) selectedModesty.remove(pref) else selectedModesty.add(pref)
                             },
-                            label = { Text(pref.displayName) }
+                            label = { Text(pref.getDisplayName(isArabic)) }
                         )
                     }
                 }
@@ -162,7 +170,7 @@ fun SearchFilterBottomSheet(
 
                 // 5. Relocation Willingness Filter (Multiple Choice)
                 Text(
-                    text = "Relocation Willingness",
+                    text = strings.selectRelocation,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(vertical = 4.dp)
@@ -179,7 +187,7 @@ fun SearchFilterBottomSheet(
                             onClick = {
                                 if (isSelected) selectedRelocation.remove(willingness) else selectedRelocation.add(willingness)
                             },
-                            label = { Text(willingness.displayName) }
+                            label = { Text(willingness.getDisplayName(isArabic)) }
                         )
                     }
                 }
@@ -195,12 +203,12 @@ fun SearchFilterBottomSheet(
                 ) {
                     Column {
                         Text(
-                            text = "Accepts Polygamy",
+                            text = strings.polygamyAcceptance,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Show profiles open to polygamous setups",
+                            text = if (isArabic) "إظهار الملفات الشخصية المقبولة لتعدد الزوجات" else "Show profiles open to polygamous setups",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -237,7 +245,7 @@ fun SearchFilterBottomSheet(
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Clear All")
+                    Text(if (isArabic) "مسح الكل" else "Clear All")
                 }
 
                 Button(
@@ -256,7 +264,7 @@ fun SearchFilterBottomSheet(
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Apply Filters")
+                    Text(if (isArabic) "تطبيق التصفية" else "Apply Filters")
                 }
             }
         }

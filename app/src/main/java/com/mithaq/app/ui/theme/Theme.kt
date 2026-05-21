@@ -83,8 +83,12 @@ fun MithaqTheme(
     }
 
     val strings = if (isArabic) ArabicStrings else EnglishStrings
+    val layoutDirection = if (isArabic) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr
 
-    androidx.compose.runtime.CompositionLocalProvider(LocalMithaqStrings provides strings) {
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalMithaqStrings provides strings,
+        androidx.compose.ui.platform.LocalLayoutDirection provides layoutDirection
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,

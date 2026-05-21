@@ -41,33 +41,47 @@ data class UserProfile(
     val questionnaireAnswers: Map<String, String> = emptyMap()
 )
 
-enum class Gender {
-    MALE, FEMALE
+enum class Gender(val displayNameEn: String, val displayNameAr: String) {
+    MALE("Male", "ذكر"),
+    FEMALE("Female", "أنثى");
+    fun getDisplayName(isArabic: Boolean): String = if (isArabic) displayNameAr else displayNameEn
 }
 
-enum class Sect(val displayName: String) {
-    SUNNI("Sunni"),
-    SHIA("Shia"),
-    IBADI("Ibadi"),
-    OTHER("Other")
+enum class Sect(val displayNameEn: String, val displayNameAr: String) {
+    SUNNI("Sunni", "سني"),
+    SHIA("Shia", "شيعي"),
+    IBADI("Ibadi", "إباضي"),
+    OTHER("Other", "أخرى");
+
+    val displayName: String get() = displayNameEn
+    fun getDisplayName(isArabic: Boolean): String = if (isArabic) displayNameAr else displayNameEn
 }
 
-enum class PrayerFrequency(val displayName: String) {
-    ALWAYS("Always (5 times daily)"),
-    USUALLY("Usually"),
-    SOMETIMES("Sometimes"),
-    NEVER("Never")
+enum class PrayerFrequency(val displayNameEn: String, val displayNameAr: String) {
+    ALWAYS("Always (5 times daily)", "دائماً (٥ فروض يومياً)"),
+    USUALLY("Usually", "غالباً"),
+    SOMETIMES("Sometimes", "أحياناً"),
+    NEVER("Never", "أبداً");
+
+    val displayName: String get() = displayNameEn
+    fun getDisplayName(isArabic: Boolean): String = if (isArabic) displayNameAr else displayNameEn
 }
 
-enum class ModestyPreference(val displayName: String) {
-    NONE("No Hijab / Open"),
-    HIJAB("Hijab"),
-    NIQAB("Niqab"),
-    DOES_NOT_MATTER("Doesn't Matter")
+enum class ModestyPreference(val displayNameEn: String, val displayNameAr: String) {
+    NONE("No Hijab / Open", "بدون حجاب / غير مقيد"),
+    HIJAB("Hijab", "حجاب"),
+    NIQAB("Niqab", "نقاب"),
+    DOES_NOT_MATTER("Doesn't Matter", "لا يهم");
+
+    val displayName: String get() = displayNameEn
+    fun getDisplayName(isArabic: Boolean): String = if (isArabic) displayNameAr else displayNameEn
 }
 
-enum class RelocationWillingness(val displayName: String) {
-    YES("Willing to relocate"),
-    NO("Not willing to relocate"),
-    OPEN("Open to discussion")
+enum class RelocationWillingness(val displayNameEn: String, val displayNameAr: String) {
+    YES("Willing to relocate", "مستعد للانتقال"),
+    NO("Not willing to relocate", "غير مستعد للانتقال"),
+    OPEN("Open to discussion", "قابل للنقاش");
+
+    val displayName: String get() = displayNameEn
+    fun getDisplayName(isArabic: Boolean): String = if (isArabic) displayNameAr else displayNameEn
 }

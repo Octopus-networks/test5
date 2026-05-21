@@ -945,6 +945,19 @@ class AuthViewModel(
                 putBoolean("isAdmin", isAdmin)
                 apply()
             }
+            val isMock = try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (!isMock && current.uid.isNotEmpty()) {
+                try {
+                    firestore.collection("users").document(current.uid)
+                        .update("isWaliAccount", isWali, "isAdmin", isAdmin).await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
 }

@@ -112,7 +112,7 @@ fun MithaqAppNavigation(
 
     // ViewModels initialized safely
     val authViewModel = remember { AuthViewModel(context = context) }
-    val searchViewModel = remember { SearchViewModel() }
+    val searchViewModel = remember { SearchViewModel(context = context) }
     val guardianViewModel = remember { GuardianViewModel() }
 
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
@@ -460,8 +460,11 @@ fun SearchTabContent(
                                         Text(text = profile.name, fontWeight = FontWeight.Bold)
                                         VerificationBadge(status = profile.verificationStatus)
                                     }
-                                    Text(text = "${profile.age} yrs • ${profile.sect.displayName}", style = MaterialTheme.typography.bodySmall)
-                                    Text(text = "Modesty: ${profile.modestyPreference.displayName}", style = MaterialTheme.typography.bodySmall)
+                                    val sectLabel = profile.sect.getDisplayName(isArabic)
+                                    val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                    val modestyLabel = if (isArabic) "الحشمة: " else "Modesty: "
+                                    Text(text = "${profile.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
+                                    Text(text = "$modestyLabel${profile.modestyPreference.getDisplayName(isArabic)}", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                             Box(
@@ -1738,7 +1741,6 @@ fun ModestyTabContent(
                         selected = !currentUser.isWaliAccount && !currentUser.isAdmin,
                         onClick = {
                             authViewModel.updateMockRole(isWali = false, isAdmin = false, context = context)
-                            onRefreshProfile()
                         },
                         label = { Text(if (isArabic) "عضو عادي" else "Regular Member") }
                     )
@@ -1747,7 +1749,6 @@ fun ModestyTabContent(
                         selected = currentUser.isWaliAccount,
                         onClick = {
                             authViewModel.updateMockRole(isWali = true, isAdmin = false, context = context)
-                            onRefreshProfile()
                         },
                         label = { Text(if (isArabic) "ولي أمر" else "Wali / Guardian") }
                     )
@@ -1756,7 +1757,6 @@ fun ModestyTabContent(
                         selected = currentUser.isAdmin,
                         onClick = {
                             authViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
-                            onRefreshProfile()
                         },
                         label = { Text(if (isArabic) "مشرف" else "Admin") }
                     )
