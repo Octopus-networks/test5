@@ -686,6 +686,10 @@ fun ChatTabContent(
         return
     }
 
+    androidx.activity.compose.BackHandler {
+        onSelectTargetUser(null)
+    }
+
     val roomId = remember(currentUser.uid, targetUser.uid) {
         val first = minOf(currentUser.uid, targetUser.uid)
         val second = maxOf(currentUser.uid, targetUser.uid)
