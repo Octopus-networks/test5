@@ -25,7 +25,8 @@ data class ChatMessage(
 class ChaperonedChatViewModel(
     private val roomId: String,
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val context: android.content.Context? = null
 ) : ViewModel() {
 
     private val _chatRoom = MutableStateFlow<ChatRoom?>(null)
@@ -42,13 +43,39 @@ class ChaperonedChatViewModel(
     }
 
     private fun listenToMessages() {
-        val isMock = firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
+        val isMock = try {
+            firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
+        } catch (e: Exception) {
+            true
+        }
         if (isMock) {
-            _messages.value = listOf(
-                ChatMessage("system", "Wali monitoring active. This chat is chaperoned.", 1716200000000L),
-                ChatMessage("mock_other_user", "Assalamu Alaikum, I would like to inquire about your requirements.", 1716200010000L, "السلام عليكم، أود الاستفسار عن شروطك للموافقة."),
-                ChatMessage("mock_user", "Wa Alaikum Assalam, my guardian is aware. Here are my conditions.", 1716200020000L, "وعليكم السلام، ولي أمري على علم بكل التفاصيل. إليك شروطي.")
-            )
+            val list = mutableListOf<ChatMessage>()
+            val prefs = context?.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
+            val jsonStr = prefs?.getString("messages_$roomId", null)
+            if (jsonStr != null) {
+                try {
+                    val array = org.json.JSONArray(jsonStr)
+                    for (i in 0 until array.length()) {
+                        val obj = array.getJSONObject(i)
+                        val senderId = obj.getString("senderId")
+                        val content = obj.getString("content")
+                        val timestamp = obj.getLong("timestamp")
+                        val translatedContent = if (obj.has("translatedContent") && !obj.isNull("translatedContent")) obj.getString("translatedContent") else null
+                        list.add(ChatMessage(senderId, content, timestamp, translatedContent))
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            if (list.isEmpty()) {
+                list.addAll(listOf(
+                    ChatMessage("system", "Wali monitoring active. This chat is chaperoned.", 1716200000000L),
+                    ChatMessage("mock_other_user", "Assalamu Alaikum, I would like to inquire about your requirements.", 1716200010000L, "السلام عليكم، أود الاستفسار عن شروطك للموافقة."),
+                    ChatMessage("mock_user", "Wa Alaikum Assalam, my guardian is aware. Here are my conditions.", 1716200020000L, "وعليكم السلام، ولي أمري على علم بكل التفاصيل. إليك شروطي.")
+                ))
+                saveMessagesMock(list)
+            }
+            _messages.value = list
             return
         }
 
@@ -120,15 +147,21 @@ class ChaperonedChatViewModel(
         val currentUserId = auth.currentUser?.uid ?: "mock_user"
         if (messageText.trim().isEmpty()) return
 
-        val isMock = firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
+        val isMock = try {
+            firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
+        } catch (e: Exception) {
+            true
+        }
         if (isMock) {
             viewModelScope.launch {
                 val list = _messages.value.toMutableList()
                 val translationHelper = MockTranslationHelper()
                 val targetLang = if (messageText.any { it in '\u0600'..'\u06FF' }) "en" else "ar"
                 val translation = try { translationHelper.translateText(messageText, targetLang) } catch(e: Exception) { null }
-                list.add(ChatMessage(currentUserId, messageText.trim(), System.currentTimeMillis(), translation))
+                val newMsg = ChatMessage(currentUserId, messageText.trim(), System.currentTimeMillis(), translation)
+                list.add(newMsg)
                 _messages.value = list
+                saveMessagesMock(list)
             }
             return
         }
@@ -202,5 +235,73 @@ class ChaperonedChatViewModel(
                 // Handle delivery errors
             }
         }
+    }
+
+    private fun saveMessagesMock(list: List<ChatMessage>) {
+        val context = context ?: return
+        val array = org.json.JSONArray()
+        for (msg in list) {
+            val obj = org.json.JSONObject()
+            obj.put("senderId", msg.senderId)
+            obj.put("content", msg.content)
+            obj.put("timestamp", msg.timestamp)
+            if (msg.translatedContent != null) {
+                obj.put("translatedContent", msg.translatedContent)
+            }
+            array.put(obj)
+        }
+        context.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString("messages_$roomId", array.toString())
+            .apply()
+        
+        updateMockRoomMetadata(list.lastOrNull())
+    }
+
+    private fun updateMockRoomMetadata(lastMsg: ChatMessage?) {
+        val context = context ?: return
+        val lastMsgText = lastMsg?.content ?: ""
+        val lastMsgTime = lastMsg?.timestamp ?: 0L
+        
+        val prefs = context.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
+        val roomsJsonStr = prefs.getString("mithaq_mock_rooms", null)
+        val array = org.json.JSONArray()
+        var updated = false
+        
+        if (roomsJsonStr != null) {
+            try {
+                val oldArray = org.json.JSONArray(roomsJsonStr)
+                for (i in 0 until oldArray.length()) {
+                    val obj = oldArray.getJSONObject(i)
+                    val rId = obj.getString("roomId")
+                    if (rId == roomId) {
+                        obj.put("lastMessage", lastMsgText)
+                        obj.put("lastMessageTimestamp", lastMsgTime)
+                        updated = true
+                    }
+                    array.put(obj)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        
+        if (!updated) {
+            val obj = org.json.JSONObject()
+            obj.put("roomId", roomId)
+            val memberIdsArr = org.json.JSONArray()
+            val ids = roomId.split("_")
+            for (id in ids) {
+                memberIdsArr.put(id)
+            }
+            obj.put("memberIds", memberIdsArr)
+            obj.put("isChaperoned", true)
+            obj.put("waliEmail", "guardian@mithaq.com")
+            obj.put("lastMessage", lastMsgText)
+            obj.put("lastMessageTimestamp", lastMsgTime)
+            array.put(obj)
+        }
+        
+        prefs.edit().putString("mithaq_mock_rooms", array.toString()).apply()
     }
 }

@@ -2,13 +2,19 @@ package com.mithaq.app.ui.auth
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +28,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mithaq.app.model.*
+import com.mithaq.app.ui.photo.UserProfileImage
+import com.mithaq.app.ui.photo.BrotherhoodAvatars
+import com.mithaq.app.ui.photo.SisterhoodAvatars
 import com.mithaq.app.ui.filter.FlowRow
 
 /**
@@ -43,6 +52,7 @@ fun RegisterScreen(
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     val authState by viewModel.authState.collectAsState()
     val scrollState = rememberScrollState()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     // Step state: 1 = Core Credentials, 2 = Onboarding Islamic Profile Values
     var currentStep by remember { mutableStateOf(1) }
@@ -55,6 +65,22 @@ fun RegisterScreen(
     var city by remember { mutableStateOf("") }
     var country by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf(Gender.MALE) }
+    var imageUrl by remember { mutableStateOf("avatar_brother_green") }
+    var localImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    val galleryLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            localImageUri = uri
+            imageUrl = uri.toString()
+        }
+    }
+
+    LaunchedEffect(gender) {
+        imageUrl = if (gender == Gender.MALE) "avatar_brother_green" else "avatar_sister_teal"
+        localImageUri = null
+    }
 
     // Religious Inputs
     var sect by remember { mutableStateOf(Sect.SUNNI) }
@@ -249,6 +275,111 @@ fun RegisterScreen(
                                     }
                                 }
 
+                                // Profile Photo Selection UI
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = if (isArabic) "الصورة الشخصية" else "Profile Photo",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.align(Alignment.Start)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    // Live preview of selected photo
+                                    Box(
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        UserProfileImage(
+                                            imageUrl = imageUrl,
+                                            gender = gender,
+                                            isBlurred = false, // Not blurred in registration preview
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isArabic) "اختر رمزاً محتشماً:" else "Choose Modest Avatar:",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            val avatars = if (gender == Gender.MALE) BrotherhoodAvatars else SisterhoodAvatars
+                                            avatars.forEach { (avatarId, color) ->
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(36.dp)
+                                                        .clip(CircleShape)
+                                                        .background(color)
+                                                        .border(
+                                                            width = if (imageUrl == avatarId) 2.dp else 0.dp,
+                                                            color = if (imageUrl == avatarId) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                                            shape = CircleShape
+                                                        )
+                                                        .clickable { 
+                                                            imageUrl = avatarId
+                                                            localImageUri = null
+                                                        }
+                                                ) {
+                                                    if (imageUrl == avatarId) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Done,
+                                                            contentDescription = "Selected",
+                                                            tint = Color.White,
+                                                            modifier = Modifier
+                                                                .align(Alignment.Center)
+                                                                .size(16.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = if (imageUrl.startsWith("avatar_") || localImageUri != null) "" else imageUrl,
+                                    onValueChange = { input ->
+                                        localImageUri = null
+                                        imageUrl = input.ifBlank {
+                                            if (gender == Gender.MALE) "avatar_brother_green" else "avatar_sister_teal"
+                                        }
+                                    },
+                                    label = { Text(if (isArabic) "رابط صورة مخصصة (اختياري)" else "Custom Photo URL (Optional)") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = {
+                                        galleryLauncher.launch(
+                                            androidx.activity.result.PickVisualMediaRequest(
+                                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            )
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                                ) {
+                                    Text(if (isArabic) "اختر صورة من المعرض" else "Select Photo from Gallery")
+                                }
+
                                 Spacer(modifier = Modifier.height(24.dp))
 
                                 Button(
@@ -359,13 +490,20 @@ fun RegisterScreen(
                                             age = ageInt,
                                             city = city,
                                             country = country,
+                                            imageUrl = imageUrl,
                                             sect = sect,
                                             prayerFrequency = prayerFrequency,
                                             modestyPreference = modestyPreference,
                                             relocationWillingness = relocationWillingness,
                                             polygamyAcceptance = polygamyAcceptance
                                         )
-                                        viewModel.signUp(email, password, userProfile)
+                                        viewModel.signUp(
+                                            email = email,
+                                            passwordPass = password,
+                                            profile = userProfile,
+                                            localImageUri = localImageUri,
+                                            context = context
+                                        )
                                     },
                                     enabled = authState !is AuthState.Loading,
                                     shape = RoundedCornerShape(12.dp),
