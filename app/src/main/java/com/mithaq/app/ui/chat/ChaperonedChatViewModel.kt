@@ -35,6 +35,9 @@ class ChaperonedChatViewModel(
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
 
+    private val _warningState = MutableStateFlow<String?>(null)
+    val warningState: StateFlow<String?> = _warningState.asStateFlow()
+
     private var messagesListenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
 
     init {
@@ -139,6 +142,37 @@ class ChaperonedChatViewModel(
         }
     }
 
+    fun clearWarning() {
+        _warningState.value = null
+    }
+
+    private fun containsContactInfo(text: String): Boolean {
+        val lowercase = text.lowercase()
+        
+        // Email pattern
+        val emailPattern = Regex("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}")
+        if (emailPattern.containsMatchIn(lowercase)) return true
+        
+        // Phone number pattern (8 or more digits, even if spaces/dashes are present)
+        val cleanNumbers = lowercase.replace(Regex("[^0-9]"), "")
+        if (cleanNumbers.length >= 8) return true
+        
+        // Check for common social media platforms and keywords
+        val forbiddenKeywords = listOf(
+            "insta", "انستا", "إنستا", "سناب", "snap", "telegram", "تليجرام", "تليغرام",
+            "whatsapp", "واتساب", "واتس", "رقمي", "phone", "email", "إيميل", "ايميل", "بريد", "فيسبوك",
+            "facebook", "twitter", "تويتر", "لينكد", "linkedin", "رقم الهاتف", "رقم الجوال"
+        )
+        for (keyword in forbiddenKeywords) {
+            if (lowercase.contains(keyword)) return true
+        }
+        
+        // Check for @ symbol
+        if (lowercase.contains("@")) return true
+        
+        return false
+    }
+
     /**
      * Sends a chat message. If chaperonage is enabled, mirrors logs to a dedicated
      * waliLogs subcollection for the guardian's review.
@@ -146,6 +180,11 @@ class ChaperonedChatViewModel(
     fun sendChatMessage(messageText: String) {
         val currentUserId = auth.currentUser?.uid ?: "mock_user"
         if (messageText.trim().isEmpty()) return
+
+        if (containsContactInfo(messageText)) {
+            _warningState.value = "تنبيه أمان: يُمنع تبادل أرقام الهواتف أو حسابات التواصل الاجتماعي لحمايتك ولضمان بقاء المحادثة تحت إشراف ولي الأمر."
+            return
+        }
 
         val isMock = try {
             firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true

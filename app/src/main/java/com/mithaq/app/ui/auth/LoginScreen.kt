@@ -1,6 +1,8 @@
 package com.mithaq.app.ui.auth
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -49,6 +51,7 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var isWali by remember { mutableStateOf(false) }
 
     var localError by remember { mutableStateOf<String?>(null) }
 
@@ -152,6 +155,60 @@ fun LoginScreen(
                     modifier = Modifier.padding(top = 16.dp, bottom = 24.dp)
                 )
 
+                // Member / Wali switcher
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp)
+                        .height(48.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(24.dp)
+                        )
+                        .padding(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val memberText = if (isArabic) "عضو / خاطب" else "Member / Match Seeker"
+                    val waliText = if (isArabic) "ولي أمر / Guardian" else "Guardian / Wali"
+                    
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .background(
+                                color = if (!isWali) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                            .clickable { isWali = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = memberText,
+                            color = if (!isWali) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .background(
+                                color = if (isWali) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                            .clickable { isWali = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = waliText,
+                            color = if (isWali) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+
                 // Email Address
                 OutlinedTextField(
                     value = email,
@@ -203,7 +260,7 @@ fun LoginScreen(
                             if (email.isBlank() || password.isBlank()) {
                                 localError = "Please fill in all credentials."
                             } else {
-                                viewModel.signIn(email, password)
+                                viewModel.signIn(email, password, isWali)
                             }
                         }
                     ),
@@ -232,7 +289,7 @@ fun LoginScreen(
                         if (email.isBlank() || password.isBlank()) {
                             localError = "Please fill in all credentials."
                         } else {
-                            viewModel.signIn(email, password)
+                            viewModel.signIn(email, password, isWali)
                         }
                     },
                     enabled = authState !is AuthState.Loading,

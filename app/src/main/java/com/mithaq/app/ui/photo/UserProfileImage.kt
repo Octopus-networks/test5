@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -73,6 +74,30 @@ fun UserProfileImage(
             // Default placeholder avatar based on gender
             val defaultAvatarId = if (gender == Gender.MALE) "avatar_brother_green" else "avatar_sister_teal"
             AvatarVector(avatarId = defaultAvatarId, gender = gender, modifier = Modifier.fillMaxSize())
+        }
+
+        if (!isBlurred) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val paint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.WHITE
+                    alpha = 60 // semi-transparent (out of 255)
+                    textSize = size.width * 0.08f
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                val text = "MITHAQ SECURE"
+                
+                // Draw text at 45 degrees
+                drawContext.canvas.nativeCanvas.save()
+                drawContext.canvas.nativeCanvas.rotate(-30f, size.width / 2f, size.height / 2f)
+                
+                // Draw repeated watermark lines
+                drawContext.canvas.nativeCanvas.drawText(text, size.width / 2f, size.height * 0.35f, paint)
+                drawContext.canvas.nativeCanvas.drawText(text, size.width / 2f, size.height * 0.5f, paint)
+                drawContext.canvas.nativeCanvas.drawText(text, size.width / 2f, size.height * 0.65f, paint)
+                
+                drawContext.canvas.nativeCanvas.restore()
+            }
         }
     }
 }

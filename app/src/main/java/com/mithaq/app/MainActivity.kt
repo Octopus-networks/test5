@@ -138,19 +138,33 @@ fun MithaqAppNavigation(
             )
         }
         "home" -> {
-            HomeScreen(
-                currentUserId = currentUserId,
-                currentUserProfile = currentUserProfile,
-                authViewModel = authViewModel,
-                searchViewModel = searchViewModel,
-                guardianViewModel = guardianViewModel,
-                isArabic = isArabic,
-                onLanguageChange = onLanguageChange,
-                onLogout = {
-                    authViewModel.signOut()
-                    currentScreen = "login"
-                }
-            )
+            if (currentUserProfile?.isWaliAccount == true) {
+                WaliDashboardScreen(
+                    currentUserId = currentUserId,
+                    currentUserProfile = currentUserProfile,
+                    authViewModel = authViewModel,
+                    isArabic = isArabic,
+                    onLanguageChange = onLanguageChange,
+                    onLogout = {
+                        authViewModel.signOut()
+                        currentScreen = "login"
+                    }
+                )
+            } else {
+                HomeScreen(
+                    currentUserId = currentUserId,
+                    currentUserProfile = currentUserProfile,
+                    authViewModel = authViewModel,
+                    searchViewModel = searchViewModel,
+                    guardianViewModel = guardianViewModel,
+                    isArabic = isArabic,
+                    onLanguageChange = onLanguageChange,
+                    onLogout = {
+                        authViewModel.signOut()
+                        currentScreen = "login"
+                    }
+                )
+            }
         }
     }
 }
@@ -249,7 +263,9 @@ fun HomeScreen(
                     targetUser = selectedChatUser,
                     onRefreshProfile = {
                         authViewModel.fetchCurrentUserProfile(currentUserId)
-                    }
+                    },
+                    isArabic = isArabic,
+                    authViewModel = authViewModel
                 )
             }
         }
@@ -341,7 +357,10 @@ fun SearchTabContent(
                                 }
 
                                 Column {
-                                    Text(text = profile.name, fontWeight = FontWeight.Bold)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = profile.name, fontWeight = FontWeight.Bold)
+                                        VerificationBadge(status = profile.verificationStatus)
+                                    }
                                     Text(text = "${profile.age} yrs • ${profile.sect.displayName}", style = MaterialTheme.typography.bodySmall)
                                     Text(text = "Modesty: ${profile.modestyPreference.displayName}", style = MaterialTheme.typography.bodySmall)
                                 }
@@ -661,7 +680,10 @@ fun ChatTabContent(
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = partner.name, fontWeight = FontWeight.Bold)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = partner.name, fontWeight = FontWeight.Bold)
+                                        VerificationBadge(status = partner.verificationStatus)
+                                    }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = room.lastMessage ?: "",
@@ -699,8 +721,22 @@ fun ChatTabContent(
     val chatViewModel = remember(roomId) { ChaperonedChatViewModel(roomId = roomId, context = context) }
     val chatRoomState by chatViewModel.chatRoom.collectAsState()
     val messages by chatViewModel.messages.collectAsState()
+    val warningState by chatViewModel.warningState.collectAsState()
 
     var messageText by remember { mutableStateOf("") }
+
+    if (warningState != null) {
+        AlertDialog(
+            onDismissRequest = { chatViewModel.clearWarning() },
+            title = { Text(if (strings.appName == "ميثاق") "تنبيه أمان" else "Security Alert") },
+            text = { Text(warningState!!) },
+            confirmButton = {
+                TextButton(onClick = { chatViewModel.clearWarning() }) {
+                    Text(if (strings.appName == "ميثاق") "موافق" else "OK")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -726,7 +762,10 @@ fun ChatTabContent(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = targetUser.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = targetUser.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    VerificationBadge(status = targetUser.verificationStatus)
+                }
                 Text(
                     text = if (targetUser.photoAccessApprovedUsers.contains(currentUser.uid)) 
                         (if (strings.appName == "ميثاق") "الصورة واضحة" else "Photo Visible")
@@ -875,7 +914,9 @@ fun GuardianTabContent(
 fun ModestyTabContent(
     currentUser: UserProfile,
     targetUser: UserProfile?,
-    onRefreshProfile: () -> Unit
+    onRefreshProfile: () -> Unit,
+    isArabic: Boolean,
+    authViewModel: AuthViewModel
 ) {
     val coroutineScope = rememberCoroutineScope()
     val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager() }
@@ -1115,15 +1156,211 @@ fun ModestyTabContent(
             }
         }
 
+        // ------------------ IDENTITY VERIFICATION CENTER ------------------
+        Spacer(modifier = Modifier.height(16.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = if (isArabic) "مركز توثيق الهوية (الشارة الزرقاء)" else "Identity Verification Center (Blue Badge)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (currentUser.verificationStatus == "VERIFIED") {
+                        Icon(
+                            imageVector = Icons.Default.Done,
+                            contentDescription = "Verified Profile",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF2196F3))
+                                .padding(2.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                when (currentUser.verificationStatus) {
+                    "VERIFIED" -> {
+                        Text(
+                            text = if (isArabic)
+                                "حسابك موثق بالشارة الزرقاء. هويتك مؤكدة الآن!"
+                            else
+                                "Your account is verified. Your identity is confirmed!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF4CAF50),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    "PENDING" -> {
+                        Text(
+                            text = if (isArabic)
+                                "طلب التحقق قيد المراجعة حالياً. سنقوم بتحديث حالتك قريباً."
+                            else
+                                "Your verification request is pending review. We will update your status shortly.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFFFF9800),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    else -> {
+                        Text(
+                            text = if (isArabic)
+                                "للحصول على الشارة الزرقاء وزيادة ثقة الأعضاء بك، يرجى رفع صورة الهوية وصورة شخصية واضحة."
+                            else
+                                "To get the Blue Badge and increase member trust, please upload your ID card and a clear selfie.",
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        var idCardUri by remember { mutableStateOf<android.net.Uri?>(null) }
+                        var selfieUri by remember { mutableStateOf<android.net.Uri?>(null) }
+                        var isSubmitting by remember { mutableStateOf(false) }
+                        var statusMsg by remember { mutableStateOf<String?>(null) }
+
+                        val idCardLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                            contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+                        ) { uri ->
+                            if (uri != null) idCardUri = uri
+                        }
+
+                        val selfieLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                            contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+                        ) { uri ->
+                            if (uri != null) selfieUri = uri
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    idCardLauncher.launch(
+                                        androidx.activity.result.PickVisualMediaRequest(
+                                            androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (idCardUri != null) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary
+                                )
+                            ) {
+                                Text(
+                                    text = if (idCardUri != null)
+                                        (if (isArabic) "تم اختيار الهوية" else "ID Selected")
+                                    else
+                                        (if (isArabic) "اختر صورة الهوية" else "Select ID Card")
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    selfieLauncher.launch(
+                                        androidx.activity.result.PickVisualMediaRequest(
+                                            androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selfieUri != null) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary
+                                )
+                            ) {
+                                Text(
+                                    text = if (selfieUri != null)
+                                        (if (isArabic) "تم اختيار الصورة" else "Selfie Selected")
+                                    else
+                                        (if (isArabic) "التقط/اختر صورة" else "Select Selfie")
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (statusMsg != null) {
+                            Text(
+                                text = statusMsg!!,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (statusMsg!!.contains("نجاح") || statusMsg!!.contains("success") || statusMsg!!.contains("قيد")) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        Button(
+                            onClick = {
+                                if (idCardUri == null || selfieUri == null) {
+                                    statusMsg = if (isArabic) "يرجى اختيار كل من صورة الهوية والصورة الشخصية." else "Please select both ID Card and Selfie."
+                                    return@Button
+                                }
+                                isSubmitting = true
+                                statusMsg = if (isArabic) "جاري معالجة التحقق ومطابقة الوجه..." else "Processing verification & face matching..."
+                                authViewModel.submitVerification(idCardUri!!, selfieUri!!, context) { success, message ->
+                                    isSubmitting = false
+                                    statusMsg = message
+                                    if (success) {
+                                        onRefreshProfile()
+                                    }
+                                }
+                            },
+                            enabled = !isSubmitting,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (isSubmitting) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(if (isArabic) "تقديم طلب التحقق" else "Submit Verification")
+                            }
+                        }
+                    }
+                }
+
+                // Instant Mock Admin Approval for developers/testers
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = {
+                        authViewModel.mockAdminApproveVerification(context)
+                        onRefreshProfile()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(if (isArabic) "تفعيل التوثيق الفوري (تجريبي)" else "Instant Mock Admin Approve (Demo)")
+                }
+            }
+        }
+        // ------------------------------------------------------------------
+
         Spacer(modifier = Modifier.height(16.dp))
 
         if (targetUser != null) {
-            Text(
-                text = "Viewing Match's Photo: ${targetUser.name}",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.secondary,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.align(Alignment.Start)
-            )
+            ) {
+                Text(
+                    text = if (isArabic) "عرض صورة الشريك: ${targetUser.name}" else "Viewing Match's Photo: ${targetUser.name}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                VerificationBadge(status = targetUser.verificationStatus)
+            }
             
             PhotoAccessRequestCard(
                 isOwnProfile = false,
@@ -1184,6 +1421,643 @@ fun ModestyTabContent(
                     }
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun VerificationBadge(status: String?, modifier: Modifier = Modifier) {
+    if (status == "VERIFIED") {
+        Spacer(modifier = Modifier.width(4.dp))
+        Icon(
+            imageVector = Icons.Default.Done,
+            contentDescription = "Verified Profile",
+            tint = Color.White,
+            modifier = modifier
+                .size(16.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF2196F3))
+                .padding(2.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WaliDashboardScreen(
+    currentUserId: String,
+    currentUserProfile: UserProfile?,
+    authViewModel: AuthViewModel,
+    isArabic: Boolean,
+    onLanguageChange: (Boolean) -> Unit,
+    onLogout: () -> Unit
+) {
+    val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val coroutineScope = rememberCoroutineScope()
+
+    var wardProfile by remember { mutableStateOf<UserProfile?>(null) }
+    var activeRooms by remember { mutableStateOf<List<ChatRoom>>(emptyList()) }
+    var roomPartners by remember { mutableStateOf<Map<String, UserProfile>>(emptyMap()) }
+    var isLoadingWard by remember { mutableStateOf(false) }
+    var selectedMonitoringChat by remember { mutableStateOf<UserProfile?>(null) }
+
+    val wardUid = currentUserProfile?.wardUid ?: "mock_user_123"
+
+    val isMock = try {
+        com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey == "mock-api-key-for-testing" ||
+        com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey?.contains("mock") == true
+    } catch (e: Exception) {
+        true
+    }
+
+    suspend fun approvePhotoAccess(wardUid: String, requestingUserId: String, context: android.content.Context, isMock: Boolean) {
+        if (isMock) {
+            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            val approvedStr = prefs.getString("photoAccessApprovedUsers_$wardUid", "[]") ?: "[]"
+            val requestsStr = prefs.getString("photoAccessRequests_$wardUid", "[]") ?: "[]"
+            val approvedArray = org.json.JSONArray(approvedStr)
+            val requestsArray = org.json.JSONArray(requestsStr)
+            
+            val newRequestsArray = org.json.JSONArray()
+            for (i in 0 until requestsArray.length()) {
+                val id = requestsArray.getString(i)
+                if (id != requestingUserId) {
+                    newRequestsArray.put(id)
+                }
+            }
+            
+            var alreadyApproved = false
+            for (i in 0 until approvedArray.length()) {
+                if (approvedArray.getString(i) == requestingUserId) {
+                    alreadyApproved = true
+                }
+            }
+            if (!alreadyApproved) {
+                approvedArray.put(requestingUserId)
+            }
+            
+            prefs.edit()
+                .putString("photoAccessApprovedUsers_$wardUid", approvedArray.toString())
+                .putString("photoAccessRequests_$wardUid", newRequestsArray.toString())
+                .apply()
+        } else {
+            com.mithaq.app.ui.photo.PhotoAccessManager().approvePhotoAccess(wardUid, requestingUserId)
+        }
+    }
+
+    suspend fun revokePhotoAccess(wardUid: String, approvedUserId: String, context: android.content.Context, isMock: Boolean) {
+        if (isMock) {
+            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            val approvedStr = prefs.getString("photoAccessApprovedUsers_$wardUid", "[]") ?: "[]"
+            val approvedArray = org.json.JSONArray(approvedStr)
+            
+            val newApprovedArray = org.json.JSONArray()
+            for (i in 0 until approvedArray.length()) {
+                val id = approvedArray.getString(i)
+                if (id != approvedUserId) {
+                    newApprovedArray.put(id)
+                }
+            }
+            
+            prefs.edit()
+                .putString("photoAccessApprovedUsers_$wardUid", newApprovedArray.toString())
+                .apply()
+        } else {
+            com.mithaq.app.ui.photo.PhotoAccessManager().revokePhotoAccess(wardUid, approvedUserId)
+        }
+    }
+
+    fun loadWardData() {
+        isLoadingWard = true
+        coroutineScope.launch {
+            if (isMock) {
+                val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+                val approvedStr = prefs.getString("photoAccessApprovedUsers_$wardUid", "[]") ?: "[]"
+                val requestsStr = prefs.getString("photoAccessRequests_$wardUid", "[]") ?: "[]"
+                
+                val approvedList = mutableListOf<String>()
+                val requestsList = mutableListOf<String>()
+                try {
+                    val approvedArray = org.json.JSONArray(approvedStr)
+                    for (i in 0 until approvedArray.length()) {
+                        approvedList.add(approvedArray.getString(i))
+                    }
+                    val requestsArray = org.json.JSONArray(requestsStr)
+                    for (i in 0 until requestsArray.length()) {
+                        requestsList.add(requestsArray.getString(i))
+                    }
+                } catch(e: Exception) {}
+
+                if (approvedList.isEmpty() && requestsList.isEmpty()) {
+                    requestsList.add("mock_user_2")
+                    prefs.edit()
+                        .putString("photoAccessRequests_$wardUid", org.json.JSONArray(requestsList).toString())
+                        .apply()
+                }
+
+                wardProfile = UserProfile(
+                    uid = wardUid,
+                    name = "عائشة أحمد / Aisha Ahmed",
+                    gender = Gender.FEMALE,
+                    age = 24,
+                    city = "القاهرة / Cairo",
+                    country = "مصر / Egypt",
+                    imageUrl = "",
+                    photoAccessApprovedUsers = approvedList,
+                    photoAccessRequests = requestsList
+                )
+            } else {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                try {
+                    val doc = db.collection("users").document(wardUid).get().await()
+                    if (doc.exists()) {
+                        val name = doc.getString("name") ?: ""
+                        val genderStr = doc.getString("gender") ?: "FEMALE"
+                        val gender = if (genderStr == "MALE") Gender.MALE else Gender.FEMALE
+                        val age = doc.getLong("age")?.toInt() ?: 25
+                        val city = doc.getString("city") ?: ""
+                        val country = doc.getString("country") ?: ""
+                        val imageUrl = doc.getString("imageUrl") ?: ""
+                        val photoApproved = doc.get("photoAccessApprovedUsers") as? List<String> ?: emptyList()
+                        val photoRequests = doc.get("photoAccessRequests") as? List<String> ?: emptyList()
+                        val verificationStatus = doc.getString("verificationStatus") ?: "NONE"
+                        wardProfile = UserProfile(
+                            uid = wardUid,
+                            name = name,
+                            gender = gender,
+                            age = age,
+                            city = city,
+                            country = country,
+                            imageUrl = imageUrl,
+                            photoAccessApprovedUsers = photoApproved,
+                            photoAccessRequests = photoRequests,
+                            verificationStatus = verificationStatus
+                        )
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            if (isMock) {
+                val prefs = context.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
+                val roomsJsonStr = prefs.getString("mithaq_mock_rooms", null)
+                val roomsList = mutableListOf<ChatRoom>()
+                if (roomsJsonStr != null) {
+                    try {
+                        val array = org.json.JSONArray(roomsJsonStr)
+                        for (i in 0 until array.length()) {
+                            val obj = array.getJSONObject(i)
+                            val roomId = obj.getString("roomId")
+                            val memberIdsArr = obj.getJSONArray("memberIds")
+                            val memberIds = mutableListOf<String>()
+                            for (j in 0 until memberIdsArr.length()) {
+                                memberIds.add(memberIdsArr.getString(j))
+                            }
+                            val isChaperoned = obj.optBoolean("isChaperoned", false)
+                            val waliEmail = obj.optString("waliEmail", null)
+                            val lastMessage = obj.optString("lastMessage", null)
+                            val lastMessageTimestamp = obj.optLong("lastMessageTimestamp", 0L)
+                            roomsList.add(ChatRoom(roomId, memberIds, isChaperoned, waliEmail, lastMessage, lastMessageTimestamp))
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+                val filteredRooms = roomsList.filter { it.memberIds.contains(wardUid) }
+                activeRooms = filteredRooms.sortedByDescending { it.lastMessageTimestamp }
+                
+                val partnersMap = mutableMapOf<String, UserProfile>()
+                for (room in filteredRooms) {
+                    val partnerId = room.memberIds.firstOrNull { it != wardUid } ?: ""
+                    partnersMap[room.roomId] = getMockUserProfile(partnerId)
+                }
+                roomPartners = partnersMap
+                isLoadingWard = false
+            } else {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                db.collection("chatRooms")
+                    .whereArrayContains("memberIds", wardUid)
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+                        val roomsList = snapshot.documents.mapNotNull { doc ->
+                            try {
+                                val roomId = doc.id
+                                val memberIds = doc.get("memberIds") as? List<String> ?: emptyList()
+                                val isChaperoned = doc.getBoolean("isChaperoned") ?: false
+                                val waliEmail = doc.getString("waliEmail")
+                                val lastMessage = doc.getString("lastMessage")
+                                val lastMessageTimestamp = doc.getLong("lastMessageTimestamp") ?: 0L
+                                ChatRoom(roomId, memberIds, isChaperoned, waliEmail, lastMessage, lastMessageTimestamp)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+
+                        activeRooms = roomsList.sortedByDescending { it.lastMessageTimestamp }
+                        val partnersMap = mutableMapOf<String, UserProfile>()
+                        val partnerFetchCount = roomsList.size
+                        if (partnerFetchCount == 0) {
+                            isLoadingWard = false
+                        } else {
+                            var fetched = 0
+                            for (room in roomsList) {
+                                val partnerId = room.memberIds.firstOrNull { it != wardUid }
+                                if (partnerId != null) {
+                                    db.collection("users").document(partnerId).get()
+                                        .addOnSuccessListener { userDoc ->
+                                            if (userDoc.exists()) {
+                                                val name = userDoc.getString("name") ?: ""
+                                                val genderStr = userDoc.getString("gender") ?: "MALE"
+                                                val gender = if (genderStr == "MALE") Gender.MALE else Gender.FEMALE
+                                                val age = userDoc.getLong("age")?.toInt() ?: 25
+                                                val city = userDoc.getString("city") ?: ""
+                                                val country = userDoc.getString("country") ?: ""
+                                                val imageUrl = userDoc.getString("imageUrl") ?: ""
+                                                val verificationStatus = userDoc.getString("verificationStatus") ?: "NONE"
+                                                partnersMap[room.roomId] = UserProfile(
+                                                    uid = partnerId,
+                                                    name = name,
+                                                    gender = gender,
+                                                    age = age,
+                                                    city = city,
+                                                    country = country,
+                                                    imageUrl = imageUrl,
+                                                    verificationStatus = verificationStatus
+                                                )
+                                            }
+                                            fetched++
+                                            if (fetched == partnerFetchCount) {
+                                                roomPartners = partnersMap
+                                                isLoadingWard = false
+                                            }
+                                        }
+                                        .addOnFailureListener {
+                                            fetched++
+                                            if (fetched == partnerFetchCount) {
+                                                roomPartners = partnersMap
+                                                isLoadingWard = false
+                                            }
+                                        }
+                                } else {
+                                    fetched++
+                                    if (fetched == partnerFetchCount) {
+                                        roomPartners = partnersMap
+                                        isLoadingWard = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .addOnFailureListener {
+                        isLoadingWard = false
+                    }
+            }
+        }
+    }
+
+    LaunchedEffect(currentUserProfile?.uid) {
+        loadWardData()
+    }
+
+    if (selectedMonitoringChat != null) {
+        val partner = selectedMonitoringChat!!
+        val roomId = remember(wardUid, partner.uid) {
+            val first = minOf(wardUid, partner.uid)
+            val second = maxOf(wardUid, partner.uid)
+            "${first}_${second}"
+        }
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (isArabic) "مراقبة: ${partner.name}" else "Monitoring: ${partner.name}",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            VerificationBadge(status = partner.verificationStatus)
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { selectedMonitoringChat = null }) {
+                            Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            ) {
+                ReadOnlyChaperonedChat(
+                    roomId = roomId,
+                    context = context,
+                    isArabic = isArabic
+                )
+            }
+        }
+        return
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (isArabic) "لوحة مراقبة ولي الأمر" else "Guardian Dashboard") },
+                actions = {
+                    TextButton(onClick = { onLanguageChange(!isArabic) }) {
+                        Text(if (isArabic) "English" else "العربية", color = MaterialTheme.colorScheme.primary)
+                    }
+                    TextButton(onClick = onLogout) {
+                        Text(if (isArabic) "خروج" else "Logout", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = if (isArabic) "العضو الخاضع للإشراف (الابن/الابنة):" else "Monitored Member (Ward):",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = wardProfile?.name ?: (if (isArabic) "جاري التحميل..." else "Loading Ward..."),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    if (wardProfile != null) {
+                        Text(
+                            text = "${wardProfile!!.age} ${if (isArabic) "عاماً" else "years"} • ${wardProfile!!.city}, ${wardProfile!!.country}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
+
+            if (isLoadingWard) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                Text(
+                    text = if (isArabic) "طلبات وأذونات الصور الشخصية" else "Photo Access & Approvals",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = if (isArabic) "طلبات رؤية صورة ابنتك المعلقة:" else "Pending Requests to View Ward's Photo:",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        val pendingRequests = wardProfile?.photoAccessRequests ?: emptyList()
+                        if (pendingRequests.isEmpty()) {
+                            Text(
+                                text = if (isArabic) "لا توجد طلبات معلقة حالياً." else "No pending requests.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            pendingRequests.forEach { requesterId ->
+                                val requesterProfile = getMockUserProfile(requesterId)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = requesterProfile.name, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            text = "${requesterProfile.age} yrs • ${requesterProfile.city}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Button(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                approvePhotoAccess(wardUid, requesterId, context, isMock)
+                                                loadWardData()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                                    ) {
+                                        Text(if (isArabic) "الموافقة" else "Approve")
+                                    }
+                                }
+                            }
+                        }
+
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        Text(
+                            text = if (isArabic) "الأشخاص المصرح لهم بالرؤية:" else "Users Approved to View Ward's Photo:",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        val approvedUsers = wardProfile?.photoAccessApprovedUsers ?: emptyList()
+                        if (approvedUsers.isEmpty()) {
+                            Text(
+                                text = if (isArabic) "لم يتم منح إذن لأي شخص بعد." else "No approved users yet.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            approvedUsers.forEach { approvedId ->
+                                val approvedProfile = getMockUserProfile(approvedId)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = approvedProfile.name, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            text = "${approvedProfile.age} yrs • ${approvedProfile.city}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Button(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                revokePhotoAccess(wardUid, approvedId, context, isMock)
+                                                loadWardData()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                                    ) {
+                                        Text(if (isArabic) "إلغاء الإذن" else "Revoke")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = if (isArabic) "مراقبة المحادثات النشطة" else "Monitor Active Conversations",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                if (activeRooms.isEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Box(modifier = Modifier.padding(24.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = if (isArabic) "لا توجد محادثات نشطة لابنتك حالياً." else "No active conversations for your ward.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        activeRooms.forEach { room ->
+                            val partner = roomPartners[room.roomId] ?: getMockUserProfile(room.memberIds.firstOrNull { it != wardUid } ?: "")
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedMonitoringChat = partner },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(modifier = Modifier.size(48.dp)) {
+                                        UserProfileImage(
+                                            imageUrl = partner.imageUrl,
+                                            gender = partner.gender,
+                                            isBlurred = false,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(text = partner.name, fontWeight = FontWeight.Bold)
+                                            VerificationBadge(status = partner.verificationStatus)
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = room.lastMessage ?: "",
+                                            maxLines = 1,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (room.lastMessageTimestamp > 0L) {
+                                        Text(
+                                            text = formatDateTime(room.lastMessageTimestamp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ReadOnlyChaperonedChat(
+    roomId: String,
+    context: android.content.Context,
+    isArabic: Boolean
+) {
+    val chatViewModel = remember(roomId) { ChaperonedChatViewModel(roomId = roomId, context = context) }
+    val messages by chatViewModel.messages.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Read Only",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    text = if (isArabic)
+                        "وضع مراقبة ولي الأمر (قراءة فقط - المحادثة مشفرة ومسجلة)"
+                    else
+                        "Guardian Monitor Mode (Read-Only - Chat is secure & chaperoned)",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            messages.forEach { msg ->
+                val isMe = msg.senderId == "mock_user_123" || msg.senderId == "mock_user"
+                ChatBubble(
+                    messageText = msg.content,
+                    isCurrentUser = isMe
+                )
+            }
         }
     }
 }

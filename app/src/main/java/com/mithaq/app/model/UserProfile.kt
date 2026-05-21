@@ -27,7 +27,14 @@ data class UserProfile(
 
     // Photo modesty locks
     val photoAccessApprovedUsers: List<String> = emptyList(),
-    val photoAccessRequests: List<String> = emptyList()
+    val photoAccessRequests: List<String> = emptyList(),
+
+    // Premium Security & Trust Upgrades
+    val isWaliAccount: Boolean = false,
+    val wardUid: String? = null,
+    val verificationStatus: String = "NONE", // "NONE", "PENDING", "VERIFIED"
+    val voiceIntroUrl: String? = null,
+    val fcmToken: String? = null
 )
 
 enum class Gender {

@@ -32,6 +32,7 @@ import com.mithaq.app.ui.photo.UserProfileImage
 import com.mithaq.app.ui.photo.BrotherhoodAvatars
 import com.mithaq.app.ui.photo.SisterhoodAvatars
 import com.mithaq.app.ui.filter.FlowRow
+import androidx.activity.compose.rememberLauncherForActivityResult
 
 /**
  * A highly-polished Multi-Step Registration Wizard for Mithaq.
@@ -75,6 +76,26 @@ fun RegisterScreen(
             localImageUri = uri
             imageUrl = uri.toString()
         }
+    }
+
+    val voiceRecorderManager = remember { com.mithaq.app.ui.photo.VoiceRecorderManager(context) }
+    var isRecordingVoice by remember { mutableStateOf(false) }
+    var localVoiceUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var isPlayingVoice by remember { mutableStateOf(false) }
+
+    var hasAudioPermission by remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.RECORD_AUDIO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasAudioPermission = isGranted
     }
 
     LaunchedEffect(gender) {
@@ -466,19 +487,95 @@ fun RegisterScreen(
                                         )
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
+                                    // Voice Introduction (Optional)
+                                 Spacer(modifier = Modifier.height(16.dp))
+                                 Text(
+                                     text = if (isArabic) "التعريف الصوتي (اختياري - 30 ثانية)" else "Voice Introduction (Optional - 30s)",
+                                     fontWeight = FontWeight.Bold,
+                                     style = MaterialTheme.typography.bodyMedium
+                                 )
+                                 Spacer(modifier = Modifier.height(8.dp))
+                                 
+                                 Row(
+                                     modifier = Modifier
+                                         .fillMaxWidth()
+                                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                         .padding(12.dp),
+                                     verticalAlignment = Alignment.CenterVertically,
+                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                 ) {
+                                     Button(
+                                         onClick = {
+                                             if (!hasAudioPermission) {
+                                                 permissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                                             } else {
+                                                 if (isRecordingVoice) {
+                                                     voiceRecorderManager.stopRecording()
+                                                     isRecordingVoice = false
+                                                 } else {
+                                                     val voiceFile = java.io.File(context.cacheDir, "temp_voice_intro.mp4")
+                                                     voiceRecorderManager.startRecording(voiceFile)
+                                                     localVoiceUri = android.net.Uri.fromFile(voiceFile)
+                                                     isRecordingVoice = true
+                                                 }
+                                             }
+                                         },
+                                         colors = ButtonDefaults.buttonColors(
+                                             containerColor = if (isRecordingVoice) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                         ),
+                                         shape = RoundedCornerShape(8.dp),
+                                         modifier = Modifier.weight(1f)
+                                     ) {
+                                         Text(
+                                             text = if (isRecordingVoice) {
+                                                 if (isArabic) "إيقاف التسجيل" else "Stop Recording"
+                                             } else {
+                                                 if (isArabic) "سجل مقطعاً صوتياً 🎙️" else "Record Voice 🎙️"
+                                             }
+                                         )
+                                     }
 
-                                // Polygamy Switch
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(strings.polygamyAcceptance, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                                    Switch(checked = polygamyAcceptance, onCheckedChange = { polygamyAcceptance = it })
-                                }
+                                     if (localVoiceUri != null) {
+                                         Button(
+                                             onClick = {
+                                                 if (isPlayingVoice) {
+                                                     voiceRecorderManager.stopPlaying()
+                                                     isPlayingVoice = false
+                                                 } else {
+                                                     isPlayingVoice = true
+                                                     voiceRecorderManager.startPlaying(localVoiceUri.toString()) {
+                                                         isPlayingVoice = false
+                                                     }
+                                                 }
+                                             },
+                                             colors = ButtonDefaults.buttonColors(
+                                                 containerColor = MaterialTheme.colorScheme.secondary
+                                             ),
+                                             shape = RoundedCornerShape(8.dp)
+                                         ) {
+                                             Text(
+                                                 text = if (isPlayingVoice) {
+                                                     if (isArabic) "إيقاف" else "Stop"
+                                                 } else {
+                                                     if (isArabic) "تشغيل ▶️" else "Play ▶️"
+                                                 }
+                                             )
+                                         }
+                                     }
+                                 }
+                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                Spacer(modifier = Modifier.height(24.dp))
+                                 // Polygamy Switch
+                                 Row(
+                                     modifier = Modifier.fillMaxWidth(),
+                                     horizontalArrangement = Arrangement.SpaceBetween,
+                                     verticalAlignment = Alignment.CenterVertically
+                                 ) {
+                                     Text(strings.polygamyAcceptance, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                     Switch(checked = polygamyAcceptance, onCheckedChange = { polygamyAcceptance = it })
+                                 }
+
+                                 Spacer(modifier = Modifier.height(24.dp))
 
                                 // Finish Button
                                 Button(
@@ -497,13 +594,14 @@ fun RegisterScreen(
                                             relocationWillingness = relocationWillingness,
                                             polygamyAcceptance = polygamyAcceptance
                                         )
-                                        viewModel.signUp(
-                                            email = email,
-                                            passwordPass = password,
-                                            profile = userProfile,
-                                            localImageUri = localImageUri,
-                                            context = context
-                                        )
+                                         viewModel.signUp(
+                                             email = email,
+                                             passwordPass = password,
+                                             profile = userProfile,
+                                             localImageUri = localImageUri,
+                                             localVoiceUri = localVoiceUri,
+                                             context = context
+                                         )
                                     },
                                     enabled = authState !is AuthState.Loading,
                                     shape = RoundedCornerShape(12.dp),

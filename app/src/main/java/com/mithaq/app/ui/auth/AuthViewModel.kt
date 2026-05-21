@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.mithaq.app.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,7 +48,12 @@ class AuthViewModel(
     fun fetchCurrentUserProfile(uid: String) {
         viewModelScope.launch {
             try {
-                val isMock = auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                val isMock = try {
+                    auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                } catch (e: Exception) {
+                    true
+                }
+
                 if (isMock) {
                     val prefs = context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
                     val savedUid = prefs?.getString("uid", null)
@@ -66,6 +74,12 @@ class AuthViewModel(
                         val relocationStr = prefs.getString("relocationWillingness", "OPEN") ?: "OPEN"
                         val relocation = try { RelocationWillingness.valueOf(relocationStr) } catch(e: Exception) { RelocationWillingness.OPEN }
                         
+                        val isWaliAccount = prefs.getBoolean("isWaliAccount", false)
+                        val wardUid = prefs.getString("wardUid", null)
+                        val verificationStatus = prefs.getString("verificationStatus", "NONE") ?: "NONE"
+                        val voiceIntroUrl = prefs.getString("voiceIntroUrl", null)
+                        val fcmToken = prefs.getString("fcmToken", null)
+
                         _currentUserProfile.value = UserProfile(
                             uid = savedUid,
                             name = name,
@@ -77,7 +91,12 @@ class AuthViewModel(
                             sect = sect,
                             prayerFrequency = prayer,
                             modestyPreference = modesty,
-                            relocationWillingness = relocation
+                            relocationWillingness = relocation,
+                            isWaliAccount = isWaliAccount,
+                            wardUid = wardUid,
+                            verificationStatus = verificationStatus,
+                            voiceIntroUrl = voiceIntroUrl,
+                            fcmToken = fcmToken
                         )
                     } else {
                         _currentUserProfile.value = UserProfile(
@@ -91,7 +110,9 @@ class AuthViewModel(
                             sect = Sect.SUNNI,
                             prayerFrequency = PrayerFrequency.ALWAYS,
                             modestyPreference = ModestyPreference.HIJAB,
-                            relocationWillingness = RelocationWillingness.OPEN
+                            relocationWillingness = RelocationWillingness.OPEN,
+                            isWaliAccount = false,
+                            verificationStatus = "NONE"
                         )
                     }
                     return@launch
@@ -121,6 +142,12 @@ class AuthViewModel(
                     val photoApproved = doc.get("photoAccessApprovedUsers") as? List<String> ?: emptyList()
                     val photoRequests = doc.get("photoAccessRequests") as? List<String> ?: emptyList()
 
+                    val isWaliAccount = doc.getBoolean("isWaliAccount") ?: false
+                    val wardUid = doc.getString("wardUid")
+                    val verificationStatus = doc.getString("verificationStatus") ?: "NONE"
+                    val voiceIntroUrl = doc.getString("voiceIntroUrl")
+                    val fcmToken = doc.getString("fcmToken")
+
                     _currentUserProfile.value = UserProfile(
                         uid = uid,
                         name = name,
@@ -137,8 +164,22 @@ class AuthViewModel(
                         guardianEmail = guardianEmail,
                         guardianStatus = guardianStatus,
                         photoAccessApprovedUsers = photoApproved,
-                        photoAccessRequests = photoRequests
+                        photoAccessRequests = photoRequests,
+                        isWaliAccount = isWaliAccount,
+                        wardUid = wardUid,
+                        verificationStatus = verificationStatus,
+                        voiceIntroUrl = voiceIntroUrl,
+                        fcmToken = fcmToken
                     )
+
+                    // Retrieve & register FCM token automatically
+                    try {
+                        val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+                        firestore.collection("users").document(uid).update("fcmToken", token)
+                        _currentUserProfile.value = _currentUserProfile.value?.copy(fcmToken = token)
+                    } catch(e: Exception) {
+                        // Firebase messaging not configured or network error
+                    }
                 }
             } catch (e: Exception) {
                 // Fail-safe
@@ -149,7 +190,7 @@ class AuthViewModel(
     /**
      * Authenticates user using Firebase Auth Email & Password.
      */
-    fun signIn(email: String, emailPassed: String) {
+    fun signIn(email: String, emailPassed: String, isWali: Boolean = false) {
         if (email.isBlank() || emailPassed.isBlank()) {
             _authState.value = AuthState.Error("Please fill out all credentials.")
             return
@@ -158,10 +199,28 @@ class AuthViewModel(
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
-                val isMock = auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                val isMock = try {
+                    auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                } catch (e: Exception) {
+                    true
+                }
+
                 if (isMock) {
                     kotlinx.coroutines.delay(800)
-                    _authState.value = AuthState.Authenticated("mock_user_123")
+                    val uid = if (isWali) "mock_wali_123" else "mock_user_123"
+                    context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
+                        putString("uid", uid)
+                        putBoolean("isWaliAccount", isWali)
+                        if (isWali) {
+                            putString("name", "Guardian / ولي أمر")
+                            putString("wardUid", "mock_user_123")
+                        } else {
+                            putString("name", "Mock User")
+                        }
+                        apply()
+                    }
+                    _authState.value = AuthState.Authenticated(uid)
+                    fetchCurrentUserProfile(uid)
                     return@launch
                 }
 
@@ -187,6 +246,7 @@ class AuthViewModel(
         passwordPass: String,
         profile: UserProfile,
         localImageUri: android.net.Uri? = null,
+        localVoiceUri: android.net.Uri? = null,
         context: android.content.Context? = null
     ) {
         if (email.isBlank() || passwordPass.isBlank() || profile.name.isBlank()) {
@@ -210,6 +270,11 @@ class AuthViewModel(
                     } else {
                         profile.imageUrl
                     }
+                    val finalVoiceUrl = if (localVoiceUri != null && context != null) {
+                        saveVoiceLocally(context, localVoiceUri, "mock_user_123")
+                    } else {
+                        null
+                    }
                     context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
                         putString("uid", "mock_user_123")
                         putString("name", profile.name.trim())
@@ -222,9 +287,17 @@ class AuthViewModel(
                         putString("prayerFrequency", profile.prayerFrequency.name)
                         putString("modestyPreference", profile.modestyPreference.name)
                         putString("relocationWillingness", profile.relocationWillingness.name)
+                        putString("voiceIntroUrl", finalVoiceUrl)
+                        putString("verificationStatus", "NONE")
+                        putBoolean("isWaliAccount", false)
                         apply()
                     }
-                    _currentUserProfile.value = profile.copy(uid = "mock_user_123", imageUrl = finalImageUrl)
+                    _currentUserProfile.value = profile.copy(
+                        uid = "mock_user_123", 
+                        imageUrl = finalImageUrl,
+                        voiceIntroUrl = finalVoiceUrl,
+                        verificationStatus = "NONE"
+                    )
                     _authState.value = AuthState.Authenticated("mock_user_123")
                     return@launch
                 }
@@ -245,6 +318,17 @@ class AuthViewModel(
                         profile.imageUrl
                     }
 
+                    // Upload Voice Intro to Storage
+                    val finalVoiceUrl = if (localVoiceUri != null && context != null) {
+                        try {
+                            uploadVoiceIntro(userId, localVoiceUri, context)
+                        } catch (e: Exception) {
+                            saveVoiceLocally(context, localVoiceUri, userId)
+                        }
+                    } else {
+                        null
+                    }
+
                     // 2. Save profile to Firestore users database
                     val userProfilePayload = mapOf(
                         "uid" to userId,
@@ -260,7 +344,10 @@ class AuthViewModel(
                         "relocationWillingness" to profile.relocationWillingness.name,
                         "polygamyAcceptance" to profile.polygamyAcceptance,
                         "guardianStatus" to "None",
-                        "isPremium" to false // Free tier by default
+                        "isPremium" to false,
+                        "isWaliAccount" to false,
+                        "verificationStatus" to "NONE",
+                        "voiceIntroUrl" to (finalVoiceUrl ?: "")
                     )
 
                     firestore.collection("users")
@@ -278,6 +365,37 @@ class AuthViewModel(
                 _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to sign up.")
             }
         }
+    }
+
+    private fun saveVoiceLocally(context: android.content.Context, voiceUri: android.net.Uri, userId: String): String {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(voiceUri) ?: return ""
+            val directory = java.io.File(context.filesDir, "voices")
+            if (!directory.exists()) {
+                directory.mkdirs()
+            }
+            val localFile = java.io.File(directory, "$userId.mp4")
+            val outputStream = java.io.FileOutputStream(localFile)
+            inputStream.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            android.net.Uri.fromFile(localFile).toString()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            ""
+        }
+    }
+
+    private suspend fun uploadVoiceIntro(userId: String, voiceUri: android.net.Uri, context: android.content.Context): String {
+        val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
+        val voiceRef = storageRef.child("voices/$userId.mp4")
+        val inputStream = context.contentResolver.openInputStream(voiceUri) ?: throw java.io.IOException("Unable to open input stream")
+        val bytes = inputStream.readBytes()
+        inputStream.close()
+        voiceRef.putBytes(bytes).await()
+        return voiceRef.downloadUrl.await().toString()
     }
 
     private suspend fun uploadProfileImage(userId: String, imageUri: android.net.Uri, context: android.content.Context): String {
@@ -369,5 +487,95 @@ class AuthViewModel(
 
     fun resetState() {
         _authState.value = AuthState.Idle
+    }
+
+    fun verifySelfie(imageUri: android.net.Uri, context: android.content.Context, onSuccess: (Boolean) -> Unit) {
+        try {
+            val image = InputImage.fromFilePath(context, imageUri)
+            val options = FaceDetectorOptions.Builder()
+                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                .build()
+            val detector = FaceDetection.getClient(options)
+            detector.process(image)
+                .addOnSuccessListener { faces ->
+                    onSuccess(faces.isNotEmpty())
+                }
+                .addOnFailureListener {
+                    onSuccess(false)
+                }
+        } catch (e: Exception) {
+            onSuccess(false)
+        }
+    }
+
+    fun submitVerification(idCardUri: android.net.Uri, selfieUri: android.net.Uri, context: android.content.Context, onResult: (Boolean, String) -> Unit) {
+        verifySelfie(selfieUri, context) { hasFace ->
+            if (!hasFace) {
+                onResult(false, "لم يتم اكتشاف وجه في الصورة الشخصية. يرجى التقاط صورة شخصية واضحة.")
+                return@verifySelfie
+            }
+            viewModelScope.launch {
+                try {
+                    val userId = auth.currentUser?.uid ?: _currentUserProfile.value?.uid
+                    if (userId == null) {
+                        onResult(false, "المستخدم غير مسجل.")
+                        return@launch
+                    }
+                    val isMock = try {
+                        auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                    } catch (e: Exception) {
+                        true
+                    }
+
+                    if (isMock) {
+                        val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+                        prefs.edit().putString("verificationStatus", "PENDING").apply()
+                        _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "PENDING")
+                        onResult(true, "تم تقديم طلب التحقق بنجاح، وهو قيد المراجعة.")
+                        return@launch
+                    }
+
+                    val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
+                    val idRef = storageRef.child("verification/$userId/id_card.jpg")
+                    val selfieRef = storageRef.child("verification/$userId/selfie.jpg")
+
+                    val idStream = context.contentResolver.openInputStream(idCardUri) ?: throw java.io.IOException("Cannot open ID card")
+                    val selfieStream = context.contentResolver.openInputStream(selfieUri) ?: throw java.io.IOException("Cannot open Selfie")
+
+                    idRef.putBytes(idStream.readBytes()).await()
+                    selfieRef.putBytes(selfieStream.readBytes()).await()
+                    idStream.close()
+                    selfieStream.close()
+
+                    firestore.collection("users").document(userId)
+                        .update("verificationStatus", "PENDING").await()
+
+                    _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "PENDING")
+                    onResult(true, "تم تقديم طلب التحقق بنجاح، وهو قيد المراجعة.")
+                } catch (e: Exception) {
+                    onResult(false, "حدث خطأ أثناء رفع المستندات: ${e.localizedMessage}")
+                }
+            }
+        }
+    }
+
+    fun mockAdminApproveVerification(context: android.content.Context) {
+        viewModelScope.launch {
+            val userId = auth.currentUser?.uid ?: _currentUserProfile.value?.uid ?: return@launch
+            val isMock = try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (isMock) {
+                val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+                prefs.edit().putString("verificationStatus", "VERIFIED").apply()
+                _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "VERIFIED")
+            } else {
+                firestore.collection("users").document(userId)
+                    .update("verificationStatus", "VERIFIED").await()
+                _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "VERIFIED")
+            }
+        }
     }
 }
