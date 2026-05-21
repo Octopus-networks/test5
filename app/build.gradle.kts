@@ -1,8 +1,10 @@
 plugins {
   alias(libs.plugins.android.application)
+  id("org.jetbrains.kotlin.android")
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.google.services)
+  id("kotlin-kapt")
 }
 
 android {
@@ -95,4 +97,14 @@ dependencies {
   implementation(libs.play.services.auth)
   implementation(libs.play.services.mlkit.face.detection)
   implementation(libs.coil.compose)
+
+  // Room Database
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.ktx)
+  add("kapt", libs.androidx.room.compiler)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask>().configureEach {
+    kaptProcessJvmArgs.add("-Dorg.sqlite.tmpdir=C:/Users/ahmed/.gemini/antigravity/sqlite_tmp")
+    kaptProcessJvmArgs.add("-Djava.io.tmpdir=C:/Users/ahmed/.gemini/antigravity/sqlite_tmp")
 }

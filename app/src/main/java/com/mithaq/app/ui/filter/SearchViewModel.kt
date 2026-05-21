@@ -10,14 +10,22 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.mithaq.app.data.local.MithaqDatabase
+import com.mithaq.app.data.local.CachedUserProfile
+import com.mithaq.app.data.local.toCached
+import com.mithaq.app.data.local.toDomain
 
 /**
  * ViewModel managing search parameters and applying complex Islamic filters to user results.
  */
 class SearchViewModel(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val context: android.content.Context? = null
 ) : ViewModel() {
+
+    private val db = context?.let { MithaqDatabase.getDatabase(it) }
+    private val userDao = db?.userDao()
 
     private val _filterCriteria = MutableStateFlow(FilterCriteria())
     val filterCriteria: StateFlow<FilterCriteria> = _filterCriteria.asStateFlow()
@@ -39,59 +47,170 @@ class SearchViewModel(
     }
 
     /**
-     * Fetches all matching users from Firestore (excluding current user and opposite gender).
+     * Fetches all matching users from Firestore or Room DB cache.
      */
     fun fetchUsers() {
-        val isMock = firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
+        val isOfflineSimulated = context?.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
+            ?.getBoolean("is_offline_simulated", false) ?: false
+
+        if (isOfflineSimulated) {
+            _isLoading.value = true
+            _errorMessage.value = null
+            viewModelScope.launch {
+                val currentUid = auth.currentUser?.uid ?: "mock_user_123"
+                val localCached = userDao?.getAllUsers()?.map { it.toDomain() } ?: emptyList()
+                val currentUserProfile = userDao?.getUser(currentUid)?.toDomain()
+                val userGender = currentUserProfile?.gender ?: Gender.MALE
+                val oppositeGender = if (userGender == Gender.MALE) Gender.FEMALE else Gender.MALE
+                
+                val filteredCached = localCached.filter { it.uid != currentUid && it.gender == oppositeGender }
+                if (filteredCached.isNotEmpty()) {
+                    allUsersCache = filteredCached
+                } else {
+                    val defaultMock = listOf(
+                        UserProfile(
+                            uid = "mock_user_2",
+                            name = "Fatima / فاطمة",
+                            gender = Gender.FEMALE,
+                            age = 24,
+                            city = "Cairo",
+                            country = "Egypt",
+                            imageUrl = "avatar_sister_purple",
+                            sect = Sect.SUNNI,
+                            prayerFrequency = PrayerFrequency.ALWAYS,
+                            modestyPreference = ModestyPreference.HIJAB,
+                            relocationWillingness = RelocationWillingness.OPEN,
+                            polygamyAcceptance = false,
+                            guardianName = "Mahmoud / محمود",
+                            guardianEmail = "mahmoud@mithaq.com",
+                            guardianStatus = "VERIFIED",
+                            verificationStatus = "VERIFIED",
+                            isPremium = true,
+                            subscriptionPlan = "GOLD",
+                            questionnaireAnswers = mapOf(
+                                "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt4", "q5" to "opt1",
+                                "q6" to "opt1", "q7" to "opt2", "q8" to "opt1", "q9" to "opt2", "q10" to "opt1"
+                            )
+                        ),
+                        UserProfile(
+                            uid = "mock_user_3",
+                            name = "Ahmad / أحمد",
+                            gender = Gender.MALE,
+                            age = 29,
+                            city = "Riyadh",
+                            country = "Saudi Arabia",
+                            imageUrl = "avatar_brother_green",
+                            sect = Sect.SUNNI,
+                            prayerFrequency = PrayerFrequency.ALWAYS,
+                            modestyPreference = ModestyPreference.DOES_NOT_MATTER,
+                            relocationWillingness = RelocationWillingness.YES,
+                            polygamyAcceptance = true,
+                            verificationStatus = "VERIFIED",
+                            isPremium = false,
+                            subscriptionPlan = "FREE",
+                            questionnaireAnswers = mapOf(
+                                "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt1", "q5" to "opt2",
+                                "q6" to "opt2", "q7" to "opt1", "q8" to "opt2", "q9" to "opt1", "q10" to "opt2"
+                            )
+                        )
+                    )
+                    defaultMock.forEach { userDao?.insertUser(it.toCached()) }
+                    allUsersCache = defaultMock.filter { it.uid != currentUid && it.gender == oppositeGender }
+                }
+                applyLocalFilters()
+                _isLoading.value = false
+            }
+            return
+        }
+
+        val isMock = try {
+            firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
+        } catch (e: Exception) {
+            true
+        }
+
         if (isMock) {
             _isLoading.value = true
             _errorMessage.value = null
             viewModelScope.launch {
                 kotlinx.coroutines.delay(500)
-                allUsersCache = listOf(
-                    UserProfile(
-                        uid = "mock_user_2",
-                        name = "Fatima Al-Zahra",
-                        gender = Gender.FEMALE,
-                        age = 24,
-                        city = "Riyadh",
-                        country = "Saudi Arabia",
-                        imageUrl = "",
-                        sect = Sect.SUNNI,
-                        prayerFrequency = PrayerFrequency.ALWAYS,
-                        modestyPreference = ModestyPreference.HIJAB,
-                        relocationWillingness = RelocationWillingness.YES,
-                        polygamyAcceptance = false
-                    ),
-                    UserProfile(
-                        uid = "mock_user_3",
-                        name = "Aisha Khan",
-                        gender = Gender.FEMALE,
-                        age = 27,
-                        city = "Dubai",
-                        country = "UAE",
-                        imageUrl = "",
-                        sect = Sect.SUNNI,
-                        prayerFrequency = PrayerFrequency.ALWAYS,
-                        modestyPreference = ModestyPreference.NIQAB,
-                        relocationWillingness = RelocationWillingness.OPEN,
-                        polygamyAcceptance = true
-                    ),
-                    UserProfile(
-                        uid = "mock_user_4",
-                        name = "Yasmin Masri",
-                        gender = Gender.FEMALE,
-                        age = 22,
-                        city = "Cairo",
-                        country = "Egypt",
-                        imageUrl = "",
-                        sect = Sect.SUNNI,
-                        prayerFrequency = PrayerFrequency.USUALLY,
-                        modestyPreference = ModestyPreference.HIJAB,
-                        relocationWillingness = RelocationWillingness.NO,
-                        polygamyAcceptance = false
+                val currentUid = auth.currentUser?.uid ?: "mock_user_123"
+                val localCached = userDao?.getAllUsers()?.map { it.toDomain() } ?: emptyList()
+                val currentUserProfile = userDao?.getUser(currentUid)?.toDomain()
+                val oppositeGender = if (currentUserProfile?.gender == Gender.MALE) Gender.FEMALE else Gender.MALE
+                
+                val filteredCached = localCached.filter { it.uid != currentUid && it.gender == oppositeGender }
+                if (filteredCached.isNotEmpty()) {
+                    allUsersCache = filteredCached
+                } else {
+                    val defaultMock = listOf(
+                        UserProfile(
+                            uid = "mock_user_2",
+                            name = "Fatima / فاطمة",
+                            gender = Gender.FEMALE,
+                            age = 24,
+                            city = "Cairo",
+                            country = "Egypt",
+                            imageUrl = "avatar_sister_purple",
+                            sect = Sect.SUNNI,
+                            prayerFrequency = PrayerFrequency.ALWAYS,
+                            modestyPreference = ModestyPreference.HIJAB,
+                            relocationWillingness = RelocationWillingness.OPEN,
+                            polygamyAcceptance = false,
+                            guardianName = "Mahmoud / محمود",
+                            guardianEmail = "mahmoud@mithaq.com",
+                            guardianStatus = "VERIFIED",
+                            verificationStatus = "VERIFIED",
+                            isPremium = true,
+                            subscriptionPlan = "GOLD",
+                            questionnaireAnswers = mapOf(
+                                "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt4", "q5" to "opt1",
+                                "q6" to "opt1", "q7" to "opt2", "q8" to "opt1", "q9" to "opt2", "q10" to "opt1"
+                            )
+                        ),
+                        UserProfile(
+                            uid = "mock_user_3",
+                            name = "Ahmad / أحمد",
+                            gender = Gender.MALE,
+                            age = 29,
+                            city = "Riyadh",
+                            country = "Saudi Arabia",
+                            imageUrl = "avatar_brother_green",
+                            sect = Sect.SUNNI,
+                            prayerFrequency = PrayerFrequency.ALWAYS,
+                            modestyPreference = ModestyPreference.DOES_NOT_MATTER,
+                            relocationWillingness = RelocationWillingness.YES,
+                            polygamyAcceptance = true,
+                            verificationStatus = "VERIFIED",
+                            isPremium = false,
+                            subscriptionPlan = "FREE",
+                            questionnaireAnswers = mapOf(
+                                "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt1", "q5" to "opt2",
+                                "q6" to "opt2", "q7" to "opt1", "q8" to "opt2", "q9" to "opt1", "q10" to "opt2"
+                            )
+                        ),
+                        UserProfile(
+                            uid = "mock_user_4",
+                            name = "Sarah / سارة",
+                            gender = Gender.FEMALE,
+                            age = 27,
+                            city = "Dubai",
+                            country = "UAE",
+                            imageUrl = "avatar_sister_purple",
+                            sect = Sect.SUNNI,
+                            prayerFrequency = PrayerFrequency.USUALLY,
+                            modestyPreference = ModestyPreference.HIJAB,
+                            relocationWillingness = RelocationWillingness.OPEN,
+                            polygamyAcceptance = false,
+                            guardianName = "Omar / عمر",
+                            guardianEmail = "omar@mithaq.com",
+                            guardianStatus = "PENDING",
+                            verificationStatus = "PENDING"
+                        )
                     )
-                )
+                    defaultMock.forEach { userDao?.insertUser(it.toCached()) }
+                    allUsersCache = defaultMock.filter { it.uid != currentUid && it.gender == oppositeGender }
+                }
                 applyLocalFilters()
                 _isLoading.value = false
             }
@@ -135,18 +254,29 @@ class SearchViewModel(
                         val imageUrl = doc.getString("imageUrl") ?: ""
                         
                         val sectStr = doc.getString("sect") ?: "SUNNI"
-                        val sect = Sect.valueOf(sectStr)
+                        val sect = try { Sect.valueOf(sectStr.uppercase()) } catch (e: Exception) { Sect.SUNNI }
                         
                         val prayerStr = doc.getString("prayerFrequency") ?: "ALWAYS"
-                        val prayer = PrayerFrequency.valueOf(prayerStr)
+                        val prayer = try { PrayerFrequency.valueOf(prayerStr.uppercase()) } catch (e: Exception) { PrayerFrequency.ALWAYS }
                         
                         val modestyStr = doc.getString("modestyPreference") ?: "HIJAB"
-                        val modesty = ModestyPreference.valueOf(modestyStr)
+                        val modesty = try { ModestyPreference.valueOf(modestyStr.uppercase()) } catch (e: Exception) { ModestyPreference.HIJAB }
                         
                         val relocationStr = doc.getString("relocationWillingness") ?: "OPEN"
-                        val relocation = RelocationWillingness.valueOf(relocationStr)
+                        val relocation = try { RelocationWillingness.valueOf(relocationStr.uppercase()) } catch (e: Exception) { RelocationWillingness.OPEN }
                         
                         val polygamy = doc.getBoolean("polygamyAcceptance") ?: false
+                        val guardianName = doc.getString("guardianName")
+                        val guardianEmail = doc.getString("guardianEmail")
+                        val guardianStatus = doc.getString("guardianStatus")
+                        val isWaliAccount = doc.getBoolean("isWaliAccount") ?: false
+                        val wardUid = doc.getString("wardUid")
+                        val verificationStatus = doc.getString("verificationStatus") ?: "NONE"
+                        val voiceIntroUrl = doc.getString("voiceIntroUrl")
+                        val isAdmin = doc.getBoolean("isAdmin") ?: false
+                        val isPremium = doc.getBoolean("isPremium") ?: false
+                        val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
+                        val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
 
                         UserProfile(
                             uid = uid,
@@ -160,19 +290,47 @@ class SearchViewModel(
                             prayerFrequency = prayer,
                             modestyPreference = modesty,
                             relocationWillingness = relocation,
-                            polygamyAcceptance = polygamy
+                            polygamyAcceptance = polygamy,
+                            guardianName = guardianName,
+                            guardianEmail = guardianEmail,
+                            guardianStatus = guardianStatus,
+                            isWaliAccount = isWaliAccount,
+                            wardUid = wardUid,
+                            verificationStatus = verificationStatus,
+                            voiceIntroUrl = voiceIntroUrl,
+                            isAdmin = isAdmin,
+                            isPremium = isPremium,
+                            subscriptionPlan = subscriptionPlan,
+                            questionnaireAnswers = questionnaireAnswers
                         )
                     } catch (e: Exception) {
                         null // Skip malformed profile documents
                     }
                 }
 
+                // Write fetched profiles to local Room database
+                profiles.forEach { userDao?.insertUser(it.toCached()) }
+
                 allUsersCache = profiles
                 applyLocalFilters()
                 _isLoading.value = false
             } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage ?: "Failed to load profiles."
-                _isLoading.value = false
+                // If network fails, load matching cached profiles from Room database
+                val localCached = userDao?.getAllUsers()?.map { it.toDomain() } ?: emptyList()
+                val currentUid = currentUser.uid
+                val currentUserProfile = userDao?.getUser(currentUid)?.toDomain()
+                val userGender = currentUserProfile?.gender ?: Gender.MALE
+                val oppositeGender = if (userGender == Gender.MALE) Gender.FEMALE else Gender.MALE
+                
+                val filteredCached = localCached.filter { it.uid != currentUid && it.gender == oppositeGender }
+                if (filteredCached.isNotEmpty()) {
+                    allUsersCache = filteredCached
+                    applyLocalFilters()
+                    _isLoading.value = false
+                } else {
+                    _errorMessage.value = e.localizedMessage ?: "Failed to load profiles."
+                    _isLoading.value = false
+                }
             }
         }
     }

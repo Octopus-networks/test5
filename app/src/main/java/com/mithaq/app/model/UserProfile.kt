@@ -34,7 +34,11 @@ data class UserProfile(
     val wardUid: String? = null,
     val verificationStatus: String = "NONE", // "NONE", "PENDING", "VERIFIED"
     val voiceIntroUrl: String? = null,
-    val fcmToken: String? = null
+    val fcmToken: String? = null,
+    val isAdmin: Boolean = false,
+    val isPremium: Boolean = false,
+    val subscriptionPlan: String = "FREE",
+    val questionnaireAnswers: Map<String, String> = emptyMap()
 )
 
 enum class Gender {

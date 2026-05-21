@@ -10,12 +10,33 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.mithaq.app.data.local.MithaqDatabase
+import com.mithaq.app.data.local.CachedMessage
+
+enum class CallState {
+    IDLE, REQUESTED, ACTIVE, ENDED
+}
 
 data class ChatMessage(
     val senderId: String = "",
     val content: String = "",
     val timestamp: Long = 0L,
     val translatedContent: String? = null
+)
+
+fun ChatMessage.toCached(roomId: String): CachedMessage = CachedMessage(
+    roomId = roomId,
+    senderId = senderId,
+    content = content,
+    timestamp = timestamp,
+    translatedContent = translatedContent
+)
+
+fun CachedMessage.toDomain(): ChatMessage = ChatMessage(
+    senderId = senderId,
+    content = content,
+    timestamp = timestamp,
+    translatedContent = translatedContent
 )
 
 /**
@@ -29,6 +50,9 @@ class ChaperonedChatViewModel(
     private val context: android.content.Context? = null
 ) : ViewModel() {
 
+    private val db = context?.let { MithaqDatabase.getDatabase(it) }
+    private val chatDao = db?.chatDao()
+
     private val _chatRoom = MutableStateFlow<ChatRoom?>(null)
     val chatRoom: StateFlow<ChatRoom?> = _chatRoom.asStateFlow()
 
@@ -38,14 +62,61 @@ class ChaperonedChatViewModel(
     private val _warningState = MutableStateFlow<String?>(null)
     val warningState: StateFlow<String?> = _warningState.asStateFlow()
 
+    private val _callState = MutableStateFlow(CallState.IDLE)
+    val callState: StateFlow<CallState> = _callState.asStateFlow()
+
     private var messagesListenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
 
     init {
         fetchChatRoomDetails()
         listenToMessages()
+
+        viewModelScope.launch {
+            chatDao?.getMessagesForRoomFlow(roomId)?.collect { cachedList ->
+                if (cachedList.isNotEmpty()) {
+                    _messages.value = cachedList.map { it.toDomain() }
+                }
+            }
+        }
+    }
+
+    fun requestCall() {
+        _callState.value = CallState.REQUESTED
+    }
+
+    fun acceptCall() {
+        _callState.value = CallState.ACTIVE
+    }
+
+    fun endCall() {
+        _callState.value = CallState.ENDED
+    }
+
+    fun resetCall() {
+        _callState.value = CallState.IDLE
     }
 
     private fun listenToMessages() {
+        val isOfflineSimulated = context?.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
+            ?.getBoolean("is_offline_simulated", false) ?: false
+
+        if (isOfflineSimulated) {
+            viewModelScope.launch {
+                val cached = chatDao?.getMessagesForRoom(roomId) ?: emptyList()
+                if (cached.isEmpty()) {
+                    val list = listOf(
+                        ChatMessage("system", "يعمل بدون اتصال - أرشيف الرسائل المحفوظ محلياً / Working Offline - Locally Cached Archive", 1716200000000L),
+                        ChatMessage("mock_other_user", "Assalamu Alaikum, I would like to inquire about your requirements.", 1716200010000L, "السلام عليكم، أود الاستفسار عن شروطك للموافقة."),
+                        ChatMessage("mock_user", "Wa Alaikum Assalam, my guardian is aware. Here are my conditions.", 1716200020000L, "وعليكم السلام، ولي أمري على علم بكل التفاصيل. إليك شروطي.")
+                    )
+                    list.forEach { msg ->
+                        chatDao?.insertMessage(msg.toCached(roomId))
+                    }
+                }
+            }
+            return
+        }
+
         val isMock = try {
             firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
         } catch (e: Exception) {
@@ -78,6 +149,14 @@ class ChaperonedChatViewModel(
                 ))
                 saveMessagesMock(list)
             }
+            
+            // Insert mock messages into Room DB for consistency
+            viewModelScope.launch {
+                list.forEach { msg ->
+                    chatDao?.insertMessage(msg.toCached(roomId))
+                }
+            }
+            
             _messages.value = list
             return
         }
@@ -99,6 +178,14 @@ class ChaperonedChatViewModel(
                         val translation = doc.getString("translation")
                         ChatMessage(senderId, content, timestamp, translation)
                     }
+                    
+                    // Insert into Room DB cache
+                    viewModelScope.launch {
+                        list.forEach { msg ->
+                            chatDao?.insertMessage(msg.toCached(roomId))
+                        }
+                    }
+                    
                     _messages.value = list
                 }
             }
@@ -113,6 +200,46 @@ class ChaperonedChatViewModel(
      * Fetches metadata of the chat room (chaperone status, wali details).
      */
     private fun fetchChatRoomDetails() {
+        val isOfflineSimulated = context?.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
+            ?.getBoolean("is_offline_simulated", false) ?: false
+
+        if (isOfflineSimulated) {
+            viewModelScope.launch {
+                val cachedRoom = chatDao?.getChatRoom(roomId)
+                if (cachedRoom != null) {
+                    _chatRoom.value = ChatRoom(
+                        roomId = cachedRoom.roomId,
+                        memberIds = cachedRoom.memberIds,
+                        isChaperoned = cachedRoom.isChaperoned,
+                        waliEmail = cachedRoom.waliEmail,
+                        lastMessage = cachedRoom.lastMessage,
+                        lastMessageTimestamp = cachedRoom.lastMessageTimestamp
+                    )
+                } else {
+                    val mockRoom = ChatRoom(
+                        roomId = roomId,
+                        memberIds = roomId.split("_"),
+                        isChaperoned = true,
+                        waliEmail = "guardian@mithaq.com",
+                        lastMessage = "Wa Alaikum Assalam, my guardian is aware. Here are my conditions.",
+                        lastMessageTimestamp = System.currentTimeMillis()
+                    )
+                    _chatRoom.value = mockRoom
+                    chatDao?.insertChatRoom(
+                        com.mithaq.app.data.local.CachedChatRoom(
+                            roomId = mockRoom.roomId,
+                            memberIds = mockRoom.memberIds,
+                            isChaperoned = mockRoom.isChaperoned,
+                            waliEmail = mockRoom.waliEmail,
+                            lastMessage = mockRoom.lastMessage,
+                            lastMessageTimestamp = mockRoom.lastMessageTimestamp
+                        )
+                    )
+                }
+            }
+            return
+        }
+
         viewModelScope.launch {
             try {
                 val doc = firestore.collection("chatRooms")
@@ -186,38 +313,52 @@ class ChaperonedChatViewModel(
             return
         }
 
+        val isOfflineSimulated = context?.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
+            ?.getBoolean("is_offline_simulated", false) ?: false
+
+        if (isOfflineSimulated) {
+            viewModelScope.launch {
+                val translationHelper = MockTranslationHelper()
+                val targetLang = if (messageText.any { it in '\u0600'..'\u06FF' }) "en" else "ar"
+                val translation = try { translationHelper.translateText(messageText, targetLang) } catch(e: Exception) { null }
+                val newMsg = ChatMessage(currentUserId, messageText.trim(), System.currentTimeMillis(), translation)
+                
+                // Cache locally in Room DB immediately
+                chatDao?.insertMessage(newMsg.toCached(roomId))
+                
+                // Update local list manually so user sees it instantly
+                val list = _messages.value.toMutableList()
+                list.add(newMsg)
+                _messages.value = list
+            }
+            return
+        }
+
         val isMock = try {
             firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
         } catch (e: Exception) {
             true
         }
-        if (isMock) {
-            viewModelScope.launch {
+
+        viewModelScope.launch {
+            val translationHelper = MockTranslationHelper()
+            val targetLang = if (messageText.any { it in '\u0600'..'\u06FF' }) "en" else "ar"
+            val translation = try { translationHelper.translateText(messageText, targetLang) } catch(e: Exception) { null }
+            val newMsg = ChatMessage(currentUserId, messageText.trim(), System.currentTimeMillis(), translation)
+            
+            // Cache locally in Room DB immediately
+            chatDao?.insertMessage(newMsg.toCached(roomId))
+            
+            if (isMock) {
                 val list = _messages.value.toMutableList()
-                val translationHelper = MockTranslationHelper()
-                val targetLang = if (messageText.any { it in '\u0600'..'\u06FF' }) "en" else "ar"
-                val translation = try { translationHelper.translateText(messageText, targetLang) } catch(e: Exception) { null }
-                val newMsg = ChatMessage(currentUserId, messageText.trim(), System.currentTimeMillis(), translation)
                 list.add(newMsg)
                 _messages.value = list
                 saveMessagesMock(list)
+                return@launch
             }
-            return
-        }
 
-        viewModelScope.launch {
             try {
                 val timestamp = System.currentTimeMillis()
-                
-                // Try translation
-                val translationHelper = MockTranslationHelper()
-                val targetLang = if (messageText.any { it in '\u0600'..'\u06FF' }) "en" else "ar"
-                val translation = try {
-                    translationHelper.translateText(messageText, targetLang)
-                } catch (e: Exception) {
-                    null
-                }
-
                 val messagePayload = mutableMapOf<String, Any>(
                     "senderId" to currentUserId,
                     "content" to messageText.trim(),
@@ -271,7 +412,7 @@ class ChaperonedChatViewModel(
                 }
 
             } catch (e: Exception) {
-                // Handle delivery errors
+                // If network/firestore write fails, it is already cached locally in Room DB
             }
         }
     }

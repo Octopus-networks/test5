@@ -11,8 +11,15 @@ import com.mithaq.app.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.mithaq.app.data.local.MithaqDatabase
+import com.mithaq.app.data.local.CachedUserProfile
+import com.mithaq.app.data.local.toCached
+import com.mithaq.app.data.local.toDomain
 
 sealed interface AuthState {
     object Idle : AuthState
@@ -31,11 +38,22 @@ class AuthViewModel(
     private val context: android.content.Context? = null
 ) : ViewModel() {
 
+    private val db = context?.let { MithaqDatabase.getDatabase(it) }
+    private val userDao = db?.userDao()
+
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     private val _currentUserProfile = MutableStateFlow<UserProfile?>(null)
     val currentUserProfile: StateFlow<UserProfile?> = _currentUserProfile.asStateFlow()
+
+    val allUsersFlow: Flow<List<UserProfile>> = userDao?.getAllUsersFlow()?.map { list ->
+        list.map { it.toDomain() }
+    } ?: flowOf(emptyList())
+
+    val pendingVerificationUsers: Flow<List<UserProfile>> = userDao?.getPendingUsersFlow()?.map { list ->
+        list.map { it.toDomain() }
+    } ?: flowOf(emptyList())
 
     init {
         val currentUser = auth.currentUser
@@ -43,80 +61,403 @@ class AuthViewModel(
             _authState.value = AuthState.Authenticated(currentUser.uid)
             fetchCurrentUserProfile(currentUser.uid)
         }
+        prepopulateMockUsersIfEmpty()
+    }
+
+    private fun prepopulateMockUsersIfEmpty() {
+        viewModelScope.launch {
+            try {
+                if (userDao != null) {
+                    val existing = userDao.getAllUsers()
+                    if (existing.isEmpty()) {
+                        val mockUsers = listOf(
+                            CachedUserProfile(
+                                uid = "mock_user_2",
+                                name = "Fatima / فاطمة",
+                                gender = "FEMALE",
+                                age = 24,
+                                city = "Cairo",
+                                country = "Egypt",
+                                imageUrl = "avatar_sister_purple",
+                                sect = "SUNNI",
+                                prayerFrequency = "ALWAYS",
+                                modestyPreference = "HIJAB",
+                                relocationWillingness = "OPEN",
+                                polygamyAcceptance = false,
+                                guardianName = "Mahmoud / محمود",
+                                guardianEmail = "mahmoud@mithaq.com",
+                                guardianStatus = "VERIFIED",
+                                photoAccessApprovedUsers = emptyList(),
+                                photoAccessRequests = emptyList(),
+                                isWaliAccount = false,
+                                wardUid = null,
+                                verificationStatus = "VERIFIED",
+                                voiceIntroUrl = null,
+                                fcmToken = null,
+                                isAdmin = false,
+                                isPremium = true,
+                                subscriptionPlan = "GOLD",
+                                questionnaireAnswers = mapOf(
+                                    "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt4", "q5" to "opt1",
+                                    "q6" to "opt1", "q7" to "opt2", "q8" to "opt1", "q9" to "opt2", "q10" to "opt1"
+                                )
+                            ),
+                            CachedUserProfile(
+                                uid = "mock_user_3",
+                                name = "Ahmad / أحمد",
+                                gender = "MALE",
+                                age = 29,
+                                city = "Riyadh",
+                                country = "Saudi Arabia",
+                                imageUrl = "avatar_brother_green",
+                                sect = "SUNNI",
+                                prayerFrequency = "ALWAYS",
+                                modestyPreference = "DOES_NOT_MATTER",
+                                relocationWillingness = "YES",
+                                polygamyAcceptance = true,
+                                guardianName = null,
+                                guardianEmail = null,
+                                guardianStatus = null,
+                                photoAccessApprovedUsers = emptyList(),
+                                photoAccessRequests = emptyList(),
+                                isWaliAccount = false,
+                                wardUid = null,
+                                verificationStatus = "VERIFIED",
+                                voiceIntroUrl = null,
+                                fcmToken = null,
+                                isAdmin = false,
+                                isPremium = false,
+                                subscriptionPlan = "FREE",
+                                questionnaireAnswers = mapOf(
+                                    "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt1", "q5" to "opt2",
+                                    "q6" to "opt2", "q7" to "opt1", "q8" to "opt2", "q9" to "opt1", "q10" to "opt2"
+                                )
+                            ),
+                            CachedUserProfile(
+                                uid = "mock_user_4",
+                                name = "Sarah / سارة",
+                                gender = "FEMALE",
+                                age = 27,
+                                city = "Dubai",
+                                country = "UAE",
+                                imageUrl = "avatar_sister_purple",
+                                sect = "SUNNI",
+                                prayerFrequency = "USUALLY",
+                                modestyPreference = "HIJAB",
+                                relocationWillingness = "OPEN",
+                                polygamyAcceptance = false,
+                                guardianName = "Omar / عمر",
+                                guardianEmail = "omar@mithaq.com",
+                                guardianStatus = "PENDING",
+                                photoAccessApprovedUsers = emptyList(),
+                                photoAccessRequests = emptyList(),
+                                isWaliAccount = false,
+                                wardUid = null,
+                                verificationStatus = "PENDING",
+                                voiceIntroUrl = null,
+                                fcmToken = null,
+                                isAdmin = false,
+                                isPremium = false,
+                                subscriptionPlan = "FREE",
+                                questionnaireAnswers = emptyMap()
+                            ),
+                            CachedUserProfile(
+                                uid = "wali@mithaq.com",
+                                name = "Wali / ولي أمر",
+                                gender = "MALE",
+                                age = 52,
+                                city = "Cairo",
+                                country = "Egypt",
+                                imageUrl = "avatar_brother_green",
+                                sect = "SUNNI",
+                                prayerFrequency = "ALWAYS",
+                                modestyPreference = "DOES_NOT_MATTER",
+                                relocationWillingness = "NO",
+                                polygamyAcceptance = false,
+                                guardianName = null,
+                                guardianEmail = null,
+                                guardianStatus = null,
+                                photoAccessApprovedUsers = emptyList(),
+                                photoAccessRequests = emptyList(),
+                                isWaliAccount = true,
+                                wardUid = "mock_user_123",
+                                verificationStatus = "VERIFIED",
+                                voiceIntroUrl = null,
+                                fcmToken = null,
+                                isAdmin = false,
+                                isPremium = false,
+                                subscriptionPlan = "FREE",
+                                questionnaireAnswers = emptyMap()
+                            ),
+                            CachedUserProfile(
+                                uid = "admin@mithaq.com",
+                                name = "Admin / مدير النظام",
+                                gender = "MALE",
+                                age = 35,
+                                city = "Cairo",
+                                country = "Egypt",
+                                imageUrl = "avatar_brother_green",
+                                sect = "SUNNI",
+                                prayerFrequency = "ALWAYS",
+                                modestyPreference = "DOES_NOT_MATTER",
+                                relocationWillingness = "OPEN",
+                                polygamyAcceptance = false,
+                                guardianName = null,
+                                guardianEmail = null,
+                                guardianStatus = null,
+                                photoAccessApprovedUsers = emptyList(),
+                                photoAccessRequests = emptyList(),
+                                isWaliAccount = false,
+                                wardUid = null,
+                                verificationStatus = "VERIFIED",
+                                voiceIntroUrl = null,
+                                fcmToken = null,
+                                isAdmin = true,
+                                isPremium = true,
+                                subscriptionPlan = "GOLD",
+                                questionnaireAnswers = emptyMap()
+                            )
+                        )
+                        userDao.insertUsers(mockUsers)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun purchasePremiumPlan(planId: String) {
+        viewModelScope.launch {
+            val current = _currentUserProfile.value ?: return@launch
+            val updated = current.copy(isPremium = true, subscriptionPlan = planId)
+            _currentUserProfile.value = updated
+            userDao?.insertUser(updated.toCached())
+
+            val isMock = try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+
+            if (isMock) {
+                context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
+                    putBoolean("isPremium", true)
+                    putString("subscriptionPlan", planId)
+                    apply()
+                }
+            } else {
+                try {
+                    firestore.collection("users").document(current.uid).update(
+                        mapOf(
+                            "isPremium" to true,
+                            "subscriptionPlan" to planId
+                        )
+                    ).await()
+                } catch (e: Exception) {
+                    // Ignored / offline sync later
+                }
+            }
+        }
+    }
+
+    fun adminUpdateVerification(targetUid: String, status: String) {
+        viewModelScope.launch {
+            val cachedUser = userDao?.getUser(targetUid)
+            if (cachedUser != null) {
+                userDao.insertUser(cachedUser.copy(verificationStatus = status))
+            }
+
+            if (targetUid == _currentUserProfile.value?.uid) {
+                _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = status)
+            }
+
+            val isMock = try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+
+            if (isMock) {
+                if (targetUid == _currentUserProfile.value?.uid) {
+                    context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
+                        putString("verificationStatus", status)
+                        apply()
+                    }
+                }
+            } else {
+                try {
+                    firestore.collection("users").document(targetUid).update("verificationStatus", status).await()
+                } catch (e: Exception) {
+                    // Ignored
+                }
+            }
+        }
+    }
+
+    fun saveQuestionnaireAnswers(answers: Map<String, String>) {
+        viewModelScope.launch {
+            val current = _currentUserProfile.value ?: return@launch
+            val updated = current.copy(questionnaireAnswers = answers)
+            _currentUserProfile.value = updated
+            userDao?.insertUser(updated.toCached())
+
+            val isMock = try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+
+            if (isMock) {
+                val jsonStr = org.json.JSONObject(answers).toString()
+                context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
+                    putString("questionnaireAnswers", jsonStr)
+                    apply()
+                }
+            } else {
+                try {
+                    firestore.collection("users").document(current.uid).update("questionnaireAnswers", answers).await()
+                } catch (e: Exception) {
+                    // Ignored
+                }
+            }
+        }
     }
 
     fun fetchCurrentUserProfile(uid: String) {
         viewModelScope.launch {
-            try {
-                val isMock = try {
-                    auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
-                } catch (e: Exception) {
-                    true
+            val isOfflineSimulated = context?.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
+                ?.getBoolean("is_offline_simulated", false) ?: false
+
+            if (isOfflineSimulated) {
+                val cached = userDao?.getUser(uid)
+                if (cached != null) {
+                    _currentUserProfile.value = cached.toDomain()
+                } else {
+                    val fallback = UserProfile(
+                        uid = uid,
+                        name = "Mock Offline User",
+                        gender = Gender.MALE,
+                        age = 26,
+                        city = "Cairo",
+                        country = "Egypt",
+                        imageUrl = "avatar_brother_green",
+                        sect = Sect.SUNNI,
+                        prayerFrequency = PrayerFrequency.ALWAYS,
+                        modestyPreference = ModestyPreference.HIJAB,
+                        relocationWillingness = RelocationWillingness.OPEN,
+                        isWaliAccount = false,
+                        verificationStatus = "VERIFIED",
+                        isAdmin = false,
+                        isPremium = false,
+                        subscriptionPlan = "FREE",
+                        questionnaireAnswers = emptyMap()
+                    )
+                    _currentUserProfile.value = fallback
+                    userDao?.insertUser(fallback.toCached())
                 }
+                return@launch
+            }
 
-                if (isMock) {
-                    val prefs = context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
-                    val savedUid = prefs?.getString("uid", null)
-                    if (savedUid != null) {
-                        val name = prefs.getString("name", "Mock User") ?: "Mock User"
-                        val genderStr = prefs.getString("gender", "MALE") ?: "MALE"
-                        val gender = if (genderStr == "FEMALE") Gender.FEMALE else Gender.MALE
-                        val age = prefs.getInt("age", 26)
-                        val city = prefs.getString("city", "Cairo") ?: "Cairo"
-                        val country = prefs.getString("country", "Egypt") ?: "Egypt"
-                        val imageUrl = prefs.getString("imageUrl", "") ?: ""
-                        val sectStr = prefs.getString("sect", "SUNNI") ?: "SUNNI"
-                        val sect = try { Sect.valueOf(sectStr) } catch(e: Exception) { Sect.SUNNI }
-                        val prayerStr = prefs.getString("prayerFrequency", "ALWAYS") ?: "ALWAYS"
-                        val prayer = try { PrayerFrequency.valueOf(prayerStr) } catch(e: Exception) { PrayerFrequency.ALWAYS }
-                        val modestyStr = prefs.getString("modestyPreference", "HIJAB") ?: "HIJAB"
-                        val modesty = try { ModestyPreference.valueOf(modestyStr) } catch(e: Exception) { ModestyPreference.HIJAB }
-                        val relocationStr = prefs.getString("relocationWillingness", "OPEN") ?: "OPEN"
-                        val relocation = try { RelocationWillingness.valueOf(relocationStr) } catch(e: Exception) { RelocationWillingness.OPEN }
-                        
-                        val isWaliAccount = prefs.getBoolean("isWaliAccount", false)
-                        val wardUid = prefs.getString("wardUid", null)
-                        val verificationStatus = prefs.getString("verificationStatus", "NONE") ?: "NONE"
-                        val voiceIntroUrl = prefs.getString("voiceIntroUrl", null)
-                        val fcmToken = prefs.getString("fcmToken", null)
+            val isMock = try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
 
-                        _currentUserProfile.value = UserProfile(
-                            uid = savedUid,
-                            name = name,
-                            gender = gender,
-                            age = age,
-                            city = city,
-                            country = country,
-                            imageUrl = imageUrl,
-                            sect = sect,
-                            prayerFrequency = prayer,
-                            modestyPreference = modesty,
-                            relocationWillingness = relocation,
-                            isWaliAccount = isWaliAccount,
-                            wardUid = wardUid,
-                            verificationStatus = verificationStatus,
-                            voiceIntroUrl = voiceIntroUrl,
-                            fcmToken = fcmToken
-                        )
-                    } else {
-                        _currentUserProfile.value = UserProfile(
-                            uid = uid,
-                            name = "Mock User",
-                            gender = Gender.MALE,
-                            age = 26,
-                            city = "Cairo",
-                            country = "Egypt",
-                            imageUrl = "avatar_brother_green",
-                            sect = Sect.SUNNI,
-                            prayerFrequency = PrayerFrequency.ALWAYS,
-                            modestyPreference = ModestyPreference.HIJAB,
-                            relocationWillingness = RelocationWillingness.OPEN,
-                            isWaliAccount = false,
-                            verificationStatus = "NONE"
-                        )
+            if (isMock) {
+                val prefs = context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+                val savedUid = prefs?.getString("uid", null)
+                if (savedUid != null) {
+                    val name = prefs.getString("name", "Mock User") ?: "Mock User"
+                    val genderStr = prefs.getString("gender", "MALE") ?: "MALE"
+                    val gender = if (genderStr == "FEMALE") Gender.FEMALE else Gender.MALE
+                    val age = prefs.getInt("age", 26)
+                    val city = prefs.getString("city", "Cairo") ?: "Cairo"
+                    val country = prefs.getString("country", "Egypt") ?: "Egypt"
+                    val imageUrl = prefs.getString("imageUrl", "") ?: ""
+                    val sectStr = prefs.getString("sect", "SUNNI") ?: "SUNNI"
+                    val sect = try { Sect.valueOf(sectStr) } catch(e: Exception) { Sect.SUNNI }
+                    val prayerStr = prefs.getString("prayerFrequency", "ALWAYS") ?: "ALWAYS"
+                    val prayer = try { PrayerFrequency.valueOf(prayerStr) } catch(e: Exception) { PrayerFrequency.ALWAYS }
+                    val modestyStr = prefs.getString("modestyPreference", "HIJAB") ?: "HIJAB"
+                    val modesty = try { ModestyPreference.valueOf(modestyStr) } catch(e: Exception) { ModestyPreference.HIJAB }
+                    val relocationStr = prefs.getString("relocationWillingness", "OPEN") ?: "OPEN"
+                    val relocation = try { RelocationWillingness.valueOf(relocationStr) } catch(e: Exception) { RelocationWillingness.OPEN }
+                    
+                    val isWaliAccount = prefs.getBoolean("isWaliAccount", false)
+                    val wardUid = prefs.getString("wardUid", null)
+                    val verificationStatus = prefs.getString("verificationStatus", "NONE") ?: "NONE"
+                    val voiceIntroUrl = prefs.getString("voiceIntroUrl", null)
+                    val fcmToken = prefs.getString("fcmToken", null)
+                    val isAdmin = prefs.getBoolean("isAdmin", false)
+                    val isPremium = prefs.getBoolean("isPremium", false)
+                    val subscriptionPlan = prefs.getString("subscriptionPlan", "FREE") ?: "FREE"
+                    val questionnaireAnswersStr = prefs.getString("questionnaireAnswers", "{}") ?: "{}"
+                    val questionnaireAnswers = try {
+                        val obj = org.json.JSONObject(questionnaireAnswersStr)
+                        val map = mutableMapOf<String, String>()
+                        val keys = obj.keys()
+                        while (keys.hasNext()) {
+                            val key = keys.next()
+                            map[key] = obj.getString(key)
+                        }
+                        map
+                    } catch (e: Exception) {
+                        emptyMap<String, String>()
                     }
-                    return@launch
+
+                    val profile = UserProfile(
+                        uid = savedUid,
+                        name = name,
+                        gender = gender,
+                        age = age,
+                        city = city,
+                        country = country,
+                        imageUrl = imageUrl,
+                        sect = sect,
+                        prayerFrequency = prayer,
+                        modestyPreference = modesty,
+                        relocationWillingness = relocation,
+                        isWaliAccount = isWaliAccount,
+                        wardUid = wardUid,
+                        verificationStatus = verificationStatus,
+                        voiceIntroUrl = voiceIntroUrl,
+                        fcmToken = fcmToken,
+                        isAdmin = isAdmin,
+                        isPremium = isPremium,
+                        subscriptionPlan = subscriptionPlan,
+                        questionnaireAnswers = questionnaireAnswers
+                    )
+                    _currentUserProfile.value = profile
+                    userDao?.insertUser(profile.toCached())
+                } else {
+                    val fallback = UserProfile(
+                        uid = uid,
+                        name = "Mock User",
+                        gender = Gender.MALE,
+                        age = 26,
+                        city = "Cairo",
+                        country = "Egypt",
+                        imageUrl = "avatar_brother_green",
+                        sect = Sect.SUNNI,
+                        prayerFrequency = PrayerFrequency.ALWAYS,
+                        modestyPreference = ModestyPreference.HIJAB,
+                        relocationWillingness = RelocationWillingness.OPEN,
+                        isWaliAccount = false,
+                        verificationStatus = "NONE",
+                        isAdmin = false,
+                        isPremium = false,
+                        subscriptionPlan = "FREE",
+                        questionnaireAnswers = emptyMap()
+                    )
+                    _currentUserProfile.value = fallback
+                    userDao?.insertUser(fallback.toCached())
                 }
+                return@launch
+            }
+
+            try {
                 val doc = firestore.collection("users").document(uid).get().await()
                 if (doc.exists()) {
                     val name = doc.getString("name") ?: ""
@@ -147,8 +488,12 @@ class AuthViewModel(
                     val verificationStatus = doc.getString("verificationStatus") ?: "NONE"
                     val voiceIntroUrl = doc.getString("voiceIntroUrl")
                     val fcmToken = doc.getString("fcmToken")
+                    val isAdmin = doc.getBoolean("isAdmin") ?: false
+                    val isPremium = doc.getBoolean("isPremium") ?: false
+                    val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
+                    val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
 
-                    _currentUserProfile.value = UserProfile(
+                    val profile = UserProfile(
                         uid = uid,
                         name = name,
                         gender = gender,
@@ -169,20 +514,29 @@ class AuthViewModel(
                         wardUid = wardUid,
                         verificationStatus = verificationStatus,
                         voiceIntroUrl = voiceIntroUrl,
-                        fcmToken = fcmToken
+                        fcmToken = fcmToken,
+                        isAdmin = isAdmin,
+                        isPremium = isPremium,
+                        subscriptionPlan = subscriptionPlan,
+                        questionnaireAnswers = questionnaireAnswers
                     )
+                    _currentUserProfile.value = profile
+                    userDao?.insertUser(profile.toCached())
 
-                    // Retrieve & register FCM token automatically
                     try {
                         val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
                         firestore.collection("users").document(uid).update("fcmToken", token)
                         _currentUserProfile.value = _currentUserProfile.value?.copy(fcmToken = token)
                     } catch(e: Exception) {
-                        // Firebase messaging not configured or network error
+                        // ignored
                     }
                 }
             } catch (e: Exception) {
-                // Fail-safe
+                // Offline fallback from Room Cache
+                val cached = userDao?.getUser(uid)
+                if (cached != null) {
+                    _currentUserProfile.value = cached.toDomain()
+                }
             }
         }
     }
@@ -575,6 +929,21 @@ class AuthViewModel(
                 firestore.collection("users").document(userId)
                     .update("verificationStatus", "VERIFIED").await()
                 _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "VERIFIED")
+            }
+        }
+    }
+
+    fun updateMockRole(isWali: Boolean, isAdmin: Boolean, context: android.content.Context) {
+        viewModelScope.launch {
+            val current = _currentUserProfile.value ?: return@launch
+            val updated = current.copy(isWaliAccount = isWali, isAdmin = isAdmin)
+            _currentUserProfile.value = updated
+            userDao?.insertUser(updated.toCached())
+            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            prefs.edit().apply {
+                putBoolean("isWaliAccount", isWali)
+                putBoolean("isAdmin", isAdmin)
+                apply()
             }
         }
     }
