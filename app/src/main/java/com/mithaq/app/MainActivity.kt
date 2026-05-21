@@ -37,6 +37,7 @@ import com.mithaq.app.ui.match.MatchScoreCalculator
 import com.mithaq.app.ui.photo.PhotoAccessRequestCard
 import com.mithaq.app.ui.photo.PhotoAccessState
 import com.mithaq.app.ui.theme.MithaqTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -89,6 +90,15 @@ fun MithaqAppNavigation(
     val searchViewModel = remember { SearchViewModel() }
     val guardianViewModel = remember { GuardianViewModel() }
 
+    val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotEmpty()) {
+            authViewModel.fetchCurrentUserProfile(currentUserId)
+            searchViewModel.fetchUsers()
+        }
+    }
+
     when (currentScreen) {
         "login" -> {
             LoginScreen(
@@ -117,6 +127,8 @@ fun MithaqAppNavigation(
         "home" -> {
             HomeScreen(
                 currentUserId = currentUserId,
+                currentUserProfile = currentUserProfile,
+                authViewModel = authViewModel,
                 searchViewModel = searchViewModel,
                 guardianViewModel = guardianViewModel,
                 isArabic = isArabic,
@@ -134,6 +146,8 @@ fun MithaqAppNavigation(
 @Composable
 fun HomeScreen(
     currentUserId: String,
+    currentUserProfile: UserProfile?,
+    authViewModel: AuthViewModel,
     searchViewModel: SearchViewModel,
     guardianViewModel: GuardianViewModel,
     isArabic: Boolean,
@@ -143,6 +157,17 @@ fun HomeScreen(
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf(strings.searchTab, strings.chatTab, strings.waliTab, "Modesty")
+
+    val profile = currentUserProfile ?: UserProfile(
+        uid = currentUserId,
+        name = "User",
+        gender = Gender.MALE,
+        age = 25,
+        city = "Cairo",
+        country = "Egypt"
+    )
+
+    var selectedChatUser by remember { mutableStateOf<UserProfile?>(null) }
 
     Scaffold(
         topBar = {
@@ -186,37 +211,47 @@ fun HomeScreen(
                 .fillMaxSize()
         ) {
             when (selectedTab) {
-                0 -> SearchTabContent(searchViewModel)
-                1 -> ChatTabContent()
-                2 -> GuardianTabContent(guardianViewModel)
-                3 -> ModestyTabContent()
+                0 -> SearchTabContent(
+                    currentUser = profile,
+                    viewModel = searchViewModel,
+                    onSelectMatch = { match ->
+                        selectedChatUser = match
+                        selectedTab = 1
+                    }
+                )
+                1 -> ChatTabContent(
+                    currentUser = profile,
+                    targetUser = selectedChatUser
+                )
+                2 -> GuardianTabContent(
+                    currentUser = profile,
+                    viewModel = guardianViewModel,
+                    onInviteSuccess = {
+                        authViewModel.fetchCurrentUserProfile(currentUserId)
+                    }
+                )
+                3 -> ModestyTabContent(
+                    currentUser = profile,
+                    targetUser = selectedChatUser,
+                    onRefreshProfile = {
+                        authViewModel.fetchCurrentUserProfile(currentUserId)
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun SearchTabContent(viewModel: SearchViewModel) {
+fun SearchTabContent(
+    currentUser: UserProfile,
+    viewModel: SearchViewModel,
+    onSelectMatch: (UserProfile) -> Unit
+) {
     var showFilters by remember { mutableStateOf(false) }
-    val currentCriteria by viewModel.filterCriteria.collectAsState()
-    
-    // Hardcoded profiles to calculate compatibility score against
-    val currentUser = UserProfile(
-        sect = Sect.SUNNI,
-        prayerFrequency = PrayerFrequency.ALWAYS,
-        modestyPreference = ModestyPreference.HIJAB,
-        relocationWillingness = RelocationWillingness.OPEN,
-        age = 26
-    )
-
-    val mockProfiles = remember {
-        listOf(
-            UserProfile(name = "Fatima Al-Hassan", age = 24, sect = Sect.SUNNI, prayerFrequency = PrayerFrequency.ALWAYS, modestyPreference = ModestyPreference.HIJAB, relocationWillingness = RelocationWillingness.YES),
-            UserProfile(name = "Aisha Mansoor", age = 23, sect = Sect.SUNNI, prayerFrequency = PrayerFrequency.USUALLY, modestyPreference = ModestyPreference.NIQAB, relocationWillingness = RelocationWillingness.NO),
-            UserProfile(name = "Omar Farooq", age = 28, sect = Sect.SUNNI, prayerFrequency = PrayerFrequency.ALWAYS, modestyPreference = ModestyPreference.NONE, relocationWillingness = RelocationWillingness.OPEN),
-            UserProfile(name = "Zainab Al-Majed", age = 25, sect = Sect.SHIA, prayerFrequency = PrayerFrequency.SOMETIMES, modestyPreference = ModestyPreference.HIJAB, relocationWillingness = RelocationWillingness.OPEN)
-        )
-    }
+    val searchResults by viewModel.searchResults.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.errorMessage.collectAsState()
 
     Column(
         modifier = Modifier
@@ -241,28 +276,49 @@ fun SearchTabContent(viewModel: SearchViewModel) {
         
         Spacer(modifier = Modifier.height(8.dp))
 
-        mockProfiles.forEach { profile ->
-            val score = MatchScoreCalculator.calculateScore(currentUser, profile)
-            
-            Card(
+        if (isLoading) {
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (error != null) {
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Text(text = error ?: "An error occurred", color = MaterialTheme.colorScheme.error)
+            }
+        } else if (searchResults.isEmpty()) {
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Text(text = "No matches found. Try adjusting filters.", modifier = Modifier.padding(16.dp))
+            }
+        } else {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp),
-                shape = RoundedCornerShape(12.dp)
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(text = profile.name, fontWeight = FontWeight.Bold)
-                        Text(text = "${profile.age} yrs • ${profile.sect.displayName}", style = MaterialTheme.typography.bodySmall)
-                        Text(text = "Modesty: ${profile.modestyPreference.displayName}", style = MaterialTheme.typography.bodySmall)
+                searchResults.forEach { profile ->
+                    val score = MatchScoreCalculator.calculateScore(currentUser, profile)
+                    
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        onClick = { onSelectMatch(profile) }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(text = profile.name, fontWeight = FontWeight.Bold)
+                                Text(text = "${profile.age} yrs • ${profile.sect.displayName}", style = MaterialTheme.typography.bodySmall)
+                                Text(text = "Modesty: ${profile.modestyPreference.displayName}", style = MaterialTheme.typography.bodySmall)
+                            }
+                            MatchScoreBadge(score = score, size = 50.dp)
+                        }
                     }
-                    MatchScoreBadge(score = score, size = 50.dp)
                 }
             }
         }
@@ -277,85 +333,106 @@ fun SearchTabContent(viewModel: SearchViewModel) {
 }
 
 @Composable
-fun ChatTabContent() {
-    val mockChatViewModel = remember { ChaperonedChatViewModel("demo_room_1") }
-    val chatRoomState by mockChatViewModel.chatRoom.collectAsState()
-
-    var mockMessageText by remember { mutableStateOf("") }
-    val mockMessages = remember {
-        mutableStateListOf(
-            "Assalamu Alaikum, I would like to inquire about your requirements." to "السلام عليكم، أود الاستفسار عن شروطك للموافقة.",
-            "Wa Alaikum Assalam, my guardian is aware. Here are my conditions." to "وعليكم السلام، ولي أمري على علم بكل التفاصيل. إليك شروطي."
-        )
+fun ChatTabContent(
+    currentUser: UserProfile,
+    targetUser: UserProfile?
+) {
+    if (targetUser == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "Select a profile from the Search tab to start chatting.", textAlign = TextAlign.Center)
+        }
+        return
     }
+
+    val roomId = remember(currentUser.uid, targetUser.uid) {
+        val first = minOf(currentUser.uid, targetUser.uid)
+        val second = maxOf(currentUser.uid, targetUser.uid)
+        "${first}_${second}"
+    }
+
+    val chatViewModel = remember(roomId) { ChaperonedChatViewModel(roomId) }
+    val chatRoomState by chatViewModel.chatRoom.collectAsState()
+    val messages by chatViewModel.messages.collectAsState()
+
+    var messageText by remember { mutableStateOf("") }
+    val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Wali monitoring banner
+        val isChaperoned = chatRoomState?.isChaperoned ?: true
+        val waliEmail = chatRoomState?.waliEmail ?: (currentUser.guardianEmail ?: "guardian@mithaq.com")
+
         ChaperonedChatBanner(
-            waliEmail = "guardian@mithaq.com",
-            isChaperoned = true
+            waliEmail = waliEmail,
+            isChaperoned = isChaperoned
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Chat logs
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            mockMessages.forEach { (en, ar) ->
+            messages.forEach { msg ->
+                val isMe = msg.senderId == currentUser.uid
                 ChatBubble(
-                    messageText = en,
-                    isCurrentUser = false
+                    messageText = msg.content,
+                    isCurrentUser = isMe
                 )
             }
         }
 
-        // Input
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
-                value = mockMessageText,
-                onValueChange = { mockMessageText = it },
-                placeholder = { Text("Write serious message...") },
+                value = messageText,
+                onValueChange = { messageText = it },
+                placeholder = { Text(if (strings.appName == "ميثاق") "اكتب رسالة جادة..." else "Write serious message...") },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = {
-                    if (mockMessageText.isNotBlank()) {
-                        mockMessages.add(mockMessageText to "ترجمة: $mockMessageText")
-                        mockMessageText = ""
+                    if (messageText.isNotBlank()) {
+                        chatViewModel.sendChatMessage(messageText)
+                        messageText = ""
                     }
                 },
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Send")
+                Text(if (strings.appName == "ميثاق") "إرسال" else "Send")
             }
         }
     }
 }
 
 @Composable
-fun GuardianTabContent(viewModel: GuardianViewModel) {
+fun GuardianTabContent(
+    currentUser: UserProfile,
+    viewModel: GuardianViewModel,
+    onInviteSuccess: () -> Unit
+) {
     var showDialog by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
-    var guardianName by remember { mutableStateOf<String?>(null) }
-    var guardianEmail by remember { mutableStateOf<String?>(null) }
+
+    val guardianName = currentUser.guardianName
+    val guardianEmail = currentUser.guardianEmail
+    val guardianStatus = currentUser.guardianStatus ?: "None"
 
     LaunchedEffect(uiState) {
         if (uiState is com.mithaq.app.ui.guardian.GuardianUiState.Success) {
-            guardianName = "Ahmad Al-Wali"
-            guardianEmail = "guardian@mithaq.com"
+            onInviteSuccess()
         }
     }
 
@@ -383,13 +460,15 @@ fun GuardianTabContent(viewModel: GuardianViewModel) {
 
         if (!guardianName.isNullOrBlank()) {
             Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(if (strings.appName == "ميثاق") "اسم الولي: $guardianName" else "Guardian Name: $guardianName", fontWeight = FontWeight.Bold)
                     Text(if (strings.appName == "ميثاق") "بريد الولي: $guardianEmail" else "Guardian Email: $guardianEmail")
-                    Text(if (strings.appName == "ميثاق") "الحالة: قيد التحقق" else "Status: Pending Verification", style = MaterialTheme.typography.labelSmall)
+                    Text(if (strings.appName == "ميثاق") "الحالة: $guardianStatus" else "Status: $guardianStatus", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -420,9 +499,20 @@ fun GuardianTabContent(viewModel: GuardianViewModel) {
 }
 
 @Composable
-fun ModestyTabContent() {
-    var photoState by remember { mutableStateOf(PhotoAccessState.NONE) }
-    val requests = remember { mutableStateListOf<String>() }
+fun ModestyTabContent(
+    currentUser: UserProfile,
+    targetUser: UserProfile?,
+    onRefreshProfile: () -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager() }
+    var photoState by remember { mutableStateOf(com.mithaq.app.ui.photo.PhotoAccessState.NONE) }
+
+    LaunchedEffect(currentUser.uid, targetUser?.uid) {
+        if (targetUser != null) {
+            photoState = photoAccessManager.checkPhotoAccessState(currentUser.uid, targetUser.uid)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -437,43 +527,73 @@ fun ModestyTabContent() {
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        // Demonstration Card as a viewer
-        Text(
-            text = "Demonstrating: Viewing Another Match's Photo",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.align(Alignment.Start)
-        )
-        
-        PhotoAccessRequestCard(
-            isOwnProfile = false,
-            accessState = photoState,
-            onRequestAccessClicked = {
-                photoState = PhotoAccessState.PENDING
-            }
-        )
+        if (targetUser != null) {
+            Text(
+                text = "Viewing Match's Photo: ${targetUser.name}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.align(Alignment.Start)
+            )
+            
+            PhotoAccessRequestCard(
+                isOwnProfile = false,
+                accessState = photoState,
+                onRequestAccessClicked = {
+                    coroutineScope.launch {
+                        val success = photoAccessManager.requestPhotoAccess(currentUser.uid, targetUser.uid)
+                        if (success) {
+                            photoState = com.mithaq.app.ui.photo.PhotoAccessState.PENDING
+                            onRefreshProfile()
+                        }
+                    }
+                }
+            )
+        } else {
+            Text(
+                text = "Select a user on the Search tab to view their photo unlock options.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Demonstration Card as profile owner
         Text(
-            text = "Demonstrating: Managing Requests to View Your Photo",
+            text = "Pending Requests to View Your Photo",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.align(Alignment.Start)
         )
-        
-        var mockRequests by remember { mutableStateOf(listOf("Omar Farooq")) }
 
-        PhotoAccessRequestCard(
-            isOwnProfile = true,
-            accessState = PhotoAccessState.NONE,
-            onRequestAccessClicked = {},
-            pendingRequests = mockRequests,
-            onApproveClicked = { name ->
-                mockRequests = mockRequests.filter { it != name }
-                photoState = PhotoAccessState.APPROVED // Approve access for testing
+        val requests = currentUser.photoAccessRequests
+        if (requests.isEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Box(modifier = Modifier.padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("No pending requests.", style = MaterialTheme.typography.bodySmall)
+                }
             }
-        )
+        } else {
+            PhotoAccessRequestCard(
+                isOwnProfile = true,
+                accessState = com.mithaq.app.ui.photo.PhotoAccessState.NONE,
+                onRequestAccessClicked = {},
+                pendingRequests = requests,
+                onApproveClicked = { userId ->
+                    coroutineScope.launch {
+                        val success = photoAccessManager.approvePhotoAccess(currentUser.uid, userId)
+                        if (success) {
+                            onRefreshProfile()
+                        }
+                    }
+                }
+            )
+        }
     }
 }

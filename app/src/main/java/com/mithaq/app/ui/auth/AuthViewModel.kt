@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.mithaq.app.model.UserProfile
+import com.mithaq.app.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +30,86 @@ class AuthViewModel(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    private val _currentUserProfile = MutableStateFlow<UserProfile?>(null)
+    val currentUserProfile: StateFlow<UserProfile?> = _currentUserProfile.asStateFlow()
+
+    init {
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            _authState.value = AuthState.Authenticated(currentUser.uid)
+            fetchCurrentUserProfile(currentUser.uid)
+        }
+    }
+
+    fun fetchCurrentUserProfile(uid: String) {
+        viewModelScope.launch {
+            try {
+                val isMock = auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                if (isMock) {
+                    _currentUserProfile.value = UserProfile(
+                        uid = uid,
+                        name = "Mock User",
+                        gender = Gender.MALE,
+                        age = 26,
+                        city = "Cairo",
+                        country = "Egypt",
+                        sect = Sect.SUNNI,
+                        prayerFrequency = PrayerFrequency.ALWAYS,
+                        modestyPreference = ModestyPreference.HIJAB,
+                        relocationWillingness = RelocationWillingness.OPEN
+                    )
+                    return@launch
+                }
+                val doc = firestore.collection("users").document(uid).get().await()
+                if (doc.exists()) {
+                    val name = doc.getString("name") ?: ""
+                    val genderStr = doc.getString("gender") ?: "MALE"
+                    val gender = if (genderStr.equals("FEMALE", ignoreCase = true)) Gender.FEMALE else Gender.MALE
+                    val age = doc.getLong("age")?.toInt() ?: 25
+                    val city = doc.getString("city") ?: ""
+                    val country = doc.getString("country") ?: ""
+                    val imageUrl = doc.getString("imageUrl") ?: ""
+                    val sectStr = doc.getString("sect") ?: "SUNNI"
+                    val sect = try { Sect.valueOf(sectStr.uppercase()) } catch(e: Exception) { Sect.SUNNI }
+                    val prayerStr = doc.getString("prayerFrequency") ?: "ALWAYS"
+                    val prayer = try { PrayerFrequency.valueOf(prayerStr.uppercase()) } catch(e: Exception) { PrayerFrequency.ALWAYS }
+                    val modestyStr = doc.getString("modestyPreference") ?: "HIJAB"
+                    val modesty = try { ModestyPreference.valueOf(modestyStr.uppercase()) } catch(e: Exception) { ModestyPreference.HIJAB }
+                    val relocationStr = doc.getString("relocationWillingness") ?: "OPEN"
+                    val relocation = try { RelocationWillingness.valueOf(relocationStr.uppercase()) } catch(e: Exception) { RelocationWillingness.OPEN }
+                    
+                    val guardianName = doc.getString("guardianName")
+                    val guardianEmail = doc.getString("guardianEmail")
+                    val guardianStatus = doc.getString("guardianStatus")
+                    
+                    val photoApproved = doc.get("photoAccessApprovedUsers") as? List<String> ?: emptyList()
+                    val photoRequests = doc.get("photoAccessRequests") as? List<String> ?: emptyList()
+
+                    _currentUserProfile.value = UserProfile(
+                        uid = uid,
+                        name = name,
+                        gender = gender,
+                        age = age,
+                        city = city,
+                        country = country,
+                        imageUrl = imageUrl,
+                        sect = sect,
+                        prayerFrequency = prayer,
+                        modestyPreference = modesty,
+                        relocationWillingness = relocation,
+                        guardianName = guardianName,
+                        guardianEmail = guardianEmail,
+                        guardianStatus = guardianStatus,
+                        photoAccessApprovedUsers = photoApproved,
+                        photoAccessRequests = photoRequests
+                    )
+                }
+            } catch (e: Exception) {
+                // Fail-safe
+            }
+        }
+    }
+
     /**
      * Authenticates user using Firebase Auth Email & Password.
      */
@@ -52,6 +132,7 @@ class AuthViewModel(
                 val result = auth.signInWithEmailAndPassword(email.trim(), emailPassed).await()
                 val user = result.user
                 if (user != null) {
+                    fetchCurrentUserProfile(user.uid)
                     _authState.value = AuthState.Authenticated(user.uid)
                 } else {
                     _authState.value = AuthState.Error("Failed to authenticate.")
@@ -108,6 +189,7 @@ class AuthViewModel(
                         .set(userProfilePayload)
                         .await()
 
+                    fetchCurrentUserProfile(userId)
                     _authState.value = AuthState.Authenticated(userId)
                 } else {
                     _authState.value = AuthState.Error("Could not retrieve created user ID.")
@@ -157,6 +239,7 @@ class AuthViewModel(
                             .set(userProfilePayload)
                             .await()
                     }
+                    fetchCurrentUserProfile(user.uid)
                     _authState.value = AuthState.Authenticated(user.uid)
                 } else {
                     _authState.value = AuthState.Error("Failed to authenticate with Google.")
@@ -169,6 +252,7 @@ class AuthViewModel(
 
     fun signOut() {
         auth.signOut()
+        _currentUserProfile.value = null
         _authState.value = AuthState.Idle
     }
 
