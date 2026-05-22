@@ -111,6 +111,23 @@ fun MithaqAppNavigation(
     var currentUserId by remember { mutableStateOf("") }
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
 
+    // Request notification permission on Android 13+
+    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val permissionCheck = androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            )
+            if (permissionCheck != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     // ViewModels initialized safely
     val authViewModel = remember { AuthViewModel(context = context) }
     val searchViewModel = remember { SearchViewModel(context = context) }
@@ -1560,6 +1577,23 @@ fun ModestyTabContent(
                         if (success) {
                             photoState = com.mithaq.app.ui.photo.PhotoAccessState.PENDING
                             onRefreshProfile()
+
+                            // Simulate target user (or Wali) approving the request after 3 seconds
+                            coroutineScope.launch {
+                                kotlinx.coroutines.delay(3000)
+                                val approveSuccess = photoAccessManager.approvePhotoAccess(targetUser.uid, currentUser.uid)
+                                if (approveSuccess) {
+                                    photoState = com.mithaq.app.ui.photo.PhotoAccessState.APPROVED
+                                    onRefreshProfile()
+                                    // Trigger notification
+                                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                        context = context,
+                                        title = if (isArabic) "ميثاق - الموافقة على طلب الصور" else "Mithaq - Photo Access Approved",
+                                        body = if (isArabic) "تمت الموافقة على طلبك لرؤية الصورة الشخصية لـ ${targetUser.name}" 
+                                               else "Your request to view the profile photo of ${targetUser.name} has been approved."
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -1606,6 +1640,13 @@ fun ModestyTabContent(
                         val success = photoAccessManager.approvePhotoAccess(currentUser.uid, userId)
                         if (success) {
                             onRefreshProfile()
+                            // Trigger notification
+                            com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                context = context,
+                                title = if (isArabic) "ميثاق - تم منح صلاحية الصورة" else "Mithaq - Photo Access Granted",
+                                body = if (isArabic) "لقد قمت بنجاح بمشاركة صورتك الشخصية مع الطرف الآخر." 
+                                       else "You have successfully shared your profile photo with the other member."
+                            )
                         }
                     }
                 }

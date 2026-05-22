@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import com.mithaq.app.data.local.MithaqDatabase
 import com.mithaq.app.data.local.CachedMessage
@@ -354,6 +355,32 @@ class ChaperonedChatViewModel(
                 list.add(newMsg)
                 _messages.value = list
                 saveMessagesMock(list)
+
+                // Simulate an automated reply after 3 seconds
+                viewModelScope.launch {
+                    delay(3000)
+                    val replyAr = "شكرًا لرسالتك، سيقوم ولي أمري بمراجعتها والرد عليك قريبًا إن شاء الله."
+                    val replyEn = "Thank you for your message, my guardian will review it and reply soon, God willing."
+                    val replyMsg = ChatMessage("mock_other_user", replyEn, System.currentTimeMillis(), replyAr)
+
+                    // Insert into DB
+                    chatDao?.insertMessage(replyMsg.toCached(roomId))
+
+                    // Update state
+                    val updatedList = _messages.value.toMutableList()
+                    updatedList.add(replyMsg)
+                    _messages.value = updatedList
+                    saveMessagesMock(updatedList)
+
+                    // Trigger local notification
+                    context?.let { ctx ->
+                        com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                            context = ctx,
+                            title = "ميثاق - رسالة جديدة",
+                            body = replyAr
+                        )
+                    }
+                }
                 return@launch
             }
 

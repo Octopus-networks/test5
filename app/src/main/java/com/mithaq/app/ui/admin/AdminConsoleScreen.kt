@@ -114,11 +114,28 @@ fun AdminConsoleScreen(
                             .padding(16.dp)
                     ) {
                         items(pendingUsers) { user ->
+                            val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
                             PendingUserVerificationCard(
                                 user = user,
                                 isArabic = isArabic,
-                                onApprove = { viewModel.adminUpdateVerification(user.uid, "VERIFIED") },
-                                onReject = { viewModel.adminUpdateVerification(user.uid, "NONE") }
+                                onApprove = {
+                                    viewModel.adminUpdateVerification(user.uid, "VERIFIED")
+                                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                        context = context,
+                                        title = if (isArabic) "ميثاق - تم توثيق الحساب" else "Mithaq - Account Verified",
+                                        body = if (isArabic) "لقد تم قبول طلب توثيق الهوية للحساب ${user.name} بنجاح!"
+                                               else "Identity verification request for ${user.name} has been approved!"
+                                    )
+                                },
+                                onReject = {
+                                    viewModel.adminUpdateVerification(user.uid, "NONE")
+                                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                        context = context,
+                                        title = if (isArabic) "ميثاق - رفض التوثيق" else "Mithaq - Verification Rejected",
+                                        body = if (isArabic) "تم رفض طلب توثيق الهوية للحساب ${user.name}."
+                                               else "Identity verification request for ${user.name} has been rejected."
+                                    )
+                                }
                             )
                         }
                     }
