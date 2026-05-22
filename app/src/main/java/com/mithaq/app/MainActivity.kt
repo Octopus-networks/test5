@@ -1743,7 +1743,7 @@ fun ModestyTabContent(
                         onClick = {
                             authViewModel.updateMockRole(isWali = false, isAdmin = false, context = context)
                         },
-                        label = { Text(if (isArabic) "عضو عادي" else "Regular Member") }
+                        label = { Text(if (isArabic) "يوزر عادي (عضو)" else "Regular Member") }
                     )
                     // Wali Chip
                     FilterChip(
@@ -1751,7 +1751,7 @@ fun ModestyTabContent(
                         onClick = {
                             authViewModel.updateMockRole(isWali = true, isAdmin = false, context = context)
                         },
-                        label = { Text(if (isArabic) "ولي أمر" else "Wali / Guardian") }
+                        label = { Text(if (isArabic) "مشرف (ولي أمر)" else "Wali / Guardian") }
                     )
                     // Admin Chip
                     FilterChip(
@@ -1759,7 +1759,7 @@ fun ModestyTabContent(
                         onClick = {
                             authViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
                         },
-                        label = { Text(if (isArabic) "مشرف" else "Admin") }
+                        label = { Text(if (isArabic) "إدمن (مسؤول)" else "Admin") }
                     )
                 }
 
