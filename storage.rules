@@ -1,0 +1,44 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper to check if a user is writing their own storage data
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper to check if user has Admin role in Firestore
+    function isAdmin() {
+      return isAuthenticated() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Profiles storage rules
+    match /profiles/{userId}.jpg {
+      // Any authenticated user can view other members' profiles
+      allow read: if isAuthenticated();
+      // Only the profile owner can upload or change their photo
+      allow write: if isOwner(userId);
+    }
+
+    // Voice Introductions storage rules
+    match /voices/{userId}.mp4 {
+      // Any authenticated user can listen to voice introductions
+      allow read: if isAuthenticated();
+      // Only the profile owner can upload or update their voice introduction
+      allow write: if isOwner(userId);
+    }
+
+    // Identity Verification Document rules (Sensitive IDs and Live Selfies)
+    match /verification/{userId}/{documentId} {
+      // Only Admins can download and review identity verification documents
+      allow read: if isAdmin();
+      // Only the user themselves can upload their verification documents
+      allow write: if isOwner(userId);
+    }
+  }
+}

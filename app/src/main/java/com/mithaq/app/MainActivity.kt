@@ -905,7 +905,7 @@ fun ChatTabContent(
         }
     }
     
-    val isMock = try {
+    val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
         com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey == "mock-api-key-for-testing" ||
         com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey?.contains("mock") == true
     } catch (e: Exception) {
@@ -1614,7 +1614,7 @@ fun ModestyTabContent(
         if (uri != null) {
             isUploadingImage = true
             coroutineScope.launch {
-                val isMock = try {
+                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                     val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
                     db.app?.options?.apiKey == "mock-api-key-for-testing" || db.app?.options?.apiKey?.contains("mock") == true
                 } catch (e: Exception) {
@@ -2134,7 +2134,7 @@ fun ModestyTabContent(
         var devTapCount by remember { mutableStateOf(0) }
         var isDevMenuVisible by remember { mutableStateOf(false) }
 
-        if (isDevMenuVisible) {
+        if (isDevMenuVisible && !com.mithaq.app.Config.IS_PRODUCTION) {
             // ------------------ DEVELOPER OPTIONS & SETTINGS CARD ------------------
             Spacer(modifier = Modifier.height(24.dp))
             Card(
@@ -2350,14 +2350,16 @@ fun ModestyTabContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier
                 .clickable {
-                    devTapCount++
-                    if (devTapCount >= 5) {
-                        isDevMenuVisible = true
-                        android.widget.Toast.makeText(
-                            context,
-                            if (isArabic) "وضع المطور نشط الآن!" else "Developer mode activated!",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                    if (!com.mithaq.app.Config.IS_PRODUCTION) {
+                        devTapCount++
+                        if (devTapCount >= 5) {
+                            isDevMenuVisible = true
+                            android.widget.Toast.makeText(
+                                context,
+                                if (isArabic) "وضع المطور نشط الآن!" else "Developer mode activated!",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
                 .padding(8.dp)
@@ -2404,7 +2406,7 @@ fun WaliDashboardScreen(
 
     val wardUid = currentUserProfile?.wardUid ?: "mock_user_123"
 
-    val isMock = try {
+    val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
         com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey == "mock-api-key-for-testing" ||
         com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey?.contains("mock") == true
     } catch (e: Exception) {

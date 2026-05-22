@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper to check if a user is writing their own document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper to check if a user is an Admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Rules for User Profiles
+    match /users/{userId} {
+      // Any authenticated user can read profiles (needed for matchmaking search)
+      allow read: if isAuthenticated();
+      
+      // A user can create or update their own profile. Admins can update any profile (e.g., verification status)
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Rules for Chat Rooms
+    match /chatRooms/{roomId} {
+      // Users can read/write the chatroom document only if they are one of the members, or if they are the Wali supervising it
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid in resource.data.memberIds ||
+        (resource.data.waliEmail != null && request.auth.token.email == resource.data.waliEmail) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isWaliAccount == true &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.wardUid in resource.data.memberIds) ||
+        isAdmin()
+      );
+      
+      // Allow creation of a chatroom if the creator is in the memberIds array
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.memberIds;
+
+      // Rules for Chat Messages subcollection
+      match /messages/{messageId} {
+        // Members of the parent chatroom can read/write messages. Walis can read transcripts.
+        allow read: if isAuthenticated() && (
+          request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.memberIds ||
+          (get(/databases/$(database)/documents/chatRooms/$(roomId)).data.waliEmail != null && request.auth.token.email == get(/databases/$(database)/documents/chatRooms/$(roomId)).data.waliEmail) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isWaliAccount == true &&
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.wardUid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.memberIds) ||
+          isAdmin()
+        );
+
+        allow write: if isAuthenticated() && 
+          request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.memberIds;
+      }
+    }
+  }
+}

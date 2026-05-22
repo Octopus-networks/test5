@@ -119,7 +119,7 @@ class ChaperonedChatViewModel(
             return
         }
 
-        val isMock = try {
+        val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
             firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
         } catch (e: Exception) {
             true
@@ -243,7 +243,7 @@ class ChaperonedChatViewModel(
             return
         }
 
-        val isMock = try {
+        val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
             firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
         } catch (e: Exception) {
             true
@@ -393,7 +393,7 @@ class ChaperonedChatViewModel(
             return
         }
 
-        val isMock = try {
+        val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
             firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
         } catch (e: Exception) {
             true

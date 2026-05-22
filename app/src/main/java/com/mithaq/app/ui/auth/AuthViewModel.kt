@@ -234,7 +234,7 @@ class AuthViewModel(
             _currentUserProfile.value = updated
             userDao?.insertUser(updated.toCached())
 
-            val isMock = try {
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
                 true
@@ -272,7 +272,7 @@ class AuthViewModel(
                 _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = status)
             }
 
-            val isMock = try {
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
                 true
@@ -302,7 +302,7 @@ class AuthViewModel(
             _currentUserProfile.value = updated
             userDao?.insertUser(updated.toCached())
 
-            val isMock = try {
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
                 true
@@ -359,7 +359,7 @@ class AuthViewModel(
                 return@launch
             }
 
-            val isMock = try {
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
                 true
@@ -553,7 +553,7 @@ class AuthViewModel(
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
-                val isMock = try {
+                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                     auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
                 } catch (e: Exception) {
                     true
@@ -611,7 +611,7 @@ class AuthViewModel(
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
-                val isMock = try {
+                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                     auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
                 } catch (e: Exception) {
                     true
@@ -787,7 +787,7 @@ class AuthViewModel(
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
-                val isMock = auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
                 if (isMock) {
                     kotlinx.coroutines.delay(800)
                     _authState.value = AuthState.Authenticated("mock_user_google_123")
@@ -875,7 +875,7 @@ class AuthViewModel(
                         onResult(false, "المستخدم غير مسجل.")
                         return@launch
                     }
-                    val isMock = try {
+                    val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                         auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
                     } catch (e: Exception) {
                         true
@@ -916,7 +916,7 @@ class AuthViewModel(
     fun mockAdminApproveVerification(context: android.content.Context) {
         viewModelScope.launch {
             val userId = auth.currentUser?.uid ?: _currentUserProfile.value?.uid ?: return@launch
-            val isMock = try {
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
                 true
@@ -945,7 +945,7 @@ class AuthViewModel(
                 putBoolean("isAdmin", isAdmin)
                 apply()
             }
-            val isMock = try {
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
                 true
