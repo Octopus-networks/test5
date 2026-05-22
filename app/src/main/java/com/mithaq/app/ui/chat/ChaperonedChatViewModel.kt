@@ -67,6 +67,7 @@ class ChaperonedChatViewModel(
     val callState: StateFlow<CallState> = _callState.asStateFlow()
 
     private var messagesListenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
+    private var chatRoomListenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
 
     init {
         fetchChatRoomDetails()
@@ -195,6 +196,7 @@ class ChaperonedChatViewModel(
     override fun onCleared() {
         super.onCleared()
         messagesListenerRegistration?.remove()
+        chatRoomListenerRegistration?.remove()
     }
 
     /**
@@ -241,21 +243,67 @@ class ChaperonedChatViewModel(
             return
         }
 
-        viewModelScope.launch {
-            try {
-                val doc = firestore.collection("chatRooms")
-                    .document(roomId)
-                    .get()
-                    .await()
+        val isMock = try {
+            firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
+        } catch (e: Exception) {
+            true
+        }
 
-                if (doc.exists()) {
+        if (isMock) {
+            viewModelScope.launch {
+                val prefs = context?.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
+                val roomsJsonStr = prefs?.getString("mithaq_mock_rooms", null)
+                if (roomsJsonStr != null) {
+                    try {
+                        val array = org.json.JSONArray(roomsJsonStr)
+                        for (i in 0 until array.length()) {
+                            val obj = array.getJSONObject(i)
+                            val rId = obj.getString("roomId")
+                            if (rId == roomId) {
+                                val memberIdsArr = obj.getJSONArray("memberIds")
+                                val memberIds = mutableListOf<String>()
+                                for (j in 0 until memberIdsArr.length()) {
+                                    memberIds.add(memberIdsArr.getString(j))
+                                }
+                                val isChaperoned = obj.optBoolean("isChaperoned", false)
+                                val waliEmail = obj.optString("waliEmail", null)
+                                val lastMessage = obj.optString("lastMessage", null)
+                                val lastMessageTimestamp = obj.optLong("lastMessageTimestamp", 0L)
+                                _chatRoom.value = ChatRoom(roomId, memberIds, isChaperoned, waliEmail, lastMessage, lastMessageTimestamp)
+                                break
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                if (_chatRoom.value == null) {
+                    _chatRoom.value = ChatRoom(
+                        roomId = roomId,
+                        memberIds = roomId.split("_"),
+                        isChaperoned = false,
+                        waliEmail = null,
+                        lastMessage = "",
+                        lastMessageTimestamp = System.currentTimeMillis()
+                    )
+                }
+            }
+            return
+        }
+
+        chatRoomListenerRegistration?.remove()
+        chatRoomListenerRegistration = firestore.collection("chatRooms")
+            .document(roomId)
+            .addSnapshotListener { doc, error ->
+                if (error != null) return@addSnapshotListener
+                if (doc != null && doc.exists()) {
                     val memberIds = doc.get("memberIds") as? List<String> ?: emptyList()
                     val isChaperoned = doc.getBoolean("isChaperoned") ?: false
                     val waliEmail = doc.getString("waliEmail")
                     val lastMessage = doc.getString("lastMessage")
                     val lastMessageTimestamp = doc.getLong("lastMessageTimestamp") ?: 0L
 
-                    _chatRoom.value = ChatRoom(
+                    val roomObj = ChatRoom(
                         roomId = roomId,
                         memberIds = memberIds,
                         isChaperoned = isChaperoned,
@@ -263,11 +311,21 @@ class ChaperonedChatViewModel(
                         lastMessage = lastMessage,
                         lastMessageTimestamp = lastMessageTimestamp
                     )
+                    _chatRoom.value = roomObj
+                    viewModelScope.launch {
+                        chatDao?.insertChatRoom(
+                            com.mithaq.app.data.local.CachedChatRoom(
+                                roomId = roomId,
+                                memberIds = memberIds,
+                                isChaperoned = isChaperoned,
+                                waliEmail = waliEmail,
+                                lastMessage = lastMessage,
+                                lastMessageTimestamp = lastMessageTimestamp
+                            )
+                        )
+                    }
                 }
-            } catch (e: Exception) {
-                // Fail silently in demo, log in production
             }
-        }
     }
 
     fun clearWarning() {

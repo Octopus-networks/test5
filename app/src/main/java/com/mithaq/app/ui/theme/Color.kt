@@ -30,3 +30,9 @@ val TextSecondaryDark = Color(0xFFCAC4D0)
 val ErrorRed = Color(0xFFEF4444)
 val SuccessGreen = Color(0xFF10B981)
 val InfoBlue = Color(0xFF3B82F6)
+
+// Glassmorphic styling values
+val GlassSurfaceLight = Color(0x26FFFFFF) // 15% opacity white
+val GlassSurfaceDark = Color(0x1A000000)  // 10% opacity black
+val GlassBorderLight = Color(0x33FFFFFF)  // 20% opacity white
+val GlassBorderDark = Color(0x26000000)   // 15% opacity black

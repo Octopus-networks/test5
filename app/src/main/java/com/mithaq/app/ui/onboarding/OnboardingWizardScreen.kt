@@ -1,0 +1,667 @@
+package com.mithaq.app.ui.onboarding
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.mithaq.app.ui.auth.AuthViewModel
+import com.mithaq.app.ui.guardian.GuardianViewModel
+import com.mithaq.app.ui.guardian.GuardianUiState
+import com.mithaq.app.ui.match.QuestionnaireData
+import com.mithaq.app.ui.match.QuestionnaireQuestion
+import com.mithaq.app.ui.match.QuestionnaireOption
+import com.mithaq.app.ui.theme.*
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+fun OnboardingWizardScreen(
+    authViewModel: AuthViewModel,
+    guardianViewModel: GuardianViewModel,
+    isArabic: Boolean,
+    onComplete: () -> Unit,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var currentStep by remember { mutableStateOf(1) } // 1: ID, 2: Compatibility, 3: Guardian
+    val context = LocalContext.current
+    val isDark = isSystemInDarkTheme()
+    val scrollState = rememberScrollState()
+
+    // Glassmorphism styling based on theme
+    val glassBgColor = if (isDark) GlassSurfaceDark else GlassSurfaceLight
+    val glassBorderColor = if (isDark) GlassBorderDark else GlassBorderLight
+
+    // Step 1 State: Verification
+    var idCardUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var selfieUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var isSubmittingVer by remember { mutableStateOf(false) }
+    var verStatusMsg by remember { mutableStateOf<String?>(null) }
+
+    val idCardLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) idCardUri = uri
+    }
+
+    val selfieLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) selfieUri = uri
+    }
+
+    // Step 2 State: Questionnaire
+    val questions = QuestionnaireData.questions
+    var currentQuestionIdx by remember { mutableStateOf(0) }
+    val answers = remember { mutableStateMapOf<String, String>() }
+
+    // Step 3 State: Guardian Invite
+    var guardianName by remember { mutableStateOf("") }
+    var guardianEmail by remember { mutableStateOf("") }
+    val guardianState by guardianViewModel.uiState.collectAsState()
+
+    // UI texts depending on language
+    val titleText = if (isArabic) "أهلاً بك في ميثاق" else "Welcome to Mithaq"
+    val subtitleText = if (isArabic) "لنبدأ رحلتك لبناء زواج مبارك ومترابط" else "Let's start your journey to a blessed marriage"
+    val skipText = if (isArabic) "تخطي الآن" else "Skip for now"
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = if (isDark) {
+                        listOf(Color(0xFF0F1713), Color(0xFF071F15))
+                    } else {
+                        listOf(Color(0xFFFDFBF7), Color(0xFFE6F3ED))
+                    }
+                )
+            )
+            .padding(20.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Premium Header & Title
+            Text(
+                text = titleText,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (isDark) Color.White else PrimaryEmeraldDark,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = subtitleText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+            )
+
+            // Step Progress Indicator
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StepIndicator(step = 1, active = currentStep >= 1, completed = currentStep > 1, label = if (isArabic) "التوثيق" else "ID Check", isArabic = isArabic)
+                Divider(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), color = if (currentStep > 1) PrimaryEmeraldLight else MaterialTheme.colorScheme.outlineVariant, thickness = 2.dp)
+                StepIndicator(step = 2, active = currentStep >= 2, completed = currentStep > 2, label = if (isArabic) "التوافق" else "Quiz", isArabic = isArabic)
+                Divider(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), color = if (currentStep > 2) PrimaryEmeraldLight else MaterialTheme.colorScheme.outlineVariant, thickness = 2.dp)
+                StepIndicator(step = 3, active = currentStep >= 3, completed = false, label = if (isArabic) "ولي الأمر" else "Guardian", isArabic = isArabic)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Premium Glassmorphic container
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(glassBgColor)
+                    .border(1.dp, glassBorderColor, RoundedCornerShape(24.dp))
+                    .padding(24.dp)
+            ) {
+                AnimatedContent(
+                    targetState = currentStep,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            slideInHorizontally { width -> width } + fadeIn() with
+                                    slideOutHorizontally { width -> -width } + fadeOut()
+                        } else {
+                            slideInHorizontally { width -> -width } + fadeIn() with
+                                    slideOutHorizontally { width -> width } + fadeOut()
+                        }.using(SizeTransform(clip = false))
+                    }
+                ) { step ->
+                    when (step) {
+                        1 -> StepVerificationContent(
+                            isArabic = isArabic,
+                            idCardUri = idCardUri,
+                            selfieUri = selfieUri,
+                            isSubmitting = isSubmittingVer,
+                            statusMsg = verStatusMsg,
+                            onSelectId = { idCardLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                            onSelectSelfie = { selfieLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                            onSubmit = {
+                                if (idCardUri == null || selfieUri == null) {
+                                    verStatusMsg = if (isArabic) "يرجى اختيار كل من صورة الهوية والصورة الشخصية." else "Please select both ID Card and Selfie."
+                                    return@StepVerificationContent
+                                }
+                                isSubmittingVer = true
+                                verStatusMsg = if (isArabic) "جاري التحقق الفوري باستخدام الذكاء الاصطناعي..." else "Analyzing with instant AI Face Recognition..."
+                                authViewModel.submitVerification(idCardUri!!, selfieUri!!, context) { success, message ->
+                                    isSubmittingVer = false
+                                    verStatusMsg = message
+                                    if (success) {
+                                        currentStep = 2
+                                    }
+                                }
+                            },
+                            onMockApprove = {
+                                authViewModel.mockAdminApproveVerification(context)
+                                verStatusMsg = if (isArabic) "تم التوثيق الفوري بنجاح!" else "Instant verification approved!"
+                                currentStep = 2
+                            }
+                        )
+                        2 -> StepQuestionnaireContent(
+                            questions = questions,
+                            currentQuestionIdx = currentQuestionIdx,
+                            answers = answers,
+                            isArabic = isArabic,
+                            onAnswerSelected = { qId, optId ->
+                                answers[qId] = optId
+                                if (currentQuestionIdx < questions.size - 1) {
+                                    currentQuestionIdx++
+                                } else {
+                                    // Save compatibility answers to ViewModel
+                                    authViewModel.saveQuestionnaireAnswers(answers.toMap())
+                                    currentStep = 3
+                                }
+                            },
+                            onPrevQuestion = {
+                                if (currentQuestionIdx > 0) {
+                                    currentQuestionIdx--
+                                } else {
+                                    currentStep = 1
+                                }
+                            }
+                        )
+                        3 -> StepGuardianContent(
+                            isArabic = isArabic,
+                            guardianName = guardianName,
+                            guardianEmail = guardianEmail,
+                            uiState = guardianState,
+                            onNameChange = { guardianName = it },
+                            onEmailChange = { guardianEmail = it },
+                            onSendInvitation = {
+                                guardianViewModel.inviteGuardian(guardianName, guardianEmail)
+                            },
+                            onPrev = { currentStep = 2 },
+                            onFinish = onComplete
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Footer navigation options: Skip for now
+            TextButton(
+                onClick = onSkip,
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Text(
+                    text = skipText,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun StepIndicator(
+    step: Int,
+    active: Boolean,
+    completed: Boolean,
+    label: String,
+    isArabic: Boolean
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(
+                    if (completed) PrimaryEmeraldLight
+                    else if (active) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.outlineVariant
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (completed) {
+                Icon(
+                    imageVector = Icons.Default.Done,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            } else {
+                Text(
+                    text = step.toString(),
+                    color = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun StepVerificationContent(
+    isArabic: Boolean,
+    idCardUri: android.net.Uri?,
+    selfieUri: android.net.Uri?,
+    isSubmitting: Boolean,
+    statusMsg: String?,
+    onSelectId: () -> Unit,
+    onSelectSelfie: () -> Unit,
+    onSubmit: () -> Unit,
+    onMockApprove: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = if (isArabic) "الخطوة 1: توثيق الهوية والوجه" else "Step 1: Face & ID Verification",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = if (isArabic) 
+                "يرجى توثيق حسابك للحصول على شارة التوثيق. هذا يضمن بيئة آمنة وجدية لجميع الأعضاء."
+            else 
+                "Please verify your identity to get the verification badge. This ensures a safe and serious environment for everyone.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onSelectId,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (idCardUri != null) PrimaryEmeraldLight.copy(alpha = 0.15f) else Color.Transparent
+                )
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 8.dp)) {
+                    Icon(
+                        imageVector = if (idCardUri != null) Icons.Default.CheckCircle else Icons.Default.Face,
+                        contentDescription = null,
+                        tint = if (idCardUri != null) SuccessGreen else MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (idCardUri != null)
+                            (if (isArabic) "تم اختيار الهوية" else "ID Selected")
+                        else
+                            (if (isArabic) "صورة الهوية" else "ID Card Photo"),
+                        textAlign = TextAlign.Center,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = onSelectSelfie,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (selfieUri != null) PrimaryEmeraldLight.copy(alpha = 0.15f) else Color.Transparent
+                )
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 8.dp)) {
+                    Icon(
+                        imageVector = if (selfieUri != null) Icons.Default.CheckCircle else Icons.Default.AccountBox,
+                        contentDescription = null,
+                        tint = if (selfieUri != null) SuccessGreen else MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (selfieUri != null)
+                            (if (isArabic) "تم اختيار الصورة" else "Selfie Selected")
+                        else
+                            (if (isArabic) "صورة شخصية" else "Selfie Photo"),
+                        textAlign = TextAlign.Center,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (statusMsg != null) {
+            Text(
+                text = statusMsg,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (statusMsg.contains("نجاح") || statusMsg.contains("success") || statusMsg.contains("قيد") || statusMsg.contains("approved")) SuccessGreen else MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            )
+        }
+
+        Button(
+            onClick = onSubmit,
+            enabled = !isSubmitting,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            if (isSubmitting) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Text(
+                    text = if (isArabic) "تحقق وتابع" else "Verify & Continue",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Demo Bypass
+        OutlinedButton(
+            onClick = onMockApprove,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(
+                text = if (isArabic) "تفعيل التوثيق الفوري (تجريبي)" else "Instant Mock Verification (Demo)",
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun StepQuestionnaireContent(
+    questions: List<QuestionnaireQuestion>,
+    currentQuestionIdx: Int,
+    answers: Map<String, String>,
+    isArabic: Boolean,
+    onAnswerSelected: (String, String) -> Unit,
+    onPrevQuestion: () -> Unit
+) {
+    val currentQuestion = questions[currentQuestionIdx]
+    val selectedOption = answers[currentQuestion.id]
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = if (isArabic) "الخطوة 2: استبيان التوافق" else "Step 2: Compatibility Quiz",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = if (isArabic) "سؤال ${currentQuestionIdx + 1} من ${questions.size}" else "Question ${currentQuestionIdx + 1} of ${questions.size}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Linear Progress Indicator for the Quiz
+        LinearProgressIndicator(
+            progress = (currentQuestionIdx + 1).toFloat() / questions.size,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(CircleShape),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.outlineVariant
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = if (isArabic) currentQuestion.textAr else currentQuestion.textEn,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 20.dp)
+        )
+
+        // Options List
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            currentQuestion.options.forEach { option ->
+                val isSelected = selectedOption == option.id
+                val optionBg = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                val optionBorder = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(optionBg)
+                        .border(1.5.dp, optionBorder, RoundedCornerShape(16.dp))
+                        .clickable { onAnswerSelected(currentQuestion.id, option.id) }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (isArabic) option.textAr else option.textEn,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            TextButton(onClick = onPrevQuestion) {
+                Icon(
+                    imageVector = if (isArabic) Icons.Default.ArrowForward else Icons.Default.ArrowBack,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(if (isArabic) "السابق" else "Back")
+            }
+        }
+    }
+}
+
+@Composable
+fun StepGuardianContent(
+    isArabic: Boolean,
+    guardianName: String,
+    guardianEmail: String,
+    uiState: GuardianUiState,
+    onNameChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
+    onSendInvitation: () -> Unit,
+    onPrev: () -> Unit,
+    onFinish: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = if (isArabic) "الخطوة 3: إشراك ولي الأمر" else "Step 3: Guardian Invitation",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = if (isArabic)
+                "لتأكيد الجدية وتيسير التواصل الشرعي، يرجى دعوة ولي أمرك لمتابعة المحادثات."
+            else
+                "To ensure seriousness and facilitate halal chaperoned chats, please invite your guardian (Wali) to oversee interactions.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = guardianName,
+            onValueChange = onNameChange,
+            label = { Text(if (isArabic) "اسم ولي الأمر" else "Guardian Name") },
+            placeholder = { Text(if (isArabic) "أدخل الاسم الكامل" else "Enter full name") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = guardianEmail,
+            onValueChange = onEmailChange,
+            label = { Text(if (isArabic) "البريد الإلكتروني لولي الأمر" else "Guardian Email") },
+            placeholder = { Text(if (isArabic) "email@example.com" else "email@example.com") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) }
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        when (uiState) {
+            is GuardianUiState.Error -> {
+                Text(
+                    text = uiState.errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+            is GuardianUiState.Success -> {
+                Text(
+                    text = if (isArabic) "تم إرسال دعوة ولي الأمر بنجاح!" else "Guardian invite sent successfully!",
+                    color = SuccessGreen,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+            is GuardianUiState.Loading -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp).padding(bottom = 12.dp),
+                    strokeWidth = 2.dp
+                )
+            }
+            else -> {}
+        }
+
+        Button(
+            onClick = {
+                if (guardianName.isNotBlank() && guardianEmail.isNotBlank()) {
+                    onSendInvitation()
+                } else {
+                    onFinish()
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            val buttonText = if (uiState is GuardianUiState.Success) {
+                if (isArabic) "إنهاء الإعداد" else "Finish Setup"
+            } else if (guardianName.isNotBlank() && guardianEmail.isNotBlank()) {
+                if (isArabic) "إرسال الدعوة والمتابعة" else "Send Invite & Continue"
+            } else {
+                if (isArabic) "إنهاء وتخطي ولي الأمر حالياً" else "Finish & Skip Guardian for now"
+            }
+            Text(text = buttonText, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            TextButton(onClick = onPrev) {
+                Icon(
+                    imageVector = if (isArabic) Icons.Default.ArrowForward else Icons.Default.ArrowBack,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(if (isArabic) "السابق" else "Back")
+            }
+        }
+    }
+}

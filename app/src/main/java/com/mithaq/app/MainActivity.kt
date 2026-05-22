@@ -50,10 +50,20 @@ import com.mithaq.app.ui.photo.UserProfileImage
 import com.mithaq.app.ui.photo.BrotherhoodAvatars
 import com.mithaq.app.ui.photo.SisterhoodAvatars
 import com.mithaq.app.ui.theme.MithaqTheme
+import com.mithaq.app.ui.theme.*
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Add
 import com.mithaq.app.ui.admin.AdminConsoleScreen
 import com.mithaq.app.ui.limit.PremiumStoreScreen
 import com.mithaq.app.ui.match.QuestionnaireScreen
 import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
+import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
 import com.mithaq.app.security.SecureScreen
@@ -134,6 +144,7 @@ fun MithaqAppNavigation(
     val guardianViewModel = remember { GuardianViewModel() }
 
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
+    var hasDismissedOnboarding by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentUserId) {
         if (currentUserId.isNotEmpty()) {
@@ -181,20 +192,39 @@ fun MithaqAppNavigation(
                     }
                 )
             } else {
-                HomeScreen(
-                    currentUserId = currentUserId,
-                    currentUserProfile = currentUserProfile,
-                    authViewModel = authViewModel,
-                    searchViewModel = searchViewModel,
-                    guardianViewModel = guardianViewModel,
-                    isArabic = isArabic,
-                    onLanguageChange = onLanguageChange,
-                    onLogout = {
-                        authViewModel.signOut()
-                        currentScreen = "login"
-                    },
-                    onNavigateToScreen = { currentScreen = it }
-                )
+                val shouldShowWizard = currentUserProfile != null &&
+                        (currentUserProfile!!.questionnaireAnswers.isEmpty() || currentUserProfile!!.verificationStatus == "NONE") &&
+                        !hasDismissedOnboarding
+
+                if (shouldShowWizard) {
+                    OnboardingWizardScreen(
+                        authViewModel = authViewModel,
+                        guardianViewModel = guardianViewModel,
+                        isArabic = isArabic,
+                        onComplete = {
+                            authViewModel.fetchCurrentUserProfile(currentUserId)
+                            hasDismissedOnboarding = true
+                        },
+                        onSkip = {
+                            hasDismissedOnboarding = true
+                        }
+                    )
+                } else {
+                    HomeScreen(
+                        currentUserId = currentUserId,
+                        currentUserProfile = currentUserProfile,
+                        authViewModel = authViewModel,
+                        searchViewModel = searchViewModel,
+                        guardianViewModel = guardianViewModel,
+                        isArabic = isArabic,
+                        onLanguageChange = onLanguageChange,
+                        onLogout = {
+                            authViewModel.signOut()
+                            currentScreen = "login"
+                        },
+                        onNavigateToScreen = { currentScreen = it }
+                    )
+                }
             }
         }
         "admin" -> {
@@ -360,7 +390,8 @@ fun HomeScreen(
                     1 -> ChatTabContent(
                         currentUser = profile,
                         targetUser = selectedChatUser,
-                        onSelectTargetUser = { selectedChatUser = it }
+                        onSelectTargetUser = { selectedChatUser = it },
+                        guardianViewModel = guardianViewModel
                     )
                     2 -> GuardianTabContent(
                         currentUser = profile,
@@ -392,11 +423,16 @@ fun SearchTabContent(
     isArabic: Boolean,
     onSelectMatch: (UserProfile) -> Unit
 ) {
+    var activeSubTab by remember { mutableStateOf(0) } // 0: Dashboard, 1: Explore Matches
     var showFilters by remember { mutableStateOf(false) }
     val searchResults by viewModel.searchResults.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.errorMessage.collectAsState()
     var breakdownPartner by remember { mutableStateOf<UserProfile?>(null) }
+    val isDark = isSystemInDarkTheme()
+
+    val glassBgColor = if (isDark) GlassSurfaceDark else GlassSurfaceLight
+    val glassBorderColor = if (isDark) GlassBorderDark else GlassBorderLight
 
     Column(
         modifier = Modifier
@@ -404,103 +440,372 @@ fun SearchTabContent(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Button(
-            onClick = { showFilters = true },
-            modifier = Modifier.fillMaxWidth()
+        // Premium Sub-Tab Switcher
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(if (isArabic) "فتح شاشة تصفية البحث" else "Open Search Filters Sheet")
+            val tabs = if (isArabic) listOf("لوحة التحكم", "استكشاف الشركاء") else listOf("Dashboard", "Explore Partners")
+            tabs.forEachIndexed { index, title ->
+                val isSelected = activeSubTab == index
+                val tabBg = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                val tabTextColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(tabBg)
+                        .clickable { activeSubTab = index }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = tabTextColor
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = if (isArabic) "التوافقات المقترحة للزواج الشرعي" else "Islamic Match Compatibility Matches",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.align(Alignment.Start)
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (isLoading) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (error != null) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Text(text = error ?: "An error occurred", color = MaterialTheme.colorScheme.error)
-            }
-        } else if (searchResults.isEmpty()) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Text(text = if (isArabic) "لا توجد نتائج مطابقة. يرجى تعديل خيارات البحث." else "No matches found. Try adjusting filters.", modifier = Modifier.padding(16.dp))
-            }
-        } else {
+        if (activeSubTab == 0) {
+            // --- PREMIUM HOME DASHBOARD ---
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                searchResults.forEach { profile ->
-                    val score = MatchScoreCalculator.calculateScore(currentUser, profile)
-                    
+                // 1. Wali/Guardian Status Banner
+                val guardianStatus = currentUser.guardianStatus ?: "None"
+                val waliBannerColor = when (guardianStatus) {
+                    "Verified" -> SuccessGreen.copy(alpha = 0.15f)
+                    "Pending" -> Color(0xFFFF9800).copy(alpha = 0.15f)
+                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                }
+                val waliBannerBorder = when (guardianStatus) {
+                    "Verified" -> SuccessGreen.copy(alpha = 0.4f)
+                    "Pending" -> Color(0xFFFF9800).copy(alpha = 0.4f)
+                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                }
+                val waliText = when (guardianStatus) {
+                    "Verified" -> if (isArabic) "تحت الإشراف الشرعي الكامل لولي أمرك" else "Under full Islamic supervision of your Guardian"
+                    "Pending" -> if (isArabic) "دعوة ولي الأمر قيد الانتظار" else "Guardian invitation pending"
+                    else -> if (isArabic) "اضغط لإشراك ولي أمرك لضمان الحشمة والجدية" else "Invite a guardian to oversee chats & ensure modesty"
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = waliBannerColor),
+                    border = BorderStroke(1.dp, waliBannerBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (guardianStatus == "Verified") Icons.Default.CheckCircle else Icons.Default.Info,
+                            contentDescription = null,
+                            tint = if (guardianStatus == "Verified") SuccessGreen else if (guardianStatus == "Pending") Color(0xFFFF9800) else MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = waliText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                // 2. Profile Completeness Card (Glassmorphic)
+                val hasPhoto = !currentUser.imageUrl.contains("avatar_") && currentUser.imageUrl.isNotEmpty()
+                val isVerified = currentUser.verificationStatus == "VERIFIED" || currentUser.verificationStatus == "PENDING"
+                val hasQuiz = currentUser.questionnaireAnswers.isNotEmpty()
+                val hasWali = !currentUser.guardianEmail.isNullOrEmpty()
+                
+                val completeness = (if (hasPhoto) 25 else 0) + 
+                                     (if (isVerified) 25 else 0) + 
+                                     (if (hasQuiz) 25 else 0) + 
+                                     (if (hasWali) 25 else 0)
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(glassBgColor)
+                        .border(1.dp, glassBorderColor, RoundedCornerShape(24.dp)),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isArabic) "اكتمل ملفك الشخصي" else "Profile Completeness",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "$completeness%",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(10.dp))
+                        
+                        LinearProgressIndicator(
+                            progress = completeness.toFloat() / 100f,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(CircleShape),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        
+                        if (completeness < 100) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (isArabic) "أكمل المهام التالية للحصول على أفضل التوافقات:" else "Complete these tasks for better matchmaking:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                CompletenessItem(done = hasPhoto, label = if (isArabic) "رفع صورة شخصية" else "Upload profile photo")
+                                CompletenessItem(done = isVerified, label = if (isArabic) "توثيق الهوية والوجه" else "Submit identity verification")
+                                CompletenessItem(done = hasQuiz, label = if (isArabic) "إكمال استبيان التوافق" else "Complete compatibility questionnaire")
+                                CompletenessItem(done = hasWali, label = if (isArabic) "دعوة ولي الأمر (مشرف)" else "Invite your Wali (Guardian)")
+                            }
+                        }
+                    }
+                }
+
+                // 3. Daily Match Recommendation Card
+                val topMatch = remember(searchResults) {
+                    if (searchResults.isNotEmpty()) {
+                        searchResults.maxByOrNull { MatchScoreCalculator.calculateScore(currentUser, it) }
+                    } else null
+                }
+
+                if (topMatch != null) {
+                    val score = MatchScoreCalculator.calculateScore(currentUser, topMatch)
+                    Text(
+                        text = if (isArabic) "ترشيح اليوم الأكثر توافقاً" else "Today's Top Compatibility Match",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Start).padding(top = 8.dp)
+                    )
+
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        onClick = { onSelectMatch(profile) }
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        onClick = { onSelectMatch(topMatch) }
                     ) {
                         Row(
                             modifier = Modifier
-                                .padding(16.dp)
+                                .padding(20.dp)
                                 .fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
-                                Box(modifier = Modifier.size(52.dp)) {
+                                val isAccessApproved = topMatch.photoAccessApprovedUsers.contains(currentUser.uid)
+                                Box(modifier = Modifier.size(64.dp)) {
                                     UserProfileImage(
-                                        imageUrl = profile.imageUrl,
-                                        gender = profile.gender,
+                                        imageUrl = topMatch.imageUrl,
+                                        gender = topMatch.gender,
                                         isBlurred = !isAccessApproved,
                                         modifier = Modifier.fillMaxSize()
                                     )
                                 }
-
                                 Column {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(text = profile.name, fontWeight = FontWeight.Bold)
-                                        VerificationBadge(status = profile.verificationStatus)
+                                        Text(text = topMatch.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                        VerificationBadge(status = topMatch.verificationStatus)
                                     }
-                                    val sectLabel = profile.sect.getDisplayName(isArabic)
+                                    val sectLabel = topMatch.sect.getDisplayName(isArabic)
                                     val ageSuffix = if (isArabic) "سنة" else "yrs"
-                                    val modestyLabel = if (isArabic) "الحشمة: " else "Modesty: "
-                                    Text(text = "${profile.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
-                                    Text(text = "$modestyLabel${profile.modestyPreference.getDisplayName(isArabic)}", style = MaterialTheme.typography.bodySmall)
+                                    Text(text = "${topMatch.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = if (isArabic) "${topMatch.city}، ${topMatch.country}" else "${topMatch.city}, ${topMatch.country}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
+
+                            // Circular Score Visual with Canvas
                             Box(
-                                modifier = Modifier.clickable {
-                                    breakdownPartner = profile
-                                }
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.size(60.dp)
                             ) {
-                                MatchScoreBadge(score = score, size = 50.dp)
+                                val arcColor = MaterialTheme.colorScheme.primary
+                                val trackColor = MaterialTheme.colorScheme.outlineVariant
+                                Canvas(modifier = Modifier.fillMaxSize()) {
+                                    drawArc(
+                                        color = trackColor,
+                                        startAngle = 0f,
+                                        sweepAngle = 360f,
+                                        useCenter = false,
+                                        style = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round)
+                                    )
+                                    drawArc(
+                                        color = arcColor,
+                                        startAngle = -90f,
+                                        sweepAngle = (score.toFloat() / 100f) * 360f,
+                                        useCenter = false,
+                                        style = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round)
+                                    )
+                                }
+                                Text(
+                                    text = "$score%",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 4. CTA to Explore
+                Button(
+                    onClick = { activeSubTab = 1 },
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Search, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isArabic) "استكشف كل التوافقات والبحث" else "Explore All Matches & Filter",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        } else {
+            // --- EXPLORE MATCHES / SEARCH RESULTS VIEW ---
+            Button(
+                onClick = { showFilters = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(if (isArabic) "فتح شاشة تصفية البحث" else "Open Search Filters Sheet")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = if (isArabic) "التوافقات المقثرحة للزواج الشرعي" else "Islamic Match Compatibility Matches",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.align(Alignment.Start)
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isLoading) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (error != null) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text(text = error ?: "An error occurred", color = MaterialTheme.colorScheme.error)
+                }
+            } else if (searchResults.isEmpty()) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text(text = if (isArabic) "لا توجد نتائج مطابقة. يرجى تعديل خيارات البحث." else "No matches found. Try adjusting filters.", modifier = Modifier.padding(16.dp))
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    searchResults.forEach { profile ->
+                        val score = MatchScoreCalculator.calculateScore(currentUser, profile)
+                        
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            shape = RoundedCornerShape(24.dp), // Premium rounded 24.dp
+                            onClick = { onSelectMatch(profile) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
+                                    Box(modifier = Modifier.size(52.dp)) {
+                                        UserProfileImage(
+                                            imageUrl = profile.imageUrl,
+                                            gender = profile.gender,
+                                            isBlurred = !isAccessApproved,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(text = profile.name, fontWeight = FontWeight.Bold)
+                                            VerificationBadge(status = profile.verificationStatus)
+                                        }
+                                        val sectLabel = profile.sect.getDisplayName(isArabic)
+                                        val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                        val modestyLabel = if (isArabic) "الحشمة: " else "Modesty: "
+                                        Text(text = "${profile.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
+                                        Text(text = "$modestyLabel${profile.modestyPreference.getDisplayName(isArabic)}", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier.clickable {
+                                        breakdownPartner = profile
+                                    }
+                                ) {
+                                    MatchScoreBadge(score = score, size = 50.dp)
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        if (showFilters) {
-            SearchFilterBottomSheet(
-                onDismissRequest = { showFilters = false },
-                viewModel = viewModel
-            )
+            if (showFilters) {
+                SearchFilterBottomSheet(
+                    onDismissRequest = { showFilters = false },
+                    viewModel = viewModel
+                )
+            }
         }
     }
 
@@ -579,10 +884,22 @@ private fun formatDateTime(timestamp: Long): String {
 fun ChatTabContent(
     currentUser: UserProfile,
     targetUser: UserProfile?,
-    onSelectTargetUser: (UserProfile?) -> Unit
+    onSelectTargetUser: (UserProfile?) -> Unit,
+    guardianViewModel: GuardianViewModel
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
+    val coroutineScope = rememberCoroutineScope()
+    val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager() }
+    var partnerPhotoState by remember { mutableStateOf(PhotoAccessState.NONE) }
+    var userPhotoStateForPartner by remember { mutableStateOf(PhotoAccessState.NONE) }
+
+    LaunchedEffect(currentUser.uid, targetUser?.uid) {
+        if (targetUser != null) {
+            partnerPhotoState = photoAccessManager.checkPhotoAccessState(currentUser.uid, targetUser.uid)
+            userPhotoStateForPartner = photoAccessManager.checkPhotoAccessState(targetUser.uid, currentUser.uid)
+        }
+    }
     
     val isMock = try {
         com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey == "mock-api-key-for-testing" ||
@@ -805,10 +1122,11 @@ fun ChatTabContent(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(modifier = Modifier.size(52.dp)) {
+                                    val isPartnerPhotoApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
                                     UserProfileImage(
                                         imageUrl = partner.imageUrl,
                                         gender = partner.gender,
-                                        isBlurred = !partner.photoAccessApprovedUsers.contains(currentUser.uid),
+                                        isBlurred = !isPartnerPhotoApproved,
                                         modifier = Modifier.fillMaxSize()
                                     )
                                 }
@@ -859,6 +1177,7 @@ fun ChatTabContent(
     val callState by chatViewModel.callState.collectAsState()
 
     var messageText by remember { mutableStateOf("") }
+    var showWaliDialog by remember { mutableStateOf(false) }
 
     if (warningState != null) {
         AlertDialog(
@@ -898,10 +1217,11 @@ fun ChatTabContent(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(modifier = Modifier.size(40.dp)) {
+                        val isPartnerPhotoApproved = targetUser.photoAccessApprovedUsers.contains(currentUser.uid) || partnerPhotoState == PhotoAccessState.APPROVED
                         UserProfileImage(
                             imageUrl = targetUser.imageUrl,
                             gender = targetUser.gender,
-                            isBlurred = !targetUser.photoAccessApprovedUsers.contains(currentUser.uid),
+                            isBlurred = !isPartnerPhotoApproved,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -911,8 +1231,9 @@ fun ChatTabContent(
                             Text(text = targetUser.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                             VerificationBadge(status = targetUser.verificationStatus)
                         }
+                        val isPartnerPhotoApproved = targetUser.photoAccessApprovedUsers.contains(currentUser.uid) || partnerPhotoState == PhotoAccessState.APPROVED
                         Text(
-                            text = if (targetUser.photoAccessApprovedUsers.contains(currentUser.uid)) 
+                            text = if (isPartnerPhotoApproved) 
                                 (if (strings.appName == "ميثاق") "الصورة واضحة" else "Photo Visible")
                             else 
                                 (if (strings.appName == "ميثاق") "الصورة مغطاة للحشمة" else "Photo Blurred"), 
@@ -921,6 +1242,29 @@ fun ChatTabContent(
                         )
                     }
                     Spacer(modifier = Modifier.weight(1f))
+                    
+                    // In-Chat Wali invite shortcut button if room not chaperoned
+                    val isChaperoned = chatRoomState?.isChaperoned ?: true
+                    val waliEmail = chatRoomState?.waliEmail ?: (currentUser.guardianEmail ?: "guardian@mithaq.com")
+                    
+                    if (!isChaperoned || waliEmail == "guardian@mithaq.com") {
+                        TextButton(
+                            onClick = { showWaliDialog = true },
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (strings.appName == "ميثاق") "أضف ولياً" else "Add Wali",
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
                     IconButton(onClick = { chatViewModel.requestCall() }) {
                         Icon(
                             imageVector = Icons.Default.Phone,
@@ -988,6 +1332,120 @@ fun ChatTabContent(
                             isCurrentUser = isMe
                         )
                     }
+
+                    // Interactive Photo Access Bubble inside chat
+                    val isPartnerPhotoApproved = targetUser.photoAccessApprovedUsers.contains(currentUser.uid) || partnerPhotoState == PhotoAccessState.APPROVED
+                    if (!isPartnerPhotoApproved) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = if (strings.appName == "ميثاق") "صورة الشريك مغطاة للحشمة." else "Partner's photo is blurred for modesty.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                if (partnerPhotoState == PhotoAccessState.PENDING) {
+                                    Text(
+                                        text = if (strings.appName == "ميثاق") "طلب رؤية الصورة معلق بانتظار موافقة الشريك..." else "Photo access request is pending partner approval...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                } else {
+                                    Button(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                val success = photoAccessManager.requestPhotoAccess(currentUser.uid, targetUser.uid)
+                                                if (success) {
+                                                    partnerPhotoState = PhotoAccessState.PENDING
+                                                }
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (strings.appName == "ميثاق") "طلب رؤية الصورة" else "Request Photo Access")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Partner requesting user photo access bubble
+                    val isUserPhotoApprovedForPartner = currentUser.photoAccessApprovedUsers.contains(targetUser.uid) || userPhotoStateForPartner == PhotoAccessState.APPROVED
+                    val hasRequestedUserPhoto = currentUser.photoAccessRequests.contains(targetUser.uid) || userPhotoStateForPartner == PhotoAccessState.PENDING
+                    
+                    if (!isUserPhotoApprovedForPartner && hasRequestedUserPhoto) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = if (strings.appName == "ميثاق") "طلب الشريك رؤية صورتك الشخصية." else "Partner requested to view your profile photo.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                val success = photoAccessManager.approvePhotoAccess(currentUser.uid, targetUser.uid)
+                                                if (success) {
+                                                    userPhotoStateForPartner = PhotoAccessState.APPROVED
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        if (strings.appName == "ميثاق") "تم السماح برؤية صورتك!" else "Photo access approved!",
+                                                        android.widget.Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (strings.appName == "ميثاق") "موافقة" else "Approve")
+                                    }
+                                    OutlinedButton(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                val success = photoAccessManager.revokePhotoAccess(currentUser.uid, targetUser.uid)
+                                                if (success) {
+                                                    userPhotoStateForPartner = PhotoAccessState.NONE
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (strings.appName == "ميثاق") "رفض" else "Reject")
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Row(
@@ -1028,6 +1486,22 @@ fun ChatTabContent(
                     Text(if (strings.appName == "ميثاق") "موافق" else "OK")
                 }
             }
+        )
+    }
+
+    if (showWaliDialog) {
+        InviteGuardianDialog(
+            viewModel = guardianViewModel,
+            onDismissRequest = { showWaliDialog = false },
+            titleText = strings.inviteWali,
+            subtitleText = if (strings.appName == "ميثاق") "في الزواج الإسلامي، إشراك ولي الأمر يضمن رحلة مباركة، شفافة، وآمنة." else "In Islamic matchmaking, involving a guardian ensures a blessed, transparent, and safe journey.",
+            nameLabel = strings.nameLabel,
+            emailLabel = strings.emailLabel,
+            submitButtonText = if (strings.appName == "ميثاق") "إرسال الدعوة" else "Send Invitation",
+            cancelButtonText = if (strings.appName == "ميثاق") "إلغاء" else "Cancel",
+            successTitle = if (strings.appName == "ميثاق") "تم إرسال الدعوة" else "Invitation Sent",
+            successSubtitle = if (strings.appName == "ميثاق") "تم إرسال دعوة إلى ولي أمرك. سنقوم بإشعارك بمجرد قبوله." else "An invitation has been sent to your Guardian. We will notify you once they accept.",
+            closeButtonText = if (strings.appName == "ميثاق") "إغلاق" else "Close"
         )
     }
 }
@@ -1653,212 +2127,237 @@ fun ModestyTabContent(
             )
         }
 
-        // ------------------ DEVELOPER OPTIONS & SETTINGS CARD ------------------
-        Spacer(modifier = Modifier.height(24.dp))
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f)
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+        var devTapCount by remember { mutableStateOf(0) }
+        var isDevMenuVisible by remember { mutableStateOf(false) }
+
+        if (isDevMenuVisible) {
+            // ------------------ DEVELOPER OPTIONS & SETTINGS CARD ------------------
+            Spacer(modifier = Modifier.height(24.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f)
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
             ) {
-                // Header with Gear Icon
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Lock,
-                        contentDescription = "Settings",
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
-                        text = if (isArabic) "خيارات المطور والإعدادات" else "Developer Settings & Options",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                val isMockDatabase = try {
-                    val firestoreDb = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                    firestoreDb.app?.options?.apiKey == "mock-api-key-for-testing" || firestoreDb.app?.options?.apiKey?.contains("mock") == true
-                } catch (e: Exception) {
-                    true
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(if (isMockDatabase) Color(0xFFFF9800) else Color(0xFF4CAF50))
-                    )
-                    Text(
-                        text = if (isMockDatabase) {
-                            if (isArabic) "وضع الاتصال: وضع التجربة (قاعدة بيانات وهمية)" else "Connection: Demo Mode (Mock Database)"
-                        } else {
-                            if (isArabic) "وضع الاتصال: متصل بالسحابة (سيرفر حقيقي)" else "Connection: Connected to Cloud (Real Server)"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isMockDatabase) Color(0xFFFF9800) else Color(0xFF4CAF50),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Simulated Offline Switch Row
-                val devPrefs = context.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
-                var isOfflineSimulatedLocal by remember {
-                    mutableStateOf(devPrefs.getBoolean("is_offline_simulated", false))
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (isArabic) "محاكاة وضع عدم الاتصال" else "Simulate Offline Mode",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
+                    // Header with Gear Icon
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Lock,
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.secondary
                         )
                         Text(
-                            text = if (isArabic) "تشغيل وضع عدم الاتصال بالشبكة لاختبار التخزين المحلي" else "Simulate network loss to test offline Room cache",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = if (isArabic) "خيارات المطور والإعدادات" else "Developer Settings & Options",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
-                    Switch(
-                        checked = isOfflineSimulatedLocal,
-                        onCheckedChange = { checked ->
-                            isOfflineSimulatedLocal = checked
-                            devPrefs.edit().putBoolean("is_offline_simulated", checked).apply()
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val isMockDatabase = try {
+                        val firestoreDb = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                        firestoreDb.app?.options?.apiKey == "mock-api-key-for-testing" || firestoreDb.app?.options?.apiKey?.contains("mock") == true
+                    } catch (e: Exception) {
+                        true
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(if (isMockDatabase) Color(0xFFFF9800) else Color(0xFF4CAF50))
                         )
+                        Text(
+                            text = if (isMockDatabase) {
+                                if (isArabic) "وضع الاتصال: وضع التجربة (قاعدة بيانات وهمية)" else "Connection: Demo Mode (Mock Database)"
+                            } else {
+                                if (isArabic) "وضع الاتصال: متصل بالسحابة (سيرفر حقيقي)" else "Connection: Connected to Cloud (Real Server)"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isMockDatabase) Color(0xFFFF9800) else Color(0xFF4CAF50),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Simulated Offline Switch Row
+                    val devPrefs = context.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
+                    var isOfflineSimulatedLocal by remember {
+                        mutableStateOf(devPrefs.getBoolean("is_offline_simulated", false))
+                    }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isArabic) "محاكاة وضع عدم الاتصال" else "Simulate Offline Mode",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = if (isArabic) "تشغيل وضع عدم الاتصال بالشبكة لاختبار التخزين المحلي" else "Simulate network loss to test offline Room cache",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isOfflineSimulatedLocal,
+                            onCheckedChange = { checked ->
+                                isOfflineSimulatedLocal = checked
+                                devPrefs.edit().putBoolean("is_offline_simulated", checked).apply()
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Mock Role Switcher Section
+                    Text(
+                        text = if (isArabic) "تبديل دور المستخدم (للاختبار)" else "Switch Mock User Role (Testing)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.align(Alignment.Start)
                     )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Mock Role Switcher Section
-                Text(
-                    text = if (isArabic) "تبديل دور المستخدم (للاختبار)" else "Switch Mock User Role (Testing)",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.align(Alignment.Start)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Regular Member Chip
-                    FilterChip(
-                        selected = !currentUser.isWaliAccount && !currentUser.isAdmin,
-                        onClick = {
-                            authViewModel.updateMockRole(isWali = false, isAdmin = false, context = context)
-                        },
-                        label = { Text(if (isArabic) "يوزر عادي (عضو)" else "Regular Member") }
-                    )
-                    // Wali Chip
-                    FilterChip(
-                        selected = currentUser.isWaliAccount,
-                        onClick = {
-                            authViewModel.updateMockRole(isWali = true, isAdmin = false, context = context)
-                        },
-                        label = { Text(if (isArabic) "مشرف (ولي أمر)" else "Wali / Guardian") }
-                    )
-                    // Admin Chip
-                    FilterChip(
-                        selected = currentUser.isAdmin,
-                        onClick = {
-                            authViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
-                        },
-                        label = { Text(if (isArabic) "إدمن (مسؤول)" else "Admin") }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Navigation Shortcuts Section
-                Text(
-                    text = if (isArabic) "روابط التنقل السريع" else "Navigation Shortcuts",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.align(Alignment.Start)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Premium Store Button
-                Button(
-                    onClick = { onNavigateToScreen("premium_store") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(if (isArabic) "الذهاب إلى متجر الاشتراكات المميزة" else "Go to Premium Store")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Questionnaire Button
-                Button(
-                    onClick = { onNavigateToScreen("questionnaire") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(if (isArabic) "الذهاب إلى استبيان التوافق" else "Go to Compatibility Questionnaire")
-                }
-
-                if (currentUser.isAdmin) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    // Admin Console Button
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Regular Member Chip
+                        FilterChip(
+                            selected = !currentUser.isWaliAccount && !currentUser.isAdmin,
+                            onClick = {
+                                authViewModel.updateMockRole(isWali = false, isAdmin = false, context = context)
+                            },
+                            label = { Text(if (isArabic) "يوزر عادي (عضو)" else "Regular Member") }
+                        )
+                        // Wali Chip
+                        FilterChip(
+                            selected = currentUser.isWaliAccount,
+                            onClick = {
+                                authViewModel.updateMockRole(isWali = true, isAdmin = false, context = context)
+                            },
+                            label = { Text(if (isArabic) "مشرف (ولي أمر)" else "Wali / Guardian") }
+                        )
+                        // Admin Chip
+                        FilterChip(
+                            selected = currentUser.isAdmin,
+                            onClick = {
+                                authViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
+                            },
+                            label = { Text(if (isArabic) "إدمن (مسؤول)" else "Admin") }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Navigation Shortcuts Section
+                    Text(
+                        text = if (isArabic) "روابط التنقل السريع" else "Navigation Shortcuts",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Premium Store Button
                     Button(
-                        onClick = { onNavigateToScreen("admin") },
+                        onClick = { onNavigateToScreen("premium_store") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFC62828) // Admin Red
+                            containerColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(if (isArabic) "الذهاب إلى لوحة تحكم الإدارة" else "Go to Admin Console")
+                        Text(if (isArabic) "الذهاب إلى متجر الاشتراكات المميز" else "Go to Premium Store")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Questionnaire Button
+                    Button(
+                        onClick = { onNavigateToScreen("questionnaire") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(if (isArabic) "الذهاب إلى استبيان التوافق" else "Go to Compatibility Questionnaire")
+                    }
+
+                    if (currentUser.isAdmin) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Admin Console Button
+                        Button(
+                            onClick = { onNavigateToScreen("admin") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFC62828) // Admin Red
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(if (isArabic) "الذهاب إلى لوحة تحكم الإدارة" else "Go to Admin Console")
+                        }
                     }
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(
+            text = if (isArabic) "ميثاق v1.1" else "Mithaq v1.1",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier
+                .clickable {
+                    devTapCount++
+                    if (devTapCount >= 5) {
+                        isDevMenuVisible = true
+                        android.widget.Toast.makeText(
+                            context,
+                            if (isArabic) "وضع المطور نشط الآن!" else "Developer mode activated!",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+                .padding(8.dp)
+        )
     }
 }
 
@@ -2498,3 +2997,25 @@ fun ReadOnlyChaperonedChat(
         }
     }
 }
+
+@Composable
+fun CompletenessItem(done: Boolean, label: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(
+            imageVector = if (done) Icons.Default.CheckCircle else Icons.Default.Info,
+            contentDescription = null,
+            tint = if (done) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (done) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
