@@ -228,12 +228,16 @@ fun MithaqAppNavigation(
             }
         }
         "admin" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
-            AdminConsoleScreen(
-                viewModel = authViewModel,
-                isArabic = isArabic,
-                onBack = { currentScreen = "home" }
-            )
+            if (currentUserProfile?.isAdmin == true) {
+                androidx.activity.compose.BackHandler { currentScreen = "home" }
+                AdminConsoleScreen(
+                    viewModel = authViewModel,
+                    isArabic = isArabic,
+                    onBack = { currentScreen = "home" }
+                )
+            } else {
+                currentScreen = "home"
+            }
         }
         "premium_store" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
