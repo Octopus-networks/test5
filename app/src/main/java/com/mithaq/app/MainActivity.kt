@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -181,13 +182,11 @@ fun MithaqAppNavigation(
         }
         "admin" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
-            SecureScreen {
-                AdminConsoleScreen(
-                    viewModel = authViewModel,
-                    isArabic = isArabic,
-                    onBack = { currentScreen = "home" }
-                )
-            }
+            AdminConsoleScreen(
+                viewModel = authViewModel,
+                isArabic = isArabic,
+                onBack = { currentScreen = "home" }
+            )
         }
         "premium_store" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
@@ -1732,7 +1731,9 @@ fun ModestyTabContent(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
