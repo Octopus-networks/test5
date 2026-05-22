@@ -18,19 +18,19 @@ service firebase.storage {
     }
 
     // Profiles storage rules
-    match /profiles/{userId}.jpg {
+    match /profiles/{imageId} {
       // Any authenticated user can view other members' profiles
       allow read: if isAuthenticated();
       // Only the profile owner can upload or change their photo
-      allow write: if isOwner(userId);
+      allow write: if isAuthenticated() && imageId == request.auth.uid + '.jpg';
     }
 
     // Voice Introductions storage rules
-    match /voices/{userId}.mp4 {
+    match /voices/{voiceId} {
       // Any authenticated user can listen to voice introductions
       allow read: if isAuthenticated();
       // Only the profile owner can upload or update their voice introduction
-      allow write: if isOwner(userId);
+      allow write: if isAuthenticated() && voiceId == request.auth.uid + '.mp4';
     }
 
     // Identity Verification Document rules (Sensitive IDs and Live Selfies)
