@@ -1067,7 +1067,16 @@ class AuthViewModel(
                         val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
                         prefs.edit().putString("verificationStatus", "PENDING").apply()
                         _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "PENDING")
-                        onResult(true, "تم تقديم طلب التحقق بنجاح، وهو قيد المراجعة.")
+                        val isArabic = java.util.Locale.getDefault().language == "ar"
+                        com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                            context,
+                            if (isArabic) "ميثاق - تم إرسال طلب التوثيق" else "Mithaq - Verification Request Sent",
+                            if (isArabic) 
+                                "تم إرسال طلب التوثيق بنجاح إلى مشرفك (ولي أمرك) وإلى الإدمن للمراجعة."
+                            else 
+                                "Verification request has been sent to your Wali & Admin for review."
+                        )
+                        onResult(true, if (isArabic) "تم تقديم طلب التوثيق بنجاح وإرساله إلى مشرفك (ولي أمرك) وإلى الإدمن للمراجعة." else "Verification request submitted successfully and sent to your supervisor (Wali) and the Admin for review.")
                         return@launch
                     }
 
@@ -1087,7 +1096,16 @@ class AuthViewModel(
                         .update("verificationStatus", "PENDING").await()
 
                     _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "PENDING")
-                    onResult(true, "تم تقديم طلب التحقق بنجاح، وهو قيد المراجعة.")
+                    val isArabic = java.util.Locale.getDefault().language == "ar"
+                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                        context,
+                        if (isArabic) "ميثاق - تم إرسال طلب التوثيق" else "Mithaq - Verification Request Sent",
+                        if (isArabic) 
+                            "تم إرسال طلب التوثيق بنجاح إلى مشرفك (ولي أمرك) وإلى الإدمن للمراجعة."
+                        else 
+                            "Verification request has been sent to your Wali & Admin for review."
+                    )
+                    onResult(true, if (isArabic) "تم تقديم طلب التوثيق بنجاح وإرساله إلى مشرفك (ولي أمرك) وإلى الإدمن للمراجعة." else "Verification request submitted successfully and sent to your supervisor (Wali) and the Admin for review.")
                 } catch (e: Exception) {
                     onResult(false, "حدث خطأ أثناء رفع المستندات: ${e.localizedMessage}")
                 }
