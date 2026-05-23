@@ -82,7 +82,7 @@ fun RegisterScreen(
     var showPhotoOptionDialog by remember { mutableStateOf(false) }
 
     val cameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+        contract = com.mithaq.app.ui.photo.CustomTakePictureContract()
     ) { success ->
         if (success) {
             tempCameraUri?.let { uri ->
@@ -423,7 +423,15 @@ fun RegisterScreen(
                                                     showPhotoOptionDialog = false
                                                     val uri = getCameraImageUri(context)
                                                     tempCameraUri = uri
-                                                    cameraLauncher.launch(uri)
+                                                    try {
+                                                        cameraLauncher.launch(uri)
+                                                    } catch (e: Exception) {
+                                                        android.widget.Toast.makeText(
+                                                            context,
+                                                            if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
+                                                            android.widget.Toast.LENGTH_LONG
+                                                        ).show()
+                                                    }
                                                 }
                                             ) {
                                                 Text(if (isArabic) "الكاميرا" else "Camera")

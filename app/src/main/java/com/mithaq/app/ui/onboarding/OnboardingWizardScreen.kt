@@ -73,7 +73,7 @@ fun OnboardingWizardScreen(
     }
 
     val idCardCameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
+        contract = com.mithaq.app.ui.photo.CustomTakePictureContract()
     ) { success ->
         if (success) {
             tempIdCameraUri?.let { idCardUri = it }
@@ -87,7 +87,7 @@ fun OnboardingWizardScreen(
     }
 
     val selfieCameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
+        contract = com.mithaq.app.ui.photo.CustomTakePictureContract()
     ) { success ->
         if (success) {
             tempSelfieCameraUri?.let { selfieUri = it }
@@ -228,7 +228,15 @@ fun OnboardingWizardScreen(
                                                 showIdOptionDialog = false
                                                 val uri = getCameraImageUri(context)
                                                 tempIdCameraUri = uri
-                                                idCardCameraLauncher.launch(uri)
+                                                try {
+                                                    idCardCameraLauncher.launch(uri)
+                                                } catch (e: Exception) {
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
+                                                        android.widget.Toast.LENGTH_LONG
+                                                    ).show()
+                                                }
                                             }
                                         ) {
                                             Text(if (isArabic) "الكاميرا" else "Camera")
@@ -258,7 +266,15 @@ fun OnboardingWizardScreen(
                                                 showSelfieOptionDialog = false
                                                 val uri = getCameraImageUri(context)
                                                 tempSelfieCameraUri = uri
-                                                selfieCameraLauncher.launch(uri)
+                                                try {
+                                                    selfieCameraLauncher.launch(uri)
+                                                } catch (e: Exception) {
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
+                                                        android.widget.Toast.LENGTH_LONG
+                                                    ).show()
+                                                }
                                             }
                                         ) {
                                             Text(if (isArabic) "الكاميرا" else "Camera")

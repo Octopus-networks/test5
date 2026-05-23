@@ -1734,7 +1734,7 @@ fun ModestyTabContent(
     }
 
     val cameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+        contract = com.mithaq.app.ui.photo.CustomTakePictureContract()
     ) { success ->
         if (success) {
             tempCameraUri?.let { handleProfileImageUpload(it) }
@@ -1822,7 +1822,15 @@ fun ModestyTabContent(
                                     onClick = {
                                         val uri = getCameraImageUri(context)
                                         tempCameraUri = uri
-                                        cameraLauncher.launch(uri)
+                                        try {
+                                            cameraLauncher.launch(uri)
+                                        } catch (e: Exception) {
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
+                                                android.widget.Toast.LENGTH_LONG
+                                            ).show()
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                     modifier = Modifier.weight(1f)
@@ -1986,7 +1994,7 @@ fun ModestyTabContent(
                         }
 
                         val idCardCameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                            contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+                            contract = com.mithaq.app.ui.photo.CustomTakePictureContract()
                         ) { success ->
                             if (success) {
                                 tempIdCameraUri?.let { idCardUri = it }
@@ -2000,7 +2008,7 @@ fun ModestyTabContent(
                         }
 
                         val selfieCameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                            contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+                            contract = com.mithaq.app.ui.photo.CustomTakePictureContract()
                         ) { success ->
                             if (success) {
                                 tempSelfieCameraUri?.let { selfieUri = it }
@@ -2035,9 +2043,17 @@ fun ModestyTabContent(
                             }
                             Button(
                                 onClick = {
-                                    val uri = getCameraImageUri(context)
-                                    tempIdCameraUri = uri
-                                    idCardCameraLauncher.launch(uri)
+                                    try {
+                                        val uri = getCameraImageUri(context)
+                                        tempIdCameraUri = uri
+                                        idCardCameraLauncher.launch(uri)
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
+                                            android.widget.Toast.LENGTH_LONG
+                                        ).show()
+                                    }
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
@@ -2078,9 +2094,17 @@ fun ModestyTabContent(
                             }
                             Button(
                                 onClick = {
-                                    val uri = getCameraImageUri(context)
-                                    tempSelfieCameraUri = uri
-                                    selfieCameraLauncher.launch(uri)
+                                    try {
+                                        val uri = getCameraImageUri(context)
+                                        tempSelfieCameraUri = uri
+                                        selfieCameraLauncher.launch(uri)
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
+                                            android.widget.Toast.LENGTH_LONG
+                                        ).show()
+                                    }
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
