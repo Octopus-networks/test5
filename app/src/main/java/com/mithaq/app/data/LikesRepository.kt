@@ -178,6 +178,7 @@ class LikesRepository(private val context: Context) {
     suspend fun addProfileView(viewerUid: String, viewedUid: String) {
         if (viewerUid == viewedUid) return
         if (isMock) {
+            // Visitors of viewedUid (who viewed viewedUid)
             val viewsStr = prefs.getString("views_$viewedUid", "[]") ?: "[]"
             val array = JSONArray(viewsStr)
             var exists = false
@@ -187,6 +188,18 @@ class LikesRepository(private val context: Context) {
             if (!exists) {
                 array.put(viewerUid)
                 prefs.edit().putString("views_$viewedUid", array.toString()).apply()
+            }
+
+            // Profiles viewed by viewerUid
+            val viewerViewsStr = prefs.getString("viewed_by_$viewerUid", "[]") ?: "[]"
+            val viewerArray = JSONArray(viewerViewsStr)
+            var viewerExists = false
+            for (i in 0 until viewerArray.length()) {
+                if (viewerArray.getString(i) == viewedUid) viewerExists = true
+            }
+            if (!viewerExists) {
+                viewerArray.put(viewedUid)
+                prefs.edit().putString("viewed_by_$viewerUid", viewerArray.toString()).apply()
             }
         } else {
             try {
@@ -225,6 +238,29 @@ class LikesRepository(private val context: Context) {
         }
     }
 
+    suspend fun getProfilesIViewed(userUid: String): List<String> {
+        if (isMock) {
+            val viewsStr = prefs.getString("viewed_by_$userUid", "[]") ?: "[]"
+            val array = JSONArray(viewsStr)
+            val list = mutableListOf<String>()
+            for (i in 0 until array.length()) {
+                list.add(array.getString(i))
+            }
+            return list
+        } else {
+            try {
+                val snapshot = db.collection("profile_views")
+                    .whereEqualTo("viewerUid", userUid)
+                    .get()
+                    .await()
+                return snapshot.documents.mapNotNull { it.getString("viewedUid") }.distinct()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return emptyList()
+            }
+        }
+    }
+
     // ================= FAVORITES =================
 
     suspend fun toggleFavorite(userUid: String, favoriteUid: String): Boolean {
@@ -245,6 +281,18 @@ class LikesRepository(private val context: Context) {
                     if (i != index) newArray.put(array.get(i))
                 }
                 prefs.edit().putString("favorites_$userUid", newArray.toString()).apply()
+
+                // Remove userUid from favorited_by_$favoriteUid
+                val fByStr = prefs.getString("favorited_by_$favoriteUid", "[]") ?: "[]"
+                val fByArray = JSONArray(fByStr)
+                val newFByArray = JSONArray()
+                for (j in 0 until fByArray.length()) {
+                    if (fByArray.getString(j) != userUid) {
+                        newFByArray.put(fByArray.get(j))
+                    }
+                }
+                prefs.edit().putString("favorited_by_$favoriteUid", newFByArray.toString()).apply()
+
                 return false
             } else {
                 for (i in 0 until array.length()) {
@@ -252,6 +300,19 @@ class LikesRepository(private val context: Context) {
                 }
                 newArray.put(favoriteUid)
                 prefs.edit().putString("favorites_$userUid", newArray.toString()).apply()
+
+                // Add userUid to favorited_by_$favoriteUid
+                val fByStr = prefs.getString("favorited_by_$favoriteUid", "[]") ?: "[]"
+                val fByArray = JSONArray(fByStr)
+                var existsInFBy = false
+                for (j in 0 until fByArray.length()) {
+                    if (fByArray.getString(j) == userUid) existsInFBy = true
+                }
+                if (!existsInFBy) {
+                    fByArray.put(userUid)
+                    prefs.edit().putString("favorited_by_$favoriteUid", fByArray.toString()).apply()
+                }
+
                 return true
             }
         } else {
@@ -298,6 +359,35 @@ class LikesRepository(private val context: Context) {
                 return emptyList()
             }
         }
+    }
+
+    suspend fun getWhoFavoritedMe(userUid: String): List<String> {
+        if (isMock) {
+            val favsStr = prefs.getString("favorited_by_$userUid", "[]") ?: "[]"
+            val array = JSONArray(favsStr)
+            val list = mutableListOf<String>()
+            for (i in 0 until array.length()) {
+                list.add(array.getString(i))
+            }
+            return list
+        } else {
+            try {
+                val snapshot = db.collection("favorites")
+                    .whereEqualTo("favoriteUserUid", userUid)
+                    .get()
+                    .await()
+                return snapshot.documents.mapNotNull { it.getString("userUid") }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return emptyList()
+            }
+        }
+    }
+
+    suspend fun getMutualFavorites(userUid: String): List<String> {
+        val myFavs = getFavorites(userUid)
+        val whoFavsMe = getWhoFavoritedMe(userUid)
+        return myFavs.intersect(whoFavsMe.toSet()).toList()
     }
 
     // ================= HELPERS FOR CHATROOMS =================

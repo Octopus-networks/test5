@@ -48,11 +48,12 @@ fun UserProfileImage(
     gender: Gender,
     isBlurred: Boolean,
     modifier: Modifier = Modifier,
-    blurRadius: Dp = 25.dp
+    blurRadius: Dp = 25.dp,
+    shape: androidx.compose.ui.graphics.Shape = CircleShape
 ) {
     Box(
         modifier = modifier
-            .clip(CircleShape)
+            .clip(shape)
             .modestyBlur(isBlurred, blurRadius)
     ) {
         if (imageUrl.startsWith("avatar_")) {
