@@ -168,8 +168,8 @@ fun LoginScreen(
                         .padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val memberText = if (isArabic) "عضو / خاطب" else "Member / Match Seeker"
-                    val waliText = if (isArabic) "ولي أمر / Guardian" else "Guardian / Wali"
+                    val memberText = if (isArabic) "عضو" else "Member"
+                    val waliText = if (isArabic) "ولي أمر" else "Guardian"
                     
                     Box(
                         modifier = Modifier
@@ -186,7 +186,8 @@ fun LoginScreen(
                             text = memberText,
                             color = if (!isWali) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            fontSize = 14.sp,
+                            maxLines = 1
                         )
                     }
                     Box(
@@ -204,7 +205,8 @@ fun LoginScreen(
                             text = waliText,
                             color = if (isWali) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            fontSize = 14.sp,
+                            maxLines = 1
                         )
                     }
                 }
