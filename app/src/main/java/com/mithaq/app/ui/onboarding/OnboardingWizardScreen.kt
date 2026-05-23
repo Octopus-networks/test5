@@ -59,16 +59,39 @@ fun OnboardingWizardScreen(
     var isSubmittingVer by remember { mutableStateOf(false) }
     var verStatusMsg by remember { mutableStateOf<String?>(null) }
 
+    var tempIdCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var tempSelfieCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var showIdOptionDialog by remember { mutableStateOf(false) }
+    var showSelfieOptionDialog by remember { mutableStateOf(false) }
+
+
+
     val idCardLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) idCardUri = uri
     }
 
+    val idCardCameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempIdCameraUri?.let { idCardUri = it }
+        }
+    }
+
     val selfieLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) selfieUri = uri
+    }
+
+    val selfieCameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempSelfieCameraUri?.let { selfieUri = it }
+        }
     }
 
     // Step 2 State: Questionnaire
@@ -163,35 +186,97 @@ fun OnboardingWizardScreen(
                     }
                 ) { step ->
                     when (step) {
-                        1 -> StepVerificationContent(
-                            isArabic = isArabic,
-                            idCardUri = idCardUri,
-                            selfieUri = selfieUri,
-                            isSubmitting = isSubmittingVer,
-                            statusMsg = verStatusMsg,
-                            onSelectId = { idCardLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                            onSelectSelfie = { selfieLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                            onSubmit = {
-                                if (idCardUri == null || selfieUri == null) {
-                                    verStatusMsg = if (isArabic) "يرجى اختيار كل من صورة الهوية والصورة الشخصية." else "Please select both ID Card and Selfie."
-                                    return@StepVerificationContent
-                                }
-                                isSubmittingVer = true
-                                verStatusMsg = if (isArabic) "جاري التحقق الفوري باستخدام الذكاء الاصطناعي..." else "Analyzing with instant AI Face Recognition..."
-                                authViewModel.submitVerification(idCardUri!!, selfieUri!!, context) { success, message ->
-                                    isSubmittingVer = false
-                                    verStatusMsg = message
-                                    if (success) {
-                                        currentStep = 2
+                        1 -> {
+                            StepVerificationContent(
+                                isArabic = isArabic,
+                                idCardUri = idCardUri,
+                                selfieUri = selfieUri,
+                                isSubmitting = isSubmittingVer,
+                                statusMsg = verStatusMsg,
+                                onSelectId = { showIdOptionDialog = true },
+                                onSelectSelfie = { showSelfieOptionDialog = true },
+                                onSubmit = {
+                                    if (idCardUri == null || selfieUri == null) {
+                                        verStatusMsg = if (isArabic) "يرجى اختيار كل من صورة الهوية والصورة الشخصية." else "Please select both ID Card and Selfie."
+                                        return@StepVerificationContent
                                     }
+                                    isSubmittingVer = true
+                                    verStatusMsg = if (isArabic) "جاري التحقق الفوري باستخدام الذكاء الاصطناعي..." else "Analyzing with instant AI Face Recognition..."
+                                    authViewModel.submitVerification(idCardUri!!, selfieUri!!, context) { success, message ->
+                                        isSubmittingVer = false
+                                        verStatusMsg = message
+                                        if (success) {
+                                            currentStep = 2
+                                        }
+                                    }
+                                },
+                                onMockApprove = {
+                                    authViewModel.mockAdminApproveVerification(context)
+                                    verStatusMsg = if (isArabic) "تم التوثيق الفوري بنجاح!" else "Instant verification approved!"
+                                    currentStep = 2
                                 }
-                            },
-                            onMockApprove = {
-                                authViewModel.mockAdminApproveVerification(context)
-                                verStatusMsg = if (isArabic) "تم التوثيق الفوري بنجاح!" else "Instant verification approved!"
-                                currentStep = 2
+                            )
+
+                            if (showIdOptionDialog) {
+                                AlertDialog(
+                                    onDismissRequest = { showIdOptionDialog = false },
+                                    title = { Text(if (isArabic) "اختر طريقة الرفع" else "Choose Upload Method") },
+                                    text = { Text(if (isArabic) "هل تريد التقاط صورة الهوية بالكاميرا أم اختيارها من المعرض؟" else "Would you like to take a photo of your ID with the camera or choose from gallery?") },
+                                    confirmButton = {
+                                        TextButton(
+                                            onClick = {
+                                                showIdOptionDialog = false
+                                                val uri = getCameraImageUri(context)
+                                                tempIdCameraUri = uri
+                                                idCardCameraLauncher.launch(uri)
+                                            }
+                                        ) {
+                                            Text(if (isArabic) "الكاميرا" else "Camera")
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(
+                                            onClick = {
+                                                showIdOptionDialog = false
+                                                idCardLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                            }
+                                        ) {
+                                            Text(if (isArabic) "المعرض" else "Gallery")
+                                        }
+                                    }
+                                )
                             }
-                        )
+
+                            if (showSelfieOptionDialog) {
+                                AlertDialog(
+                                    onDismissRequest = { showSelfieOptionDialog = false },
+                                    title = { Text(if (isArabic) "اختر طريقة الرفع" else "Choose Upload Method") },
+                                    text = { Text(if (isArabic) "هل تريد التقاط صورة شخصية بالكاميرا أم اختيارها من المعرض؟" else "Would you like to take a selfie with the camera or choose from gallery?") },
+                                    confirmButton = {
+                                        TextButton(
+                                            onClick = {
+                                                showSelfieOptionDialog = false
+                                                val uri = getCameraImageUri(context)
+                                                tempSelfieCameraUri = uri
+                                                selfieCameraLauncher.launch(uri)
+                                            }
+                                        ) {
+                                            Text(if (isArabic) "الكاميرا" else "Camera")
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(
+                                            onClick = {
+                                                showSelfieOptionDialog = false
+                                                selfieLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                            }
+                                        ) {
+                                            Text(if (isArabic) "المعرض" else "Gallery")
+                                        }
+                                    }
+                                )
+                            }
+                        }
                         2 -> StepQuestionnaireContent(
                             questions = questions,
                             currentQuestionIdx = currentQuestionIdx,
@@ -664,4 +749,17 @@ fun StepGuardianContent(
             }
         }
     }
+}
+
+private fun getCameraImageUri(context: android.content.Context): android.net.Uri {
+    val directory = java.io.File(context.cacheDir, "camera")
+    if (!directory.exists()) {
+        directory.mkdirs()
+    }
+    val file = java.io.File(directory, "camera_capture_${System.currentTimeMillis()}.jpg")
+    return androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "com.mithaq.app.provider",
+        file
+    )
 }

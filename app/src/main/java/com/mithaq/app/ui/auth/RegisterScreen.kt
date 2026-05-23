@@ -78,6 +78,21 @@ fun RegisterScreen(
         }
     }
 
+    var tempCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var showPhotoOptionDialog by remember { mutableStateOf(false) }
+
+    val cameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempCameraUri?.let { uri ->
+                localImageUri = uri
+                imageUrl = uri.toString()
+            }
+        }
+    }
+
+
     val voiceRecorderManager = remember { com.mithaq.app.ui.photo.VoiceRecorderManager(context) }
     var isRecordingVoice by remember { mutableStateOf(false) }
     var localVoiceUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -388,17 +403,47 @@ fun RegisterScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Button(
                                     onClick = {
-                                        galleryLauncher.launch(
-                                            androidx.activity.result.PickVisualMediaRequest(
-                                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                                            )
-                                        )
+                                        showPhotoOptionDialog = true
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                                 ) {
-                                    Text(if (isArabic) "اختر صورة من المعرض" else "Select Photo from Gallery")
+                                    Text(if (isArabic) "إضافة صورة شخصية" else "Add Profile Photo")
+                                }
+
+                                if (showPhotoOptionDialog) {
+                                    AlertDialog(
+                                        onDismissRequest = { showPhotoOptionDialog = false },
+                                        title = { Text(if (isArabic) "اختر طريقة الرفع" else "Choose Upload Method") },
+                                        text = { Text(if (isArabic) "هل تريد التقاط الصورة بالكاميرا أم اختيارها من المعرض؟" else "Would you like to take a photo with the camera or choose from gallery?") },
+                                        confirmButton = {
+                                            TextButton(
+                                                onClick = {
+                                                    showPhotoOptionDialog = false
+                                                    val uri = getCameraImageUri(context)
+                                                    tempCameraUri = uri
+                                                    cameraLauncher.launch(uri)
+                                                }
+                                            ) {
+                                                Text(if (isArabic) "الكاميرا" else "Camera")
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(
+                                                onClick = {
+                                                    showPhotoOptionDialog = false
+                                                    galleryLauncher.launch(
+                                                        androidx.activity.result.PickVisualMediaRequest(
+                                                            androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                        )
+                                                    )
+                                                }
+                                            ) {
+                                                Text(if (isArabic) "المعرض" else "Gallery")
+                                            }
+                                        }
+                                    )
                                 }
 
                                 Spacer(modifier = Modifier.height(24.dp))
@@ -663,3 +708,17 @@ fun RegisterScreen(
         }
     }
 }
+
+private fun getCameraImageUri(context: android.content.Context): android.net.Uri {
+    val directory = java.io.File(context.cacheDir, "camera")
+    if (!directory.exists()) {
+        directory.mkdirs()
+    }
+    val file = java.io.File(directory, "camera_capture_${System.currentTimeMillis()}.jpg")
+    return androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "com.mithaq.app.provider",
+        file
+    )
+}
+

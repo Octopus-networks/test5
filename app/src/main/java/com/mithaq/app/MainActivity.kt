@@ -1644,20 +1644,46 @@ fun ModestyTabContent(
     val context = androidx.compose.ui.platform.LocalContext.current
     var isUploadingImage by remember { mutableStateOf(false) }
 
-    val galleryLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            isUploadingImage = true
-            coroutineScope.launch {
-                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                    db.app?.options?.apiKey == "mock-api-key-for-testing" || db.app?.options?.apiKey?.contains("mock") == true
-                } catch (e: Exception) {
-                    true
-                }
+    var tempCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
-                val finalUrl = if (isMock) {
+    fun handleProfileImageUpload(uri: android.net.Uri) {
+        isUploadingImage = true
+        coroutineScope.launch {
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                db.app?.options?.apiKey == "mock-api-key-for-testing" || db.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+
+            val finalUrl = if (isMock) {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val directory = java.io.File(context.filesDir, "profiles")
+                    if (!directory.exists()) {
+                        directory.mkdirs()
+                    }
+                    val localFile = java.io.File(directory, "${currentUser.uid}.jpg")
+                    val outputStream = java.io.FileOutputStream(localFile)
+                    inputStream?.use { input ->
+                        outputStream.use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    android.net.Uri.fromFile(localFile).toString()
+                } catch (e: Exception) {
+                    uri.toString()
+                }
+            } else {
+                try {
+                    val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
+                    val profileImageRef = storageRef.child("profiles/${currentUser.uid}.jpg")
+                    val inputStream = context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("Unable to open input stream")
+                    val bytes = inputStream.readBytes()
+                    inputStream.close()
+                    profileImageRef.putBytes(bytes).await()
+                    profileImageRef.downloadUrl.await().toString()
+                } catch (e: Exception) {
                     try {
                         val inputStream = context.contentResolver.openInputStream(uri)
                         val directory = java.io.File(context.filesDir, "profiles")
@@ -1672,54 +1698,42 @@ fun ModestyTabContent(
                             }
                         }
                         android.net.Uri.fromFile(localFile).toString()
-                    } catch (e: Exception) {
+                    } catch (ex: Exception) {
                         uri.toString()
                     }
-                } else {
-                    try {
-                        val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
-                        val profileImageRef = storageRef.child("profiles/${currentUser.uid}.jpg")
-                        val inputStream = context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("Unable to open input stream")
-                        val bytes = inputStream.readBytes()
-                        inputStream.close()
-                        profileImageRef.putBytes(bytes).await()
-                        profileImageRef.downloadUrl.await().toString()
-                    } catch (e: Exception) {
-                        try {
-                            val inputStream = context.contentResolver.openInputStream(uri)
-                            val directory = java.io.File(context.filesDir, "profiles")
-                            if (!directory.exists()) {
-                                directory.mkdirs()
-                            }
-                            val localFile = java.io.File(directory, "${currentUser.uid}.jpg")
-                            val outputStream = java.io.FileOutputStream(localFile)
-                            inputStream?.use { input ->
-                                outputStream.use { output ->
-                                    input.copyTo(output)
-                                }
-                            }
-                            android.net.Uri.fromFile(localFile).toString()
-                        } catch (ex: Exception) {
-                            uri.toString()
-                        }
-                    }
                 }
-
-                if (isMock) {
-                    context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
-                        .edit()
-                        .putString("imageUrl", finalUrl)
-                        .apply()
-                } else {
-                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                    db.collection("users")
-                        .document(currentUser.uid)
-                        .update("imageUrl", finalUrl)
-                        .await()
-                }
-                isUploadingImage = false
-                onRefreshProfile()
             }
+
+            if (isMock) {
+                context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+                    .edit()
+                    .putString("imageUrl", finalUrl)
+                    .apply()
+            } else {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                db.collection("users")
+                    .document(currentUser.uid)
+                    .update("imageUrl", finalUrl)
+                    .await()
+            }
+            isUploadingImage = false
+            onRefreshProfile()
+        }
+    }
+
+    val galleryLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            handleProfileImageUpload(uri)
+        }
+    }
+
+    val cameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempCameraUri?.let { handleProfileImageUpload(it) }
         }
     }
 
@@ -1780,20 +1794,37 @@ fun ModestyTabContent(
                             Text(if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "تعديل الصورة الشخصية" else "Edit Profile Photo")
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                galleryLauncher.launch(
-                                    androidx.activity.result.PickVisualMediaRequest(
-                                        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                                    )
-                                )
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            if (isUploadingImage) {
-                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            } else {
-                                Text(if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "رفع صورة من الاستوديو" else "Upload from Gallery")
+                        if (isUploadingImage) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Button(
+                                    onClick = {
+                                        galleryLauncher.launch(
+                                            androidx.activity.result.PickVisualMediaRequest(
+                                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            )
+                                        )
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(if (isArabic) "المعرض" else "Gallery")
+                                }
+                                Button(
+                                    onClick = {
+                                        val uri = getCameraImageUri(context)
+                                        tempCameraUri = uri
+                                        cameraLauncher.launch(uri)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(if (isArabic) "الكاميرا" else "Camera")
+                                }
                             }
                         }
                     }
@@ -1936,26 +1967,26 @@ fun ModestyTabContent(
                         )
                     }
                     else -> {
-                        Text(
-                            text = if (isArabic)
-                                "للحصول على الشارة الزرقاء وزيادة ثقة الأعضاء بك، يرجى رفع صورة الهوية وصورة شخصية واضحة."
-                            else
-                                "To get the Blue Badge and increase member trust, please upload your ID card and a clear selfie.",
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
                         var idCardUri by remember { mutableStateOf<android.net.Uri?>(null) }
                         var selfieUri by remember { mutableStateOf<android.net.Uri?>(null) }
                         var isSubmitting by remember { mutableStateOf(false) }
                         var statusMsg by remember { mutableStateOf<String?>(null) }
 
+                        var tempIdCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+                        var tempSelfieCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
                         val idCardLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                             contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
                         ) { uri ->
                             if (uri != null) idCardUri = uri
+                        }
+
+                        val idCardCameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                            contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+                        ) { success ->
+                            if (success) {
+                                tempIdCameraUri?.let { idCardUri = it }
+                            }
                         }
 
                         val selfieLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -1964,6 +1995,21 @@ fun ModestyTabContent(
                             if (uri != null) selfieUri = uri
                         }
 
+                        val selfieCameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                            contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+                        ) { success ->
+                            if (success) {
+                                tempSelfieCameraUri?.let { selfieUri = it }
+                            }
+                        }
+
+                        // ID Card Selection
+                        Text(
+                            text = if (isArabic) "صورة الهوية الوطنية (البطاقة/جواز السفر)" else "National Identity Document (ID/Passport)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1978,17 +2024,39 @@ fun ModestyTabContent(
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (idCardUri != null) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary
+                                    containerColor = if (idCardUri != null && idCardUri != tempIdCameraUri) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary
                                 )
                             ) {
-                                Text(
-                                    text = if (idCardUri != null)
-                                        (if (isArabic) "تم اختيار الهوية" else "ID Selected")
-                                    else
-                                        (if (isArabic) "اختر صورة الهوية" else "Select ID Card")
-                                )
+                                Text(if (isArabic) "الهوية (المعرض)" else "ID (Gallery)")
                             }
+                            Button(
+                                onClick = {
+                                    val uri = getCameraImageUri(context)
+                                    tempIdCameraUri = uri
+                                    idCardCameraLauncher.launch(uri)
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (idCardUri != null && idCardUri == tempIdCameraUri) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Text(if (isArabic) "الهوية (الكاميرا)" else "ID (Camera)")
+                            }
+                        }
 
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Selfie Selection
+                        Text(
+                            text = if (isArabic) "صورة شخصية حية (سيلفي لمطابقة الوجه)" else "Live Selfie (for face matching)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Button(
                                 onClick = {
                                     selfieLauncher.launch(
@@ -1999,15 +2067,23 @@ fun ModestyTabContent(
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (selfieUri != null) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary
+                                    containerColor = if (selfieUri != null && selfieUri != tempSelfieCameraUri) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary
                                 )
                             ) {
-                                Text(
-                                    text = if (selfieUri != null)
-                                        (if (isArabic) "تم اختيار الصورة" else "Selfie Selected")
-                                    else
-                                        (if (isArabic) "التقط/اختر صورة" else "Select Selfie")
+                                Text(if (isArabic) "السيلفي (المعرض)" else "Selfie (Gallery)")
+                            }
+                            Button(
+                                onClick = {
+                                    val uri = getCameraImageUri(context)
+                                    tempSelfieCameraUri = uri
+                                    selfieCameraLauncher.launch(uri)
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selfieUri != null && selfieUri == tempSelfieCameraUri) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
                                 )
+                            ) {
+                                Text(if (isArabic) "السيلفي (الكاميرا)" else "Selfie (Camera)")
                             }
                         }
 
@@ -3059,5 +3135,18 @@ fun CompletenessItem(done: Boolean, label: String) {
             color = if (done) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+fun getCameraImageUri(context: android.content.Context): android.net.Uri {
+    val directory = java.io.File(context.cacheDir, "camera")
+    if (!directory.exists()) {
+        directory.mkdirs()
+    }
+    val file = java.io.File(directory, "camera_capture_${System.currentTimeMillis()}.jpg")
+    return androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "com.mithaq.app.provider",
+        file
+    )
 }
 
