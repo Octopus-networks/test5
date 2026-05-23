@@ -1,26 +1,30 @@
 package com.mithaq.app.ui.limit
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -30,90 +34,93 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.mithaq.app.ui.auth.AuthViewModel
 
-data class SubscriptionPlanItem(
-    val id: String,
-    val nameEn: String,
-    val nameAr: String,
-    val price: String,
-    val periodAr: String,
-    val periodEn: String,
-    val featuresAr: List<String>,
-    val featuresEn: List<String>,
-    val color: Color,
-    val gradient: Brush
+data class StoreFeatureItem(
+    val icon: ImageVector,
+    val titleEn: String,
+    val titleAr: String,
+    val isGold: Boolean = false // If true, unlocked in Gold too
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+data class HighlightItem(
+    val icon: ImageVector,
+    val titleEn: String,
+    val titleAr: String,
+    val descEn: String,
+    val descAr: String
+)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PremiumStoreScreen(
     viewModel: AuthViewModel,
     isArabic: Boolean,
+    initialTab: Int = 0,
     onBack: () -> Unit
 ) {
-    var selectedPlan by remember { mutableStateOf<SubscriptionPlanItem?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    var selectedTabState by remember { mutableStateOf(initialTab) } // 0: Gold, 1: Platinum
     var showCheckout by remember { mutableStateOf(false) }
 
-    val plans = listOf(
-        SubscriptionPlanItem(
-            id = "silver",
-            nameEn = "Silver Plan",
-            nameAr = "الباقة الفضية",
-            price = "$9.99",
-            periodAr = "شهرياً",
-            periodEn = "/ month",
-            featuresAr = listOf(
-                "عرض 20 تقرير توافق يومياً",
-                "فتح الحظر المضبب لـ 5 صور شخصية",
-                "إرسال دعوة Wali إضافية",
-                "دعم الترجمة الفورية في المحادثات"
-            ),
-            featuresEn = listOf(
-                "View 20 compatibility scores daily",
-                "Unlock modesty blur for 5 profiles",
-                "Invite an additional Wali",
-                "Instant bilingual chat translation"
-            ),
-            color = Color(0xFF9E9E9E),
-            gradient = Brush.linearGradient(listOf(Color(0xFFB0BEC5), Color(0xFF78909C)))
+    val currentUserProfile by viewModel.currentUserProfile.collectAsState()
+
+    // 50% discount prices
+    val goldPriceLabel = if (isArabic) "احصل على ٣ أشهر مقابل ٣٩٩.٩٩ ج.م" else "Get 3 months for EGP 399.99"
+    val platinumPriceLabel = if (isArabic) "احصل على شهر واحد مقابل ٢٥٨.٥٠ ج.م" else "Get 1 month for EGP 258.50"
+
+    val features = listOf(
+        StoreFeatureItem(Icons.Default.Chat, "Send Unlimited Communications", "إرسال رسائل غير محدودة", isGold = true),
+        StoreFeatureItem(Icons.Default.LockOpen, "Unlock Your Messages", "فتح الرسائل المغلقة", isGold = true),
+        StoreFeatureItem(Icons.Default.Block, "Say Goodbye to Ads", "تصفح بدون إعلانات", isGold = true),
+        StoreFeatureItem(Icons.Default.VisibilityOff, "Hide Your Profile and Photos", "إخفاء الملف الشخصي والصور", isGold = true),
+        StoreFeatureItem(Icons.Default.TrendingUp, "Rank Above Other Members", "أولوية الظهور في البحث"),
+        StoreFeatureItem(Icons.Default.AutoAwesome, "Instantly Translate Messages", "ترجمة فورية للرسائل"),
+        StoreFeatureItem(Icons.Default.CropFree, "Double Your Profile Space", "مساحة إضافية للملف الشخصي"),
+        StoreFeatureItem(Icons.Default.Favorite, "Get Better Matches", "الحصول على مطابقات أفضل"),
+        StoreFeatureItem(Icons.Default.LocalFireDepartment, "View Popular Members", "مشاهدة الأعضاء الأكثر شعبية"),
+        StoreFeatureItem(Icons.Default.FavoriteBorder, "See who liked you", "رؤية من أعجب بك"),
+        StoreFeatureItem(Icons.Default.RemoveRedEye, "See who viewed you", "رؤية من زار ملفك"),
+        StoreFeatureItem(Icons.Default.StarBorder, "See who favorited you", "رؤية من أضافك للمفضلة"),
+        StoreFeatureItem(Icons.Default.Tune, "Advanced Filters", "فلاتر بحث متقدمة")
+    )
+
+    val highlights = listOf(
+        HighlightItem(
+            Icons.Default.LockOpen,
+            "Unlock Your Messages",
+            "فتح قفل رسائلك",
+            "Premium members can send and receive unlimited messages to all members on Mithaq.",
+            "يمكن للأعضاء المميزين إرسال واستقبال رسائل غير محدودة مع جميع المشتركين."
         ),
-        SubscriptionPlanItem(
-            id = "gold",
-            nameEn = "Gold Plan",
-            nameAr = "الباقة الذهبية",
-            price = "$19.99",
-            periodAr = "شهرياً",
-            periodEn = "/ month",
-            featuresAr = listOf(
-                "كل ميزات الفضية",
-                "عدد غير محدود من تقارير التوافق",
-                "فتح الحظر الكامل للصور بعد موافقة ولي الأمر",
-                "أولوية الظهور في نتائج البحث والتصفح",
-                "بدون حد أقصى للرسائل اليومية"
-            ),
-            featuresEn = listOf(
-                "All Silver Plan features",
-                "Unlimited compatibility reports",
-                "Full photo unlock approval by Wali",
-                "Priority listing in match searches",
-                "No daily message limits"
-            ),
-            color = Color(0xFFD4AF37),
-            gradient = Brush.linearGradient(listOf(Color(0xFFFFD700), Color(0xFFFFA000)))
+        HighlightItem(
+            Icons.Default.TrendingUp,
+            "Rank Above Other Members",
+            "أولوية الظهور فوق الأعضاء الآخرين",
+            "As a premium member, your profile will rank above standard members in search results.",
+            "بصفتك عضواً مميزاً، سيظهر ملفك الشخصي في أعلى نتائج البحث قبل الأعضاء العاديين."
+        ),
+        HighlightItem(
+            Icons.Default.AutoAwesome,
+            "Instantly Translate Messages",
+            "ترجمة فورية للرسائل",
+            "Don't let language barriers get in the way of love with messages translated instantly.",
+            "لا تدع حواجز اللغة تقف عائقاً في طريق تواصلك، مع ترجمة فورية وفورية للرسائل."
         )
     )
+
+    val pagerState = rememberPagerState(pageCount = { highlights.size })
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = if (isArabic) "متجر ميثاق المميز" else "Mithaq Premium Store",
+                        text = if (isArabic) "ترقية الحساب" else "Upgrade",
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Back")
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -128,74 +135,243 @@ fun PremiumStoreScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header Promo
-            Box(
+            // Main content layout with weight
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.secondary
-                            )
-                        )
-                    )
-                    .padding(24.dp)
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Column {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = Color.Yellow,
-                        modifier = Modifier.size(36.dp)
+                // 1. Sliding Pager / Highlights Card at the Top
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedTabState == 0) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                        } else {
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f)
+                        }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        HorizontalPager(state = pagerState) { page ->
+                            val item = highlights[page]
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = null,
+                                    tint = if (selectedTabState == 0) Color(0xFFD4AF37) else MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(56.dp)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = if (isArabic) item.titleAr else item.titleEn,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = if (isArabic) item.descAr else item.descEn,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Page indicators (dots)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            repeat(highlights.size) { index ->
+                                val isSelected = pagerState.currentPage == index
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) {
+                                                if (selectedTabState == 0) Color(0xFFD4AF37) else MaterialTheme.colorScheme.secondary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                                            }
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 2. Gold vs Platinum Plan Switches
+                TabRow(
+                    selectedTabIndex = selectedTabState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabState]),
+                            color = if (selectedTabState == 0) Color(0xFFD4AF37) else MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                ) {
+                    Tab(
+                        selected = selectedTabState == 0,
+                        onClick = { selectedTabState = 0 },
+                        text = {
+                            Text(
+                                if (isArabic) "ذهبية Gold" else "Gold",
+                                fontWeight = FontWeight.Bold,
+                                color = if (selectedTabState == 0) Color(0xFFD4AF37) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
+                    Tab(
+                        selected = selectedTabState == 1,
+                        onClick = { selectedTabState = 1 },
+                        text = {
+                            Text(
+                                if (isArabic) "بلاتينية Platinum" else "Platinum",
+                                fontWeight = FontWeight.Bold,
+                                color = if (selectedTabState == 1) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
+                }
+
+                // 3. Feature list with dynamic checkmarks
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
                     Text(
-                        text = if (isArabic) "ارتقِ بتجربتك اليوم!" else "Upgrade Your Journey!",
-                        style = MaterialTheme.typography.headlineSmall,
+                        text = if (isArabic) "الميزات المتاحة:" else "Features:",
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 12.dp)
                     )
-                    Text(
-                        text = if (isArabic)
-                            "احصل على توثيق أسرع، تواصل بلا حدود، وميزات أمان إضافية لضمان العثور على شريك حياتك بوقار وموثوقية."
-                        else "Unlock unlimited chats, priority searches, and verified trust badges to find your partner in a respectful manner.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.85f),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+
+                    features.forEach { feature ->
+                        // Check if unlocked in the selected tier
+                        val isUnlocked = if (selectedTabState == 0) feature.isGold else true
+                        val tintColor = if (isUnlocked) {
+                            if (selectedTabState == 0) Color(0xFFD4AF37) else MaterialTheme.colorScheme.secondary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = feature.icon,
+                                contentDescription = null,
+                                tint = tintColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = if (isArabic) feature.titleAr else feature.titleEn,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isUnlocked) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Available",
+                                    tint = tintColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            // 4. Footer & Purchase button
+            Surface(
+                tonalElevation = 4.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (isArabic) {
+                            "سيتم تجديد هذا الاشتراك تلقائياً بنفس السعر والمدة عند انتهائه. يمكنك الإلغاء بسهولة عبر إعدادات متجر Google Play في أي وقت."
+                        } else {
+                            "This subscription will be automatically renewed for the same price and membership length once it expires. You can easily cancel via Google Play settings at any time."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
 
-            // Plans listing
-            plans.forEach { plan ->
-                PlanCard(
-                    plan = plan,
-                    isArabic = isArabic,
-                    onSelect = {
-                        selectedPlan = plan
-                        showCheckout = true
+                    Button(
+                        onClick = { showCheckout = true },
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selectedTabState == 0) Color(0xFFD4AF37) else MaterialTheme.colorScheme.secondary
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        Text(
+                            text = if (selectedTabState == 0) goldPriceLabel else platinumPriceLabel,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
-                )
-                Spacer(modifier = Modifier.height(20.dp))
+                }
             }
         }
     }
 
-    if (showCheckout && selectedPlan != null) {
-        SimulatedCheckoutDialog(
-            plan = selectedPlan!!,
+    if (showCheckout) {
+        val planName = if (selectedTabState == 0) {
+            if (isArabic) "الباقة الذهبية (Gold)" else "Gold Plan"
+        } else {
+            if (isArabic) "الباقة البلاتينية (Platinum)" else "Platinum Plan"
+        }
+        val planPrice = if (selectedTabState == 0) "EGP 399.99" else "EGP 258.50"
+        val planId = if (selectedTabState == 0) "gold" else "platinum"
+
+        SimulatedCheckoutDialog2(
+            planName = planName,
+            planPrice = planPrice,
+            planColor = if (selectedTabState == 0) Color(0xFFD4AF37) else MaterialTheme.colorScheme.secondary,
             isArabic = isArabic,
             onDismiss = { showCheckout = false },
             onPaymentSuccess = {
-                viewModel.purchasePremiumPlan(selectedPlan!!.id)
+                viewModel.purchasePremiumPlan(planId)
                 showCheckout = false
                 onBack()
             }
@@ -204,102 +380,10 @@ fun PremiumStoreScreen(
 }
 
 @Composable
-fun PlanCard(
-    plan: SubscriptionPlanItem,
-    isArabic: Boolean,
-    onSelect: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                brush = plan.gradient,
-                shape = RoundedCornerShape(24.dp)
-            ),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp)
-        ) {
-            // Header with Gradient
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (isArabic) plan.nameAr else plan.nameEn,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = plan.color
-                )
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(plan.gradient)
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = plan.price,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Features checklist
-            val features = if (isArabic) plan.featuresAr else plan.featuresEn
-            features.forEach { feature ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = plan.color,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = feature,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = onSelect,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = plan.color
-                )
-            ) {
-                Text(
-                    text = if (isArabic) "اشترك الآن" else "Subscribe Now",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalAnimationApi::class)
-@Composable
-fun SimulatedCheckoutDialog(
-    plan: SubscriptionPlanItem,
+fun SimulatedCheckoutDialog2(
+    planName: String,
+    planPrice: String,
+    planColor: Color,
     isArabic: Boolean,
     onDismiss: () -> Unit,
     onPaymentSuccess: () -> Unit
@@ -311,6 +395,7 @@ fun SimulatedCheckoutDialog(
 
     var isProcessing by remember { mutableStateOf(false) }
     var isSuccess by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Dialog(
         onDismissRequest = { if (!isProcessing && !isSuccess) onDismiss() },
@@ -335,16 +420,16 @@ fun SimulatedCheckoutDialog(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "${if (isArabic) plan.nameAr else plan.nameEn} - ${plan.price}",
+                            text = "$planName - $planPrice",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = plan.color,
+                            color = planColor,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
                         )
 
                         if (isProcessing) {
                             Spacer(modifier = Modifier.height(40.dp))
-                            CircularProgressIndicator(color = plan.color)
+                            CircularProgressIndicator(color = planColor)
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = if (isArabic) "جاري معالجة الدفع..." else "Processing payment...",
@@ -352,7 +437,6 @@ fun SimulatedCheckoutDialog(
                             )
                             Spacer(modifier = Modifier.height(40.dp))
                         } else {
-                            // Fields
                             OutlinedTextField(
                                 value = cardNumber,
                                 onValueChange = { if (it.length <= 16) cardNumber = it },
@@ -403,10 +487,10 @@ fun SimulatedCheckoutDialog(
                                         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                                             isProcessing = false
                                             isSuccess = true
-                                        }, 2500)
+                                        }, 2000)
                                     },
                                     enabled = cardNumber.length >= 12 && expiry.length >= 4 && cvv.length >= 3 && holderName.isNotEmpty(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = plan.color),
+                                    colors = ButtonDefaults.buttonColors(containerColor = planColor),
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Text(text = if (isArabic) "ادفع الآن" else "Pay Now", color = Color.White)
@@ -422,7 +506,6 @@ fun SimulatedCheckoutDialog(
                         }
                     }
                 } else {
-                    // Success View
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.fillMaxWidth()
@@ -450,8 +533,8 @@ fun SimulatedCheckoutDialog(
                         )
                         Text(
                             text = if (isArabic)
-                                "تهانينا! تم تفعيل ${plan.nameAr} لحسابك بنجاح. استمتع الآن بالميزات الحصرية."
-                            else "Congratulations! The ${plan.nameEn} is now active on your account. Enjoy exclusive premium perks.",
+                                "تهانينا! تم تفعيل الاشتراك بنجاح لحسابك. استمتع الآن بالميزات الحصرية."
+                            else "Congratulations! The premium subscription is now active on your account. Enjoy exclusive premium perks.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

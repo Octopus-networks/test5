@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -126,6 +127,11 @@ fun MithaqAppNavigation(
     var currentUserId by remember { mutableStateOf("") }
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
 
+    var selectedMatchProfile by remember { mutableStateOf<UserProfile?>(null) }
+    var initialTab by remember { mutableStateOf(0) }
+    var initialChatUser by remember { mutableStateOf<UserProfile?>(null) }
+    var premiumStoreInitialTab by remember { mutableStateOf(0) }
+
     // Request notification permission on Android 13+
     val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
@@ -222,14 +228,58 @@ fun MithaqAppNavigation(
                         searchViewModel = searchViewModel,
                         guardianViewModel = guardianViewModel,
                         isArabic = isArabic,
+                        initialTab = initialTab,
+                        initialChatUser = initialChatUser,
+                        onClearInitialChat = {
+                            initialTab = 0
+                            initialChatUser = null
+                        },
                         onLanguageChange = onLanguageChange,
                         onLogout = {
                             authViewModel.signOut()
                             currentScreen = "login"
                         },
-                        onNavigateToScreen = { currentScreen = it }
+                        onNavigateToScreen = { screen ->
+                            if (screen == "premium_store_platinum") {
+                                premiumStoreInitialTab = 1
+                                currentScreen = "premium_store"
+                            } else {
+                                premiumStoreInitialTab = 0
+                                currentScreen = screen
+                            }
+                        },
+                        onNavigateToDetail = { partner ->
+                            selectedMatchProfile = partner
+                            currentScreen = "match_detail"
+                        }
                     )
                 }
+            }
+        }
+        "match_detail" -> {
+            val partner = selectedMatchProfile
+            if (partner != null) {
+                val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
+                val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+                androidx.activity.compose.BackHandler { currentScreen = "home" }
+                com.mithaq.app.ui.match.MatchDetailScreen(
+                    partner = partner,
+                    currentUser = profile,
+                    isArabic = isArabic,
+                    likesRepository = likesRepository,
+                    searchViewModel = searchViewModel,
+                    onBack = { currentScreen = "home" },
+                    onNavigateToChat = { clickedPartner ->
+                        initialTab = 2 // Chat Tab
+                        initialChatUser = clickedPartner
+                        currentScreen = "home"
+                    },
+                    onNavigateToUpgrade = {
+                        currentScreen = "premium_store"
+                    }
+                )
+            } else {
+                currentScreen = "home"
             }
         }
         "admin" -> {
@@ -249,6 +299,7 @@ fun MithaqAppNavigation(
             PremiumStoreScreen(
                 viewModel = authViewModel,
                 isArabic = isArabic,
+                initialTab = premiumStoreInitialTab,
                 onBack = { currentScreen = "home" }
             )
         }
@@ -290,10 +341,14 @@ fun HomeScreen(
     isArabic: Boolean,
     onLanguageChange: (Boolean) -> Unit,
     onLogout: () -> Unit,
-    onNavigateToScreen: (String) -> Unit
+    onNavigateToScreen: (String) -> Unit,
+    initialTab: Int = 0,
+    initialChatUser: UserProfile? = null,
+    onClearInitialChat: () -> Unit = {},
+    onNavigateToDetail: (UserProfile) -> Unit = {}
 ) {
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember(initialTab) { mutableStateOf(initialTab) }
     val tabs = listOf(strings.searchTab, strings.likesTab, strings.chatTab, strings.viewsTab, strings.favoritesTab)
 
     val profile = currentUserProfile ?: UserProfile(
@@ -305,7 +360,7 @@ fun HomeScreen(
         country = "Egypt"
     )
 
-    var selectedChatUser by remember { mutableStateOf<UserProfile?>(null) }
+    var selectedChatUser by remember(initialChatUser) { mutableStateOf(initialChatUser) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     var isOfflineSimulated by remember { mutableStateOf(false) }
@@ -414,9 +469,9 @@ fun HomeScreen(
                         viewModel = searchViewModel,
                         isArabic = isArabic,
                         onSelectMatch = { match ->
-                            selectedChatUser = match
-                            selectedTab = 2
-                        }
+                            onNavigateToDetail(match)
+                        },
+                        onNavigateToUpgrade = { onNavigateToScreen("premium_store_platinum") }
                     )
                     1 -> LikesTabContent(
                         currentUser = profile,
@@ -424,15 +479,16 @@ fun HomeScreen(
                         likesRepository = likesRepository,
                         isArabic = isArabic,
                         onSelectMatch = { match ->
-                            selectedChatUser = match
-                            selectedTab = 2
-                        }
+                            onNavigateToDetail(match)
+                        },
+                        onNavigateToUpgrade = { onNavigateToScreen("premium_store") }
                     )
                     2 -> ChatTabContent(
                         currentUser = profile,
                         targetUser = selectedChatUser,
                         onSelectTargetUser = { selectedChatUser = it },
-                        guardianViewModel = guardianViewModel
+                        guardianViewModel = guardianViewModel,
+                        onNavigateToUpgrade = { onNavigateToScreen("premium_store") }
                     )
                     3 -> ViewsTabContent(
                         currentUser = profile,
@@ -440,8 +496,7 @@ fun HomeScreen(
                         likesRepository = likesRepository,
                         isArabic = isArabic,
                         onSelectMatch = { match ->
-                            selectedChatUser = match
-                            selectedTab = 2
+                            onNavigateToDetail(match)
                         }
                     )
                     4 -> FavoritesTabContent(
@@ -450,8 +505,7 @@ fun HomeScreen(
                         likesRepository = likesRepository,
                         isArabic = isArabic,
                         onSelectMatch = { match ->
-                            selectedChatUser = match
-                            selectedTab = 2
+                            onNavigateToDetail(match)
                         }
                     )
                 }
@@ -465,7 +519,8 @@ fun SearchTabContent(
     currentUser: UserProfile,
     viewModel: SearchViewModel,
     isArabic: Boolean,
-    onSelectMatch: (UserProfile) -> Unit
+    onSelectMatch: (UserProfile) -> Unit,
+    onNavigateToUpgrade: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var activeSubTab by remember { mutableStateOf(0) }
@@ -1128,6 +1183,15 @@ fun SearchTabContent(
         }
     }
 
+    if (showFilters) {
+        SearchFilterBottomSheet(
+            onDismissRequest = { showFilters = false },
+            viewModel = viewModel,
+            isPlatinum = currentUser.isPremium && currentUser.subscriptionPlan.lowercase() == "platinum",
+            onNavigateToUpgrade = onNavigateToUpgrade
+        )
+    }
+
     if (breakdownPartner != null) {
         CompatibilityBreakdownDialog(
             userAnswers = currentUser.questionnaireAnswers,
@@ -1204,7 +1268,8 @@ fun ChatTabContent(
     currentUser: UserProfile,
     targetUser: UserProfile?,
     onSelectTargetUser: (UserProfile?) -> Unit,
-    guardianViewModel: GuardianViewModel
+    guardianViewModel: GuardianViewModel,
+    onNavigateToUpgrade: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
@@ -1391,84 +1456,256 @@ fun ChatTabContent(
             }
         }
 
+        var activeSubTab by remember { mutableStateOf(0) } // 0: Received, 1: Sent, 2: Favorites
+        var favoritesIds by remember { mutableStateOf<List<String>>(emptyList()) }
+        val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+
+        LaunchedEffect(currentUser.uid) {
+            try {
+                favoritesIds = likesRepository.getFavorites(currentUser.uid)
+            } catch(e: Exception) {}
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Text(
-                text = if (strings.appName == "ميثاق") "المحادثات النشطة" else "Active Conversations",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            // Header Row with Edit action
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (strings.appName == "ميثاق") "الرسائل" else "Messages",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = if (strings.appName == "ميثاق") "تعديل" else "Edit",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable {
+                        android.widget.Toast.makeText(
+                            context,
+                            if (strings.appName == "ميثاق") "خيار التعديل قريباً" else "Edit option coming soon",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                )
+            }
+
+            // Premium reminder banner
+            if (!currentUser.isPremium) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Message promo",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = if (strings.appName == "ميثاق") {
+                                "لا تفوت فرصة التواصل! استمتع برسائل غير محدودة."
+                            } else {
+                                "Never Miss a Connection! Enjoy unlimited messaging."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+
+            // Sub-tabs: Received, Sent, Favorites
+            val subTabs = if (strings.appName == "ميثاق") {
+                listOf("الواردة", "المرسلة", "المفضلة")
+            } else {
+                listOf("Received", "Sent", "Favorites")
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                subTabs.forEachIndexed { index, title ->
+                    val isSelected = activeSubTab == index
+                    val tabBg = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                    val tabTextColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(tabBg)
+                            .clickable { activeSubTab = index }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = tabTextColor,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (isLoadingRooms) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (activeRooms.isEmpty()) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = if (strings.appName == "ميثاق") 
-                            "لا توجد محادثات نشطة حالياً. ابحث عن شريك وبادر بمراسلته!" 
-                        else 
-                            "No active conversations yet. Find a partner in Search to start chatting!",
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             } else {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    activeRooms.forEach { room ->
-                        val partner = roomPartners[room.roomId] ?: getMockUserProfile(room.memberIds.firstOrNull { it != currentUser.uid } ?: "")
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelectTargetUser(partner) },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                val displayedRooms = activeRooms.filter { room ->
+                    val partnerId = room.memberIds.firstOrNull { it != currentUser.uid } ?: ""
+                    when (activeSubTab) {
+                        0 -> { // Received
+                            partnerId == "mock_user_2" || partnerId.hashCode() % 2 == 0
+                        }
+                        1 -> { // Sent
+                            partnerId != "mock_user_2" && partnerId.hashCode() % 2 != 0
+                        }
+                        else -> { // Favorites
+                            favoritesIds.contains(partnerId)
+                        }
+                    }
+                }
+
+                if (displayedRooms.isEmpty()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = if (strings.appName == "ميثاق") 
+                                "لا توجد محادثات في هذا القسم حالياً." 
+                            else 
+                                "No conversations in this section yet.",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        displayedRooms.forEach { room ->
+                            val partner = roomPartners[room.roomId] ?: getMockUserProfile(room.memberIds.firstOrNull { it != currentUser.uid } ?: "")
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelectTargetUser(partner) },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             ) {
-                                Box(modifier = Modifier.size(52.dp)) {
-                                    val isPartnerPhotoApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
-                                    UserProfileImage(
-                                        imageUrl = partner.imageUrl,
-                                        gender = partner.gender,
-                                        isBlurred = !isPartnerPhotoApproved,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(text = partner.name, fontWeight = FontWeight.Bold)
-                                        VerificationBadge(status = partner.verificationStatus)
+                                Row(
+                                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(modifier = Modifier.size(52.dp)) {
+                                        val isPartnerPhotoApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
+                                        UserProfileImage(
+                                            imageUrl = partner.imageUrl,
+                                            gender = partner.gender,
+                                            isBlurred = !isPartnerPhotoApproved,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(text = partner.name, fontWeight = FontWeight.Bold)
+                                            VerificationBadge(status = partner.verificationStatus)
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = room.lastMessage ?: "",
+                                            maxLines = 1,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (room.lastMessageTimestamp > 0L) {
+                                        Text(
+                                            text = formatDateTime(room.lastMessageTimestamp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Unlock Your Messages Paywall Block inside lists for Free users
+                        if (!currentUser.isPremium) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.LockOpen,
+                                        contentDescription = "Unlock Messages",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(44.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = room.lastMessage ?: "",
-                                        maxLines = 1,
+                                        text = if (strings.appName == "ميثاق") "افتح قفل رسائلك" else "Unlock Your Messages",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = if (strings.appName == "ميثاق") {
+                                            "يمكن للأعضاء المتميزين إرسال واستقبال رسائل غير محدودة لجميع الأعضاء في ميثاق."
+                                        } else {
+                                            "Premium members can send and receive unlimited messages to all members on Mithaq."
+                                        },
                                         style = MaterialTheme.typography.bodySmall,
+                                        textAlign = TextAlign.Center,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                }
-                                if (room.lastMessageTimestamp > 0L) {
-                                    Text(
-                                        text = formatDateTime(room.lastMessageTimestamp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = onNavigateToUpgrade,
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(
+                                            text = if (strings.appName == "ميثاق") "اشترك الآن" else "Upgrade Now",
+                                            color = Color.White
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2032,7 +2269,7 @@ fun ModestyTabContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "الملف الشخصي وإعدادات الحشمة" else "Profile & Modesty Settings",
+            text = if (isArabic) "الملف الشخصي وإعدادات الحشمة" else "Profile & Modesty Settings",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -2483,7 +2720,7 @@ fun ModestyTabContent(
             )
         } else {
             Text(
-                text = "Select a user on the Search tab to view their photo unlock options.",
+                text = if (isArabic) "اختر عضواً من تبويب البحث لعرض خيارات إلغاء قفل الصورة." else "Select a user on the Search tab to view their photo unlock options.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -2494,7 +2731,7 @@ fun ModestyTabContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Pending Requests to View Your Photo",
+            text = if (isArabic) "طلبات مشاهدة صورتك المعلقة" else "Pending Requests to View Your Photo",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.align(Alignment.Start)
@@ -2509,7 +2746,10 @@ fun ModestyTabContent(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Box(modifier = Modifier.padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("No pending requests.", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = if (isArabic) "لا توجد طلبات معلقة حالياً." else "No pending requests.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         } else {
@@ -3271,7 +3511,7 @@ fun WaliDashboardScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(text = requesterProfile.name, fontWeight = FontWeight.Bold)
                                         Text(
-                                            text = "${requesterProfile.age} yrs • ${requesterProfile.city}",
+                                            text = "${requesterProfile.age} ${if (isArabic) "عاماً" else "yrs"} • ${requesterProfile.city}",
                                             style = MaterialTheme.typography.bodySmall
                                         )
                                     }
@@ -3290,7 +3530,7 @@ fun WaliDashboardScreen(
                             }
                         }
 
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                         Text(
                             text = if (isArabic) "الأشخاص المصرح لهم بالرؤية:" else "Users Approved to View Ward's Photo:",
@@ -3316,7 +3556,7 @@ fun WaliDashboardScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(text = approvedProfile.name, fontWeight = FontWeight.Bold)
                                         Text(
-                                            text = "${approvedProfile.age} yrs • ${approvedProfile.city}",
+                                            text = "${approvedProfile.age} ${if (isArabic) "عاماً" else "yrs"} • ${approvedProfile.city}",
                                             style = MaterialTheme.typography.bodySmall
                                         )
                                     }
@@ -3520,7 +3760,8 @@ fun LikesTabContent(
     searchViewModel: SearchViewModel,
     likesRepository: com.mithaq.app.data.LikesRepository,
     isArabic: Boolean,
-    onSelectMatch: (UserProfile) -> Unit
+    onSelectMatch: (UserProfile) -> Unit,
+    onNavigateToUpgrade: () -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
     val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true)
@@ -3620,6 +3861,117 @@ fun LikesTabContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            } else if (activeSubTab == 0 && !currentUser.isPremium) {
+                // Blurred grid for Free users on "Liked Me" tab
+                val chunks = displayIds.chunked(2)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Top Paywall Banner
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = "Likes count",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = if (isArabic) {
+                                    "أعجب ${displayIds.size} من الأعضاء بملفك! قم بالترقية للباقة البلاتينية!"
+                                } else {
+                                    "${displayIds.size} people liked your profile! Upgrade to Platinum!"
+                                },
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    chunks.forEach { rowIds ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            rowIds.forEach { uid ->
+                                val partner = resolveProfile(uid)
+                                Card(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(180.dp),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        UserProfileImage(
+                                            imageUrl = partner.imageUrl,
+                                            gender = partner.gender,
+                                            isBlurred = true,
+                                            blurRadius = 35.dp,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                        Column(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomStart)
+                                                .padding(12.dp)
+                                                .fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(80.dp)
+                                                    .height(8.dp)
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(Color.White.copy(alpha = 0.6f))
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(120.dp)
+                                                    .height(8.dp)
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(Color.White.copy(alpha = 0.4f))
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            if (rowIds.size == 1) {
+                                Box(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = onNavigateToUpgrade,
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp)
+                    ) {
+                        Text(
+                            text = if (isArabic) "أظهر من أعجب بك" else "See who liked you",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             } else {
                 Column(
