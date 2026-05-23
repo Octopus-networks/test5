@@ -60,29 +60,34 @@ class LikesRepository(private val context: Context) {
             }
             return mutual
         } else {
-            // Write like document
-            val likeDocId = "${fromUid}_${toUid}"
-            val inverseDocId = "${toUid}_${fromUid}"
-            
-            // Check if inverse like exists
-            val inverseSnap = db.collection("likes").document(inverseDocId).get().await()
-            val isMutual = inverseSnap.exists()
+            try {
+                // Write like document
+                val likeDocId = "${fromUid}_${toUid}"
+                val inverseDocId = "${toUid}_${fromUid}"
+                
+                // Check if inverse like exists
+                val inverseSnap = db.collection("likes").document(inverseDocId).get().await()
+                val isMutual = inverseSnap.exists()
 
-            val likeData = hashMapOf(
-                "fromUid" to fromUid,
-                "toUid" to toUid,
-                "isMutual" to isMutual,
-                "timestamp" to System.currentTimeMillis()
-            )
-            db.collection("likes").document(likeDocId).set(likeData).await()
+                val likeData = hashMapOf(
+                    "fromUid" to fromUid,
+                    "toUid" to toUid,
+                    "isMutual" to isMutual,
+                    "timestamp" to System.currentTimeMillis()
+                )
+                db.collection("likes").document(likeDocId).set(likeData).await()
 
-            if (isMutual) {
-                // Update inverse doc as mutual too
-                db.collection("likes").document(inverseDocId).update("isMutual", true).await()
-                // Create live chatroom
-                createLiveChatRoom(fromUid, toUid)
+                if (isMutual) {
+                    // Update inverse doc as mutual too
+                    db.collection("likes").document(inverseDocId).update("isMutual", true).await()
+                    // Create live chatroom
+                    createLiveChatRoom(fromUid, toUid)
+                }
+                return isMutual
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return false
             }
-            return isMutual
         }
     }
 
@@ -96,11 +101,16 @@ class LikesRepository(private val context: Context) {
             }
             return list
         } else {
-            val snapshot = db.collection("likes")
-                .whereEqualTo("fromUid", userUid)
-                .get()
-                .await()
-            return snapshot.documents.mapNotNull { it.getString("toUid") }
+            try {
+                val snapshot = db.collection("likes")
+                    .whereEqualTo("fromUid", userUid)
+                    .get()
+                    .await()
+                return snapshot.documents.mapNotNull { it.getString("toUid") }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return emptyList()
+            }
         }
     }
 
@@ -119,11 +129,16 @@ class LikesRepository(private val context: Context) {
             }
             return result
         } else {
-            val snapshot = db.collection("likes")
-                .whereEqualTo("toUid", userUid)
-                .get()
-                .await()
-            return snapshot.documents.mapNotNull { it.getString("fromUid") }
+            try {
+                val snapshot = db.collection("likes")
+                    .whereEqualTo("toUid", userUid)
+                    .get()
+                    .await()
+                return snapshot.documents.mapNotNull { it.getString("fromUid") }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return emptyList()
+            }
         }
     }
 
@@ -137,19 +152,24 @@ class LikesRepository(private val context: Context) {
             }
             return list
         } else {
-            val snap1 = db.collection("likes")
-                .whereEqualTo("fromUid", userUid)
-                .whereEqualTo("isMutual", true)
-                .get()
-                .await()
-            val snap2 = db.collection("likes")
-                .whereEqualTo("toUid", userUid)
-                .whereEqualTo("isMutual", true)
-                .get()
-                .await()
-            val list1 = snap1.documents.mapNotNull { it.getString("toUid") }
-            val list2 = snap2.documents.mapNotNull { it.getString("fromUid") }
-            return (list1 + list2).distinct()
+            try {
+                val snap1 = db.collection("likes")
+                    .whereEqualTo("fromUid", userUid)
+                    .whereEqualTo("isMutual", true)
+                    .get()
+                    .await()
+                val snap2 = db.collection("likes")
+                    .whereEqualTo("toUid", userUid)
+                    .whereEqualTo("isMutual", true)
+                    .get()
+                    .await()
+                val list1 = snap1.documents.mapNotNull { it.getString("toUid") }
+                val list2 = snap2.documents.mapNotNull { it.getString("fromUid") }
+                return (list1 + list2).distinct()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return emptyList()
+            }
         }
     }
 
@@ -169,12 +189,16 @@ class LikesRepository(private val context: Context) {
                 prefs.edit().putString("views_$viewedUid", array.toString()).apply()
             }
         } else {
-            val viewData = hashMapOf(
-                "viewerUid" to viewerUid,
-                "viewedUid" to viewedUid,
-                "timestamp" to System.currentTimeMillis()
-            )
-            db.collection("profile_views").add(viewData).await()
+            try {
+                val viewData = hashMapOf(
+                    "viewerUid" to viewerUid,
+                    "viewedUid" to viewedUid,
+                    "timestamp" to System.currentTimeMillis()
+                )
+                db.collection("profile_views").add(viewData).await()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -188,11 +212,16 @@ class LikesRepository(private val context: Context) {
             }
             return list
         } else {
-            val snapshot = db.collection("profile_views")
-                .whereEqualTo("viewedUid", userUid)
-                .get()
-                .await()
-            return snapshot.documents.mapNotNull { it.getString("viewerUid") }.distinct()
+            try {
+                val snapshot = db.collection("profile_views")
+                    .whereEqualTo("viewedUid", userUid)
+                    .get()
+                    .await()
+                return snapshot.documents.mapNotNull { it.getString("viewerUid") }.distinct()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return emptyList()
+            }
         }
     }
 
@@ -226,19 +255,24 @@ class LikesRepository(private val context: Context) {
                 return true
             }
         } else {
-            val favDocId = "${userUid}_${favoriteUid}"
-            val doc = db.collection("favorites").document(favDocId).get().await()
-            if (doc.exists()) {
-                db.collection("favorites").document(favDocId).delete().await()
+            try {
+                val favDocId = "${userUid}_${favoriteUid}"
+                val doc = db.collection("favorites").document(favDocId).get().await()
+                if (doc.exists()) {
+                    db.collection("favorites").document(favDocId).delete().await()
+                    return false
+                } else {
+                    val favData = hashMapOf(
+                        "userUid" to userUid,
+                        "favoriteUserUid" to favoriteUid,
+                        "timestamp" to System.currentTimeMillis()
+                    )
+                    db.collection("favorites").document(favDocId).set(favData).await()
+                    return true
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
                 return false
-            } else {
-                val favData = hashMapOf(
-                    "userUid" to userUid,
-                    "favoriteUserUid" to favoriteUid,
-                    "timestamp" to System.currentTimeMillis()
-                )
-                db.collection("favorites").document(favDocId).set(favData).await()
-                return true
             }
         }
     }
@@ -253,11 +287,16 @@ class LikesRepository(private val context: Context) {
             }
             return list
         } else {
-            val snapshot = db.collection("favorites")
-                .whereEqualTo("userUid", userUid)
-                .get()
-                .await()
-            return snapshot.documents.mapNotNull { it.getString("favoriteUserUid") }
+            try {
+                val snapshot = db.collection("favorites")
+                    .whereEqualTo("userUid", userUid)
+                    .get()
+                    .await()
+                return snapshot.documents.mapNotNull { it.getString("favoriteUserUid") }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return emptyList()
+            }
         }
     }
 

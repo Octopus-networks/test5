@@ -3368,9 +3368,14 @@ fun LikesTabContent(
     fun refresh() {
         isLoading = true
         coroutineScope.launch {
-            whoLikedMeIds = likesRepository.getWhoLikedMe(currentUser.uid)
-            mutualIds = likesRepository.getMutualMatches(currentUser.uid)
-            isLoading = false
+            try {
+                whoLikedMeIds = likesRepository.getWhoLikedMe(currentUser.uid)
+                mutualIds = likesRepository.getMutualMatches(currentUser.uid)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isLoading = false
+            }
         }
     }
     
@@ -3598,8 +3603,13 @@ fun ViewsTabContent(
     fun refresh() {
         isLoading = true
         coroutineScope.launch {
-            visitorIds = likesRepository.getProfileVisitors(currentUser.uid)
-            isLoading = false
+            try {
+                visitorIds = likesRepository.getProfileVisitors(currentUser.uid)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isLoading = false
+            }
         }
     }
     
@@ -3738,8 +3748,13 @@ fun FavoritesTabContent(
     fun refresh() {
         isLoading = true
         coroutineScope.launch {
-            favoriteIds = likesRepository.getFavorites(currentUser.uid)
-            isLoading = false
+            try {
+                favoriteIds = likesRepository.getFavorites(currentUser.uid)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isLoading = false
+            }
         }
     }
     
