@@ -401,6 +401,7 @@ fun HomeScreen(
                     2 -> GuardianTabContent(
                         currentUser = profile,
                         viewModel = guardianViewModel,
+                        isArabic = isArabic,
                         onInviteSuccess = {
                             authViewModel.fetchCurrentUserProfile(currentUserId)
                         }
@@ -1541,7 +1542,8 @@ fun ChatTabContent(
             cancelButtonText = if (strings.appName == "ميثاق") "إلغاء" else "Cancel",
             successTitle = if (strings.appName == "ميثاق") "تم إرسال الدعوة" else "Invitation Sent",
             successSubtitle = if (strings.appName == "ميثاق") "تم إرسال دعوة إلى ولي أمرك. سنقوم بإشعارك بمجرد قبوله." else "An invitation has been sent to your Guardian. We will notify you once they accept.",
-            closeButtonText = if (strings.appName == "ميثاق") "إغلاق" else "Close"
+            closeButtonText = if (strings.appName == "ميثاق") "إغلاق" else "Close",
+            isArabic = (strings.appName == "ميثاق")
         )
     }
 }
@@ -1550,6 +1552,7 @@ fun ChatTabContent(
 fun GuardianTabContent(
     currentUser: UserProfile,
     viewModel: GuardianViewModel,
+    isArabic: Boolean,
     onInviteSuccess: () -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
@@ -1621,7 +1624,8 @@ fun GuardianTabContent(
                 cancelButtonText = if (strings.appName == "ميثاق") "إلغاء" else "Cancel",
                 successTitle = if (strings.appName == "ميثاق") "تم إرسال الدعوة" else "Invitation Sent",
                 successSubtitle = if (strings.appName == "ميثاق") "تم إرسال دعوة إلى ولي أمرك. سنقوم بإشعارك بمجرد قبوله." else "An invitation has been sent to your Guardian. We will notify you once they accept.",
-                closeButtonText = if (strings.appName == "ميثاق") "إغلاق" else "Close"
+                closeButtonText = if (strings.appName == "ميثاق") "إغلاق" else "Close",
+                isArabic = isArabic
             )
         }
     }

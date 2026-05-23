@@ -711,9 +711,27 @@ fun StepGuardianContent(
             else -> {}
         }
 
+        val context = androidx.compose.ui.platform.LocalContext.current
+
+        if (uiState is GuardianUiState.Success) {
+            Button(
+                onClick = {
+                    sendWaliEmailInvitation(context, guardianName, guardianEmail, isArabic)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text(text = if (isArabic) "أرسل بريد الدعوة الآن" else "Send Email Invite Now", fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Button(
             onClick = {
-                if (guardianName.isNotBlank() && guardianEmail.isNotBlank()) {
+                if (uiState is GuardianUiState.Success) {
+                    onFinish()
+                } else if (guardianName.isNotBlank() && guardianEmail.isNotBlank()) {
                     onSendInvitation()
                 } else {
                     onFinish()
@@ -763,3 +781,32 @@ private fun getCameraImageUri(context: android.content.Context): android.net.Uri
         file
     )
 }
+
+private fun sendWaliEmailInvitation(
+    context: android.content.Context,
+    guardianName: String,
+    guardianEmail: String,
+    isArabic: Boolean
+) {
+    try {
+        val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+            data = android.net.Uri.parse("mailto:")
+            putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(guardianEmail.trim().lowercase()))
+            putExtra(android.content.Intent.EXTRA_SUBJECT, if (isArabic) "دعوة إشراك ولي أمر - تطبيق ميثاق" else "Guardian Invitation - Mithaq App")
+            putExtra(android.content.Intent.EXTRA_TEXT, if (isArabic) {
+                "السلام عليكم يا $guardianName،\n\nلقد قمت بإضافتك كولي أمر لي في تطبيق ميثاق للزواج الإسلامي المحافظ.\n\nيرجى تحميل التطبيق والتسجيل فيه بحساب ولي أمر (Guardian) باستخدام بريدك الإلكتروني هذا ($guardianEmail) لمتابعة المحادثات والطلبات بشكل مباشر وآمن لضمان بيئة شرعية ومحافظة.\n\nرابط تحميل التطبيق: https://github.com/ahmedbebars/test5/raw/main/Mithaq-Matchmaking-v1.0-debug.apk\n\nشكراً لك."
+            } else {
+                "Assalamu Alaikum $guardianName,\n\nI have invited you to be my Guardian (Wali) on the Mithaq matchmaking application.\n\nPlease download the app and register a Guardian account using this email address ($guardianEmail) to oversee my chats and requests securely.\n\nApp Download Link: https://github.com/ahmedbebars/test5/raw/main/Mithaq-Matchmaking-v1.0-debug.apk\n\nThank you."
+            })
+        }
+        val chooser = android.content.Intent.createChooser(intent, if (isArabic) "اختر تطبيق البريد الإلكتروني" else "Choose Email Client")
+        context.startActivity(chooser)
+    } catch (e: Exception) {
+        android.widget.Toast.makeText(
+            context,
+            if (isArabic) "تعذر فتح تطبيق البريد" else "Could not open email application",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
+    }
+}
+

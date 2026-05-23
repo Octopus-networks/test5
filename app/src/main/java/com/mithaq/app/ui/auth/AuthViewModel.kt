@@ -478,13 +478,44 @@ class AuthViewModel(
                     
                     val guardianName = doc.getString("guardianName")
                     val guardianEmail = doc.getString("guardianEmail")
-                    val guardianStatus = doc.getString("guardianStatus")
+                    var guardianStatus = doc.getString("guardianStatus")
                     
                     val photoApproved = doc.get("photoAccessApprovedUsers") as? List<String> ?: emptyList()
                     val photoRequests = doc.get("photoAccessRequests") as? List<String> ?: emptyList()
 
-                    val isWaliAccount = doc.getBoolean("isWaliAccount") ?: false
-                    val wardUid = doc.getString("wardUid")
+                    var isWaliAccount = doc.getBoolean("isWaliAccount") ?: false
+                    var wardUid = doc.getString("wardUid")
+
+                    val authEmail = auth.currentUser?.email
+                    if (authEmail != null && authEmail.isNotEmpty()) {
+                        try {
+                            val wardsQuery = firestore.collection("users")
+                                .whereEqualTo("guardianEmail", authEmail.trim().lowercase())
+                                .get()
+                                .await()
+                            if (!wardsQuery.isEmpty) {
+                                val wardDoc = wardsQuery.documents.first()
+                                val foundWardUid = wardDoc.id
+                                if (!isWaliAccount || wardUid != foundWardUid) {
+                                    isWaliAccount = true
+                                    wardUid = foundWardUid
+                                    firestore.collection("users").document(uid)
+                                        .update("isWaliAccount", true, "wardUid", foundWardUid)
+                                        .await()
+                                }
+                                val wardStatus = wardDoc.getString("guardianStatus")
+                                if (wardStatus != "Verified") {
+                                    firestore.collection("users").document(foundWardUid)
+                                        .update("guardianStatus", "Verified")
+                                        .await()
+                                    guardianStatus = "Verified"
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+
                     val verificationStatus = doc.getString("verificationStatus") ?: "NONE"
                     val voiceIntroUrl = doc.getString("voiceIntroUrl")
                     val fcmToken = doc.getString("fcmToken")
