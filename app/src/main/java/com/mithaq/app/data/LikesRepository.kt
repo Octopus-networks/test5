@@ -1,0 +1,314 @@
+package com.mithaq.app.data
+
+import android.content.Context
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
+import org.json.JSONArray
+import org.json.JSONObject
+
+class LikesRepository(private val context: Context) {
+
+    private val db by lazy { FirebaseFirestore.getInstance() }
+    
+    private val isMock: Boolean
+        get() = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+            db.app?.options?.apiKey == "mock-api-key-for-testing" ||
+            db.app?.options?.apiKey?.contains("mock") == true
+        } catch (e: Exception) {
+            true
+        }
+
+    private val prefs by lazy {
+        context.getSharedPreferences("mithaq_interactions_prefs", Context.MODE_PRIVATE)
+    }
+
+    // ================= LIKES & MUTUAL MATCHES =================
+
+    suspend fun addLike(fromUid: String, toUid: String): Boolean {
+        if (isMock) {
+            val likesStr = prefs.getString("likes_$fromUid", "[]") ?: "[]"
+            val array = JSONArray(likesStr)
+            var exists = false
+            for (i in 0 until array.length()) {
+                if (array.getString(i) == toUid) exists = true
+            }
+            if (!exists) {
+                array.put(toUid)
+                prefs.edit().putString("likes_$fromUid", array.toString()).apply()
+            }
+
+            // Check if toUid liked fromUid (Mutual)
+            val targetLikesStr = prefs.getString("likes_$toUid", "[]") ?: "[]"
+            val targetArray = JSONArray(targetLikesStr)
+            var mutual = false
+            for (i in 0 until targetArray.length()) {
+                if (targetArray.getString(i) == fromUid) mutual = true
+            }
+            if (mutual) {
+                // Save mutual status
+                val mutualsA = prefs.getString("mutuals_$fromUid", "[]") ?: "[]"
+                val mutualsB = prefs.getString("mutuals_$toUid", "[]") ?: "[]"
+                val arrA = JSONArray(mutualsA).apply { put(toUid) }
+                val arrB = JSONArray(mutualsB).apply { put(fromUid) }
+                prefs.edit()
+                    .putString("mutuals_$fromUid", arrA.toString())
+                    .putString("mutuals_$toUid", arrB.toString())
+                    .apply()
+                
+                // Create a mock chat room
+                createMockChatRoom(fromUid, toUid)
+            }
+            return mutual
+        } else {
+            // Write like document
+            val likeDocId = "${fromUid}_${toUid}"
+            val inverseDocId = "${toUid}_${fromUid}"
+            
+            // Check if inverse like exists
+            val inverseSnap = db.collection("likes").document(inverseDocId).get().await()
+            val isMutual = inverseSnap.exists()
+
+            val likeData = hashMapOf(
+                "fromUid" to fromUid,
+                "toUid" to toUid,
+                "isMutual" to isMutual,
+                "timestamp" to System.currentTimeMillis()
+            )
+            db.collection("likes").document(likeDocId).set(likeData).await()
+
+            if (isMutual) {
+                // Update inverse doc as mutual too
+                db.collection("likes").document(inverseDocId).update("isMutual", true).await()
+                // Create live chatroom
+                createLiveChatRoom(fromUid, toUid)
+            }
+            return isMutual
+        }
+    }
+
+    suspend fun getLikesList(userUid: String): List<String> {
+        if (isMock) {
+            val likesStr = prefs.getString("likes_$userUid", "[]") ?: "[]"
+            val array = JSONArray(likesStr)
+            val list = mutableListOf<String>()
+            for (i in 0 until array.length()) {
+                list.add(array.getString(i))
+            }
+            return list
+        } else {
+            val snapshot = db.collection("likes")
+                .whereEqualTo("fromUid", userUid)
+                .get()
+                .await()
+            return snapshot.documents.mapNotNull { it.getString("toUid") }
+        }
+    }
+
+    suspend fun getWhoLikedMe(userUid: String): List<String> {
+        if (isMock) {
+            val result = mutableListOf<String>()
+            val mockUserIds = listOf("mock_user_1", "mock_user_2", "mock_user_3", "mock_user_4")
+            for (id in mockUserIds) {
+                val likesStr = prefs.getString("likes_$id", "[]") ?: "[]"
+                val array = JSONArray(likesStr)
+                for (i in 0 until array.length()) {
+                    if (array.getString(i) == userUid) {
+                        result.add(id)
+                    }
+                }
+            }
+            return result
+        } else {
+            val snapshot = db.collection("likes")
+                .whereEqualTo("toUid", userUid)
+                .get()
+                .await()
+            return snapshot.documents.mapNotNull { it.getString("fromUid") }
+        }
+    }
+
+    suspend fun getMutualMatches(userUid: String): List<String> {
+        if (isMock) {
+            val mutualsStr = prefs.getString("mutuals_$userUid", "[]") ?: "[]"
+            val array = JSONArray(mutualsStr)
+            val list = mutableListOf<String>()
+            for (i in 0 until array.length()) {
+                list.add(array.getString(i))
+            }
+            return list
+        } else {
+            val snap1 = db.collection("likes")
+                .whereEqualTo("fromUid", userUid)
+                .whereEqualTo("isMutual", true)
+                .get()
+                .await()
+            val snap2 = db.collection("likes")
+                .whereEqualTo("toUid", userUid)
+                .whereEqualTo("isMutual", true)
+                .get()
+                .await()
+            val list1 = snap1.documents.mapNotNull { it.getString("toUid") }
+            val list2 = snap2.documents.mapNotNull { it.getString("fromUid") }
+            return (list1 + list2).distinct()
+        }
+    }
+
+    // ================= PROFILE VIEWS =================
+
+    suspend fun addProfileView(viewerUid: String, viewedUid: String) {
+        if (viewerUid == viewedUid) return
+        if (isMock) {
+            val viewsStr = prefs.getString("views_$viewedUid", "[]") ?: "[]"
+            val array = JSONArray(viewsStr)
+            var exists = false
+            for (i in 0 until array.length()) {
+                if (array.getString(i) == viewerUid) exists = true
+            }
+            if (!exists) {
+                array.put(viewerUid)
+                prefs.edit().putString("views_$viewedUid", array.toString()).apply()
+            }
+        } else {
+            val viewData = hashMapOf(
+                "viewerUid" to viewerUid,
+                "viewedUid" to viewedUid,
+                "timestamp" to System.currentTimeMillis()
+            )
+            db.collection("profile_views").add(viewData).await()
+        }
+    }
+
+    suspend fun getProfileVisitors(userUid: String): List<String> {
+        if (isMock) {
+            val viewsStr = prefs.getString("views_$userUid", "[]") ?: "[]"
+            val array = JSONArray(viewsStr)
+            val list = mutableListOf<String>()
+            for (i in 0 until array.length()) {
+                list.add(array.getString(i))
+            }
+            return list
+        } else {
+            val snapshot = db.collection("profile_views")
+                .whereEqualTo("viewedUid", userUid)
+                .get()
+                .await()
+            return snapshot.documents.mapNotNull { it.getString("viewerUid") }.distinct()
+        }
+    }
+
+    // ================= FAVORITES =================
+
+    suspend fun toggleFavorite(userUid: String, favoriteUid: String): Boolean {
+        if (isMock) {
+            val favsStr = prefs.getString("favorites_$userUid", "[]") ?: "[]"
+            val array = JSONArray(favsStr)
+            var exists = false
+            var index = -1
+            for (i in 0 until array.length()) {
+                if (array.getString(i) == favoriteUid) {
+                    exists = true
+                    index = i
+                }
+            }
+            val newArray = JSONArray()
+            if (exists) {
+                for (i in 0 until array.length()) {
+                    if (i != index) newArray.put(array.get(i))
+                }
+                prefs.edit().putString("favorites_$userUid", newArray.toString()).apply()
+                return false
+            } else {
+                for (i in 0 until array.length()) {
+                    newArray.put(array.get(i))
+                }
+                newArray.put(favoriteUid)
+                prefs.edit().putString("favorites_$userUid", newArray.toString()).apply()
+                return true
+            }
+        } else {
+            val favDocId = "${userUid}_${favoriteUid}"
+            val doc = db.collection("favorites").document(favDocId).get().await()
+            if (doc.exists()) {
+                db.collection("favorites").document(favDocId).delete().await()
+                return false
+            } else {
+                val favData = hashMapOf(
+                    "userUid" to userUid,
+                    "favoriteUserUid" to favoriteUid,
+                    "timestamp" to System.currentTimeMillis()
+                )
+                db.collection("favorites").document(favDocId).set(favData).await()
+                return true
+            }
+        }
+    }
+
+    suspend fun getFavorites(userUid: String): List<String> {
+        if (isMock) {
+            val favsStr = prefs.getString("favorites_$userUid", "[]") ?: "[]"
+            val array = JSONArray(favsStr)
+            val list = mutableListOf<String>()
+            for (i in 0 until array.length()) {
+                list.add(array.getString(i))
+            }
+            return list
+        } else {
+            val snapshot = db.collection("favorites")
+                .whereEqualTo("userUid", userUid)
+                .get()
+                .await()
+            return snapshot.documents.mapNotNull { it.getString("favoriteUserUid") }
+        }
+    }
+
+    // ================= HELPERS FOR CHATROOMS =================
+
+    private fun createMockChatRoom(uid1: String, uid2: String) {
+        try {
+            val chatPrefs = context.getSharedPreferences("mithaq_mock_chat", Context.MODE_PRIVATE)
+            val roomsStr = chatPrefs.getString("mithaq_mock_rooms", "[]") ?: "[]"
+            val array = JSONArray(roomsStr)
+            
+            val roomId = if (uid1 < uid2) "${uid1}_${uid2}" else "${uid2}_${uid1}"
+            var exists = false
+            for (i in 0 until array.length()) {
+                if (array.getJSONObject(i).getString("roomId") == roomId) exists = true
+            }
+            if (!exists) {
+                val roomObj = JSONObject().apply {
+                    put("roomId", roomId)
+                    val members = JSONArray().apply { put(uid1); put(uid2) }
+                    put("memberIds", members)
+                    put("isChaperoned", false)
+                    put("waliEmail", null)
+                    put("lastMessage", "لقد تم التطابق! ابدأ المحادثة الآن.")
+                    put("lastMessageTimestamp", System.currentTimeMillis())
+                }
+                array.put(roomObj)
+                chatPrefs.edit().putString("mithaq_mock_rooms", array.toString()).apply()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private suspend fun createLiveChatRoom(uid1: String, uid2: String) {
+        try {
+            val roomId = if (uid1 < uid2) "${uid1}_${uid2}" else "${uid2}_${uid1}"
+            val roomRef = db.collection("chatRooms").document(roomId)
+            val snap = roomRef.get().await()
+            if (!snap.exists()) {
+                val roomData = hashMapOf(
+                    "memberIds" to listOf(uid1, uid2),
+                    "isChaperoned" to false,
+                    "waliEmail" to null,
+                    "lastMessage" to "لقد تم التطابق! ابدأ المحادثة الآن.",
+                    "lastMessageTimestamp" to System.currentTimeMillis()
+                )
+                roomRef.set(roomData).await()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+}

@@ -38,7 +38,56 @@ data class UserProfile(
     val isAdmin: Boolean = false,
     val isPremium: Boolean = false,
     val subscriptionPlan: String = "FREE",
-    val questionnaireAnswers: Map<String, String> = emptyMap()
+    val questionnaireAnswers: Map<String, String> = emptyMap(),
+
+    // --- Muslima Extended Upgrades ---
+    val profileCreator: String = "self", // "self", "parent", "brother_sister", "relative", "friend"
+    val regionalCode: String = "MUS",    // "MUS", "SAC", "IDC", "AFR", "INT", "IRC", "MLS"
+    
+    // Appearance
+    val height: Int = 170, // 140–220 cm
+    val weight: Int = 70,  // 40–220 kg
+    val bodyType: String = "average", // petite, slim, athletic, average, extra_pounds, full_figured, large
+    val hairColor: String = "black",  // bald, black, blonde, brown, grey, red
+    val eyeColor: String = "brown",   // black, blue, brown, green, grey, hazel
+    val ethnicity: String = "arab_middle_eastern",
+    val appearanceRating: String = "average",
+
+    // Lifestyle
+    val maritalStatus: String = "single", // single, separated, widowed, divorced
+    val haveChildren: String = "no",      // no, yes_live_at_home, yes_sometimes, not_at_home
+    val numberOfChildren: Int = 0,
+    val wantMoreChildren: String = "not_sure", // yes, not_sure, no
+    val livingSituation: String = "with_family", // alone, friends, family, kids, spouse
+    val occupation: String = "employed",
+    val employmentStatus: String = "full_time",
+    val annualIncome: String = "no_say",
+    val drinkStatus: String = "dont_drink",
+    val smokeStatus: String = "dont_smoke",
+    val eatingHabit: String = "halal_always", // halal_always, halal_when_possible, no_restrictions
+    val relationshipLookingFor: String = "marriage", // marriage, friendship
+
+    // Islamic & Cultural Values
+    val religiousValues: String = "religious", // very_religious, religious, not_religious
+    val attendReligiousService: String = "sometimes", // daily, jummah, sometimes, ramadan, never
+    val readQuran: String = "occasionally", // daily, occasionally, ramadan, jummah, translated, never
+    val wearHijab: String = "no", // yes, sometimes, no
+    val wearNiqab: String = "no", // yes, sometimes, no
+    val convertStatus: String = "born_muslim", // born_muslim, reverted, planning_to_revert
+    val familyValue: String = "moderate", // conservative, moderate, liberal
+
+    // Languages & Interests
+    val languagesSpoken: List<String> = emptyList(),
+    val interestsEntertainments: List<String> = emptyList(),
+    val interestsSports: List<String> = emptyList(),
+    val interestsFoods: List<String> = emptyList(),
+    val interestsMusics: List<String> = emptyList(),
+
+    // Personality Text Fields
+    val aboutYourself: String = "",
+    val partnerPreferences: String = "",
+    val profileHeading: String = "",
+    val idealPartner: String = ""
 )
 
 enum class Gender(val displayNameEn: String, val displayNameAr: String) {

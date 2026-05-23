@@ -371,6 +371,18 @@ class SearchViewModel(
         // 8. City Check
         if (criteria.city.isNotBlank() && !user.city.contains(criteria.city, ignoreCase = true)) return false
         
+        // 9. Height Check
+        if (user.height !in criteria.minHeight..criteria.maxHeight) return false
+        
+        // 10. Marital Status Check
+        if (criteria.maritalStatuses.isNotEmpty() && user.maritalStatus !in criteria.maritalStatuses) return false
+        
+        // 11. Have Children Check
+        if (criteria.haveChildren.isNotEmpty() && user.haveChildren !in criteria.haveChildren) return false
+        
+        // 12. Religious Values Check
+        if (criteria.religiousValues.isNotEmpty() && user.religiousValues !in criteria.religiousValues) return false
+
         return true
     }
 

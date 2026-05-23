@@ -12,6 +12,14 @@ data class FilterCriteria(
     val relocationWillingness: Set<RelocationWillingness> = emptySet(),
     val polygamyAcceptance: Boolean? = null, // null means doesn't matter
     val country: String = "",
-    val city: String = ""
+    val city: String = "",
+    
+    // New fields
+    val maritalStatuses: Set<String> = emptySet(),
+    val minHeight: Int = 140,
+    val maxHeight: Int = 220,
+    val haveChildren: Set<String> = emptySet(),
+    val religiousValues: Set<String> = emptySet()
 )
+
 

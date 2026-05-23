@@ -38,6 +38,12 @@ fun SearchFilterBottomSheet(
     var countryText by remember { mutableStateOf(filterCriteria.country) }
     var cityText by remember { mutableStateOf(filterCriteria.city) }
 
+    // New fields
+    var heightRange by remember { mutableStateOf(filterCriteria.minHeight.toFloat()..filterCriteria.maxHeight.toFloat()) }
+    val selectedMaritalStatuses = remember { mutableStateListOf<String>().apply { addAll(filterCriteria.maritalStatuses) } }
+    val selectedHaveChildren = remember { mutableStateListOf<String>().apply { addAll(filterCriteria.haveChildren) } }
+    val selectedReligiousValues = remember { mutableStateListOf<String>().apply { addAll(filterCriteria.religiousValues) } }
+
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -253,6 +259,122 @@ fun SearchFilterBottomSheet(
                         }
                     )
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 7. Height Range Slider
+                val heightRangeLabel = if (isArabic) {
+                    "الطول: ${heightRange.start.toInt()} - ${heightRange.endInclusive.toInt()} سم"
+                } else {
+                    "Height Range: ${heightRange.start.toInt()} - ${heightRange.endInclusive.toInt()} cm"
+                }
+                Text(
+                    text = heightRangeLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+                RangeSlider(
+                    value = heightRange,
+                    onValueChange = { heightRange = it },
+                    valueRange = 140f..220f,
+                    steps = 79,
+                    colors = SliderDefaults.colors(
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        thumbColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 8. Marital Status (Multiple Choice)
+                Text(
+                    text = if (isArabic) "الحالة الاجتماعية" else "Marital Status",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+                val maritalOptions = listOf(
+                    "single" to (if (isArabic) "أعزب/عزباء" else "Single"),
+                    "divorced" to (if (isArabic) "مطلق/مطلقة" else "Divorced"),
+                    "widowed" to (if (isArabic) "أرمل/أرملة" else "Widowed"),
+                    "separated" to (if (isArabic) "منفصل/منفصلة" else "Separated")
+                )
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    mainAxisSpacing = 8.dp,
+                    crossAxisSpacing = 8.dp
+                ) {
+                    maritalOptions.forEach { (value, label) ->
+                        val isSelected = selectedMaritalStatuses.contains(value)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                if (isSelected) selectedMaritalStatuses.remove(value) else selectedMaritalStatuses.add(value)
+                            },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 9. Children (Multiple Choice)
+                Text(
+                    text = if (isArabic) "وجود أطفال" else "Children",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+                val childrenOptions = listOf(
+                    "no" to (if (isArabic) "لا يوجد" else "No children"),
+                    "yes_live_at_home" to (if (isArabic) "نعم (يعيشون معي)" else "Yes (live at home)"),
+                    "yes_sometimes" to (if (isArabic) "نعم (أحياناً)" else "Yes (sometimes)"),
+                    "not_at_home" to (if (isArabic) "لا يعيشون معي" else "Not at home")
+                )
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    mainAxisSpacing = 8.dp,
+                    crossAxisSpacing = 8.dp
+                ) {
+                    childrenOptions.forEach { (value, label) ->
+                        val isSelected = selectedHaveChildren.contains(value)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                if (isSelected) selectedHaveChildren.remove(value) else selectedHaveChildren.add(value)
+                            },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 10. Religious Values (Multiple Choice)
+                Text(
+                    text = if (isArabic) "درجة التدين" else "Religious Values",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+                val religiousOptions = listOf(
+                    "very_religious" to (if (isArabic) "ملتزم جداً" else "Very religious"),
+                    "religious" to (if (isArabic) "ملتزم" else "Religious"),
+                    "not_religious" to (if (isArabic) "غير ملتزم" else "Not religious")
+                )
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    mainAxisSpacing = 8.dp,
+                    crossAxisSpacing = 8.dp
+                ) {
+                    religiousOptions.forEach { (value, label) ->
+                        val isSelected = selectedReligiousValues.contains(value)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                if (isSelected) selectedReligiousValues.remove(value) else selectedReligiousValues.add(value)
+                            },
+                            label = { Text(label) }
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
@@ -274,6 +396,10 @@ fun SearchFilterBottomSheet(
                         polygamyAcceptance = null
                         countryText = ""
                         cityText = ""
+                        heightRange = 140f..220f
+                        selectedMaritalStatuses.clear()
+                        selectedHaveChildren.clear()
+                        selectedReligiousValues.clear()
                         
                         viewModel.resetFilters()
                         onDismissRequest()
@@ -294,7 +420,12 @@ fun SearchFilterBottomSheet(
                             relocationWillingness = selectedRelocation.toSet(),
                             polygamyAcceptance = polygamyAcceptance,
                             country = countryText,
-                            city = cityText
+                            city = cityText,
+                            maritalStatuses = selectedMaritalStatuses.toSet(),
+                            minHeight = heightRange.start.toInt(),
+                            maxHeight = heightRange.endInclusive.toInt(),
+                            haveChildren = selectedHaveChildren.toSet(),
+                            religiousValues = selectedReligiousValues.toSet()
                         )
                         viewModel.updateFilters(newCriteria)
                         onDismissRequest()

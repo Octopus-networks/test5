@@ -10,6 +10,10 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -260,6 +264,18 @@ fun MithaqAppNavigation(
                 onBack = { currentScreen = "home" }
             )
         }
+        "profile_settings" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            ProfileSettingsScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
+                isArabic = isArabic,
+                authViewModel = authViewModel,
+                guardianViewModel = guardianViewModel,
+                onNavigateToScreen = { currentScreen = it },
+                onBack = { currentScreen = "home" }
+            )
+        }
     }
 }
 
@@ -278,7 +294,7 @@ fun HomeScreen(
 ) {
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf(strings.searchTab, strings.chatTab, strings.waliTab, strings.profileTab)
+    val tabs = listOf(strings.searchTab, strings.likesTab, strings.chatTab, strings.viewsTab, strings.favoritesTab)
 
     val profile = currentUserProfile ?: UserProfile(
         uid = currentUserId,
@@ -293,6 +309,8 @@ fun HomeScreen(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     var isOfflineSimulated by remember { mutableStateOf(false) }
+
+    val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
 
     DisposableEffect(context) {
         val prefs = context.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
@@ -316,6 +334,13 @@ fun HomeScreen(
                     TextButton(onClick = { onLanguageChange(!isArabic) }) {
                         Text(if (isArabic) "English" else "العربية", color = MaterialTheme.colorScheme.primary)
                     }
+                    IconButton(onClick = { onNavigateToScreen("profile_settings") }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Profile & Settings",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     TextButton(onClick = onLogout) {
                         Text(if (isArabic) "خروج" else "Logout", color = MaterialTheme.colorScheme.error)
                     }
@@ -329,10 +354,11 @@ fun HomeScreen(
             NavigationBar {
                 tabs.forEachIndexed { index, label ->
                     val icon = when (index) {
-                        0 -> Icons.Default.Search
-                        1 -> Icons.Default.Chat
-                        2 -> Icons.Default.Person
-                        else -> Icons.Default.Settings
+                        0 -> Icons.Default.Home
+                        1 -> Icons.Default.Favorite
+                        2 -> Icons.Default.Chat
+                        3 -> Icons.Default.Visibility
+                        else -> Icons.Default.Star
                     }
                     NavigationBarItem(
                         selected = selectedTab == index,
@@ -389,32 +415,44 @@ fun HomeScreen(
                         isArabic = isArabic,
                         onSelectMatch = { match ->
                             selectedChatUser = match
-                            selectedTab = 1
+                            selectedTab = 2
                         }
                     )
-                    1 -> ChatTabContent(
+                    1 -> LikesTabContent(
+                        currentUser = profile,
+                        searchViewModel = searchViewModel,
+                        likesRepository = likesRepository,
+                        isArabic = isArabic,
+                        onSelectMatch = { match ->
+                            selectedChatUser = match
+                            selectedTab = 2
+                        }
+                    )
+                    2 -> ChatTabContent(
                         currentUser = profile,
                         targetUser = selectedChatUser,
                         onSelectTargetUser = { selectedChatUser = it },
                         guardianViewModel = guardianViewModel
                     )
-                    2 -> GuardianTabContent(
+                    3 -> ViewsTabContent(
                         currentUser = profile,
-                        viewModel = guardianViewModel,
+                        searchViewModel = searchViewModel,
+                        likesRepository = likesRepository,
                         isArabic = isArabic,
-                        onInviteSuccess = {
-                            authViewModel.fetchCurrentUserProfile(currentUserId)
+                        onSelectMatch = { match ->
+                            selectedChatUser = match
+                            selectedTab = 2
                         }
                     )
-                    3 -> ModestyTabContent(
+                    4 -> FavoritesTabContent(
                         currentUser = profile,
-                        targetUser = selectedChatUser,
-                        onRefreshProfile = {
-                            authViewModel.fetchCurrentUserProfile(currentUserId)
-                        },
+                        searchViewModel = searchViewModel,
+                        likesRepository = likesRepository,
                         isArabic = isArabic,
-                        authViewModel = authViewModel,
-                        onNavigateToScreen = onNavigateToScreen
+                        onSelectMatch = { match ->
+                            selectedChatUser = match
+                            selectedTab = 2
+                        }
                     )
                 }
             }
@@ -429,6 +467,7 @@ fun SearchTabContent(
     isArabic: Boolean,
     onSelectMatch: (UserProfile) -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var activeSubTab by remember { mutableStateOf(0) } // 0: Dashboard, 1: Explore Matches
     var showFilters by remember { mutableStateOf(false) }
     val searchResults by viewModel.searchResults.collectAsState()
@@ -822,18 +861,90 @@ fun SearchTabContent(
                                         }
                                     }
                                 }
-                                Box(
-                                    modifier = Modifier.clickable {
-                                        if (isCompatible) {
-                                            breakdownPartner = profile
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    if (isCompatible) {
+                                        val context = androidx.compose.ui.platform.LocalContext.current
+                                        val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+                                        var isFav by remember { mutableStateOf(false) }
+                                        var isLiked by remember { mutableStateOf(false) }
+                                        
+                                        LaunchedEffect(currentUser.uid, profile.uid) {
+                                            isFav = likesRepository.getFavorites(currentUser.uid).contains(profile.uid)
+                                            isLiked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
+                                        }
+                                        
+                                        IconButton(
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    val liked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
+                                                    if (!liked) {
+                                                        val isMutual = likesRepository.addLike(currentUser.uid, profile.uid)
+                                                        isLiked = true
+                                                        if (isMutual) {
+                                                            android.widget.Toast.makeText(
+                                                                context,
+                                                                if (isArabic) "لقد تم التطابق! ابدأ المحادثة الآن." else "Mutual Match! Chat unlocked.",
+                                                                android.widget.Toast.LENGTH_LONG
+                                                            ).show()
+                                                        } else {
+                                                            android.widget.Toast.makeText(
+                                                                context,
+                                                                if (isArabic) "تم تسجيل الإعجاب!" else "Liked!",
+                                                                android.widget.Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Favorite,
+                                                contentDescription = "Like",
+                                                tint = if (isLiked) Color.Red else MaterialTheme.colorScheme.outline
+                                            )
+                                        }
+                                        
+                                        IconButton(
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    val added = likesRepository.toggleFavorite(currentUser.uid, profile.uid)
+                                                    isFav = added
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        if (added) {
+                                                            if (isArabic) "تمت الإضافة للمفضلة" else "Added to Favorites"
+                                                        } else {
+                                                            if (isArabic) "تمت الإزالة من المفضلة" else "Removed from Favorites"
+                                                        },
+                                                        android.widget.Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = "Favorite",
+                                                tint = if (isFav) Color(0xFFFFC107) else MaterialTheme.colorScheme.outline
+                                            )
                                         }
                                     }
-                                ) {
-                                    MatchScoreBadge(
-                                        score = score, 
-                                        size = 50.dp,
-                                        modifier = if (!isCompatible) Modifier.alpha(0.5f) else Modifier
-                                    )
+                                    
+                                    Box(
+                                        modifier = Modifier.clickable {
+                                            if (isCompatible) {
+                                                breakdownPartner = profile
+                                            }
+                                        }
+                                    ) {
+                                        MatchScoreBadge(
+                                            score = score, 
+                                            size = 50.dp,
+                                            modifier = if (!isCompatible) Modifier.alpha(0.5f) else Modifier
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1750,7 +1861,6 @@ fun ModestyTabContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -3224,5 +3334,605 @@ fun getCameraImageUri(context: android.content.Context): android.net.Uri {
         "com.mithaq.app.provider",
         file
     )
+}
+
+@Composable
+fun rememberUserProfileResolver(
+    searchViewModel: SearchViewModel,
+    isMock: Boolean
+): (String) -> UserProfile {
+    val searchResults by searchViewModel.searchResults.collectAsState()
+    return { uid ->
+        searchResults.find { it.uid == uid } ?: getMockUserProfile(uid)
+    }
+}
+
+@Composable
+fun LikesTabContent(
+    currentUser: UserProfile,
+    searchViewModel: SearchViewModel,
+    likesRepository: com.mithaq.app.data.LikesRepository,
+    isArabic: Boolean,
+    onSelectMatch: (UserProfile) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
+    var activeSubTab by remember { mutableStateOf(0) } // 0: Who Liked Me, 1: Mutual Matches
+    
+    var whoLikedMeIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var mutualIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    
+    fun refresh() {
+        isLoading = true
+        coroutineScope.launch {
+            whoLikedMeIds = likesRepository.getWhoLikedMe(currentUser.uid)
+            mutualIds = likesRepository.getMutualMatches(currentUser.uid)
+            isLoading = false
+        }
+    }
+    
+    LaunchedEffect(currentUser.uid) {
+        refresh()
+    }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            val tabs = if (isArabic) listOf("من أعجب بي", "تطابق متبادل") else listOf("Who Liked Me", "Mutual Matches")
+            tabs.forEachIndexed { index, title ->
+                val isSelected = activeSubTab == index
+                val tabBg = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                val tabTextColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(tabBg)
+                        .clickable { activeSubTab = index }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = tabTextColor
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        if (isLoading) {
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            val displayIds = if (activeSubTab == 0) whoLikedMeIds else mutualIds
+            
+            if (displayIds.isEmpty()) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = if (activeSubTab == 0) {
+                            if (isArabic) "لا توجد إعجابات واردة حالياً." else "No incoming likes yet."
+                        } else {
+                            if (isArabic) "لا توجد تطابقات متبادلة حالياً." else "No mutual matches yet."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    displayIds.forEach { uid ->
+                        val partner = resolveProfile(uid)
+                        val score = MatchScoreCalculator.calculateScore(currentUser, partner)
+                        val isCompatible = searchViewModel.isCompatible(partner)
+                        
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .let { if (!isCompatible) it.alpha(0.55f) else it },
+                            shape = RoundedCornerShape(20.dp),
+                            onClick = {
+                                if (isCompatible) {
+                                    coroutineScope.launch {
+                                        likesRepository.addProfileView(currentUser.uid, partner.uid)
+                                    }
+                                    onSelectMatch(partner)
+                                }
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    val isAccessApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
+                                    val isBlurred = if (isCompatible) !isAccessApproved else true
+                                    
+                                    Box(modifier = Modifier.size(52.dp)) {
+                                        UserProfileImage(
+                                            imageUrl = if (isCompatible) partner.imageUrl else "",
+                                            gender = partner.gender,
+                                            isBlurred = isBlurred,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+                                    
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = if (isCompatible) partner.name else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isCompatible) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            if (isCompatible) {
+                                                VerificationBadge(status = partner.verificationStatus)
+                                            }
+                                        }
+                                        if (isCompatible) {
+                                            val sectLabel = partner.sect.getDisplayName(isArabic)
+                                            val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                            Text(text = "${partner.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
+                                            Text(text = "${partner.city}, ${partner.country}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        } else {
+                                            Text(
+                                                text = if (isArabic) "التفاصيل مخفية لعدم التوافق" else "Details hidden due to incompatibility",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    if (isCompatible) {
+                                        if (activeSubTab == 0) {
+                                            IconButton(
+                                                onClick = {
+                                                    coroutineScope.launch {
+                                                        val isMutual = likesRepository.addLike(currentUser.uid, partner.uid)
+                                                        if (isMutual) {
+                                                            android.widget.Toast.makeText(
+                                                                context,
+                                                                if (isArabic) "لقد تم التطابق! ابدأ المحادثة الآن." else "Mutual Match! Chat unlocked.",
+                                                                android.widget.Toast.LENGTH_LONG
+                                                            ).show()
+                                                        } else {
+                                                            android.widget.Toast.makeText(
+                                                                context,
+                                                                if (isArabic) "تم إرسال الإعجاب!" else "Like sent!",
+                                                                android.widget.Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+                                                        refresh()
+                                                    }
+                                                },
+                                                modifier = Modifier
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Favorite,
+                                                    contentDescription = "Like Back",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        } else {
+                                            IconButton(
+                                                onClick = { onSelectMatch(partner) },
+                                                modifier = Modifier
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Chat,
+                                                    contentDescription = "Chat",
+                                                    tint = MaterialTheme.colorScheme.secondary
+                                                )
+                                            }
+                                        }
+                                    }
+                                    
+                                    MatchScoreBadge(
+                                        score = score,
+                                        size = 40.dp,
+                                        modifier = if (!isCompatible) Modifier.alpha(0.5f) else Modifier
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ViewsTabContent(
+    currentUser: UserProfile,
+    searchViewModel: SearchViewModel,
+    likesRepository: com.mithaq.app.data.LikesRepository,
+    isArabic: Boolean,
+    onSelectMatch: (UserProfile) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true)
+    
+    var visitorIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    
+    fun refresh() {
+        isLoading = true
+        coroutineScope.launch {
+            visitorIds = likesRepository.getProfileVisitors(currentUser.uid)
+            isLoading = false
+        }
+    }
+    
+    LaunchedEffect(currentUser.uid) {
+        refresh()
+    }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = if (isArabic) "من زار ملفك الشخصي" else "Who visited your profile",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        
+        if (isLoading) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (visitorIds.isEmpty()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (isArabic) "لا توجد زيارات لملفك الشخصي حالياً." else "No profile visitors yet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                visitorIds.forEach { uid ->
+                    val partner = resolveProfile(uid)
+                    val score = MatchScoreCalculator.calculateScore(currentUser, partner)
+                    val isCompatible = searchViewModel.isCompatible(partner)
+                    
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .let { if (!isCompatible) it.alpha(0.55f) else it },
+                        shape = RoundedCornerShape(20.dp),
+                        onClick = {
+                            if (isCompatible) {
+                                coroutineScope.launch {
+                                    likesRepository.addProfileView(currentUser.uid, partner.uid)
+                                }
+                                onSelectMatch(partner)
+                            }
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                val isAccessApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
+                                val isBlurred = if (isCompatible) !isAccessApproved else true
+                                
+                                Box(modifier = Modifier.size(52.dp)) {
+                                    UserProfileImage(
+                                        imageUrl = if (isCompatible) partner.imageUrl else "",
+                                        gender = partner.gender,
+                                        isBlurred = isBlurred,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = if (isCompatible) partner.name else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isCompatible) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        if (isCompatible) {
+                                            VerificationBadge(status = partner.verificationStatus)
+                                        }
+                                    }
+                                    if (isCompatible) {
+                                        val sectLabel = partner.sect.getDisplayName(isArabic)
+                                        val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                        Text(text = "${partner.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
+                                        Text(text = "${partner.city}, ${partner.country}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    } else {
+                                        Text(
+                                            text = if (isArabic) "التفاصيل مخفية لعدم التوافق" else "Details hidden due to incompatibility",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            MatchScoreBadge(
+                                score = score,
+                                size = 40.dp,
+                                modifier = if (!isCompatible) Modifier.alpha(0.5f) else Modifier
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FavoritesTabContent(
+    currentUser: UserProfile,
+    searchViewModel: SearchViewModel,
+    likesRepository: com.mithaq.app.data.LikesRepository,
+    isArabic: Boolean,
+    onSelectMatch: (UserProfile) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true)
+    
+    var favoriteIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    
+    fun refresh() {
+        isLoading = true
+        coroutineScope.launch {
+            favoriteIds = likesRepository.getFavorites(currentUser.uid)
+            isLoading = false
+        }
+    }
+    
+    LaunchedEffect(currentUser.uid) {
+        refresh()
+    }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = if (isArabic) "قائمة المفضلة" else "Bookmarked Favorites",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        
+        if (isLoading) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (favoriteIds.isEmpty()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (isArabic) "لا توجد ملفات شخصية مضافة للمفضلة حالياً." else "No bookmarked profiles yet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                favoriteIds.forEach { uid ->
+                    val partner = resolveProfile(uid)
+                    val score = MatchScoreCalculator.calculateScore(currentUser, partner)
+                    val isCompatible = searchViewModel.isCompatible(partner)
+                    
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .let { if (!isCompatible) it.alpha(0.55f) else it },
+                        shape = RoundedCornerShape(20.dp),
+                        onClick = {
+                            if (isCompatible) {
+                                coroutineScope.launch {
+                                    likesRepository.addProfileView(currentUser.uid, partner.uid)
+                                }
+                                onSelectMatch(partner)
+                            }
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                val isAccessApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
+                                val isBlurred = if (isCompatible) !isAccessApproved else true
+                                
+                                Box(modifier = Modifier.size(52.dp)) {
+                                    UserProfileImage(
+                                        imageUrl = if (isCompatible) partner.imageUrl else "",
+                                        gender = partner.gender,
+                                        isBlurred = isBlurred,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = if (isCompatible) partner.name else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isCompatible) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        if (isCompatible) {
+                                            VerificationBadge(status = partner.verificationStatus)
+                                        }
+                                    }
+                                    if (isCompatible) {
+                                        val sectLabel = partner.sect.getDisplayName(isArabic)
+                                        val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                        Text(text = "${partner.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
+                                        Text(text = "${partner.city}, ${partner.country}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    } else {
+                                        Text(
+                                            text = if (isArabic) "التفاصيل مخفية لعدم التوافق" else "Details hidden due to incompatibility",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            likesRepository.toggleFavorite(currentUser.uid, partner.uid)
+                                            refresh()
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = "Remove Favorite",
+                                        tint = Color(0xFFFFC107)
+                                    )
+                                }
+                                
+                                MatchScoreBadge(
+                                    score = score,
+                                    size = 40.dp,
+                                    modifier = if (!isCompatible) Modifier.alpha(0.5f) else Modifier
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileSettingsScreen(
+    currentUser: UserProfile,
+    onRefreshProfile: () -> Unit,
+    isArabic: Boolean,
+    authViewModel: AuthViewModel,
+    guardianViewModel: GuardianViewModel,
+    onNavigateToScreen: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (isArabic) "الملف الشخصي والإعدادات" else "Profile & Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            ModestyTabContent(
+                currentUser = currentUser,
+                targetUser = null,
+                onRefreshProfile = onRefreshProfile,
+                isArabic = isArabic,
+                authViewModel = authViewModel,
+                onNavigateToScreen = onNavigateToScreen
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            GuardianTabContent(
+                currentUser = currentUser,
+                viewModel = guardianViewModel,
+                isArabic = isArabic,
+                onInviteSuccess = onRefreshProfile
+            )
+        }
+    }
 }
 
