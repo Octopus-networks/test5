@@ -2155,18 +2155,6 @@ fun ModestyTabContent(
                     }
                 }
 
-                // Instant Mock Admin Approval for developers/testers
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = {
-                        authViewModel.mockAdminApproveVerification(context)
-                        onRefreshProfile()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text(if (isArabic) "تفعيل التوثيق الفوري (تجريبي)" else "Instant Mock Admin Approve (Demo)")
-                }
             }
         }
         // ------------------------------------------------------------------
@@ -2881,18 +2869,78 @@ fun WaliDashboardScreen(
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = wardProfile?.name ?: (if (isArabic) "جاري التحميل..." else "Loading Ward..."),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = wardProfile?.name ?: (if (isArabic) "جاري التحميل..." else "Loading Ward..."),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        VerificationBadge(status = wardProfile?.verificationStatus)
+                    }
                     if (wardProfile != null) {
                         Text(
                             text = "${wardProfile!!.age} ${if (isArabic) "عاماً" else "years"} • ${wardProfile!!.city}, ${wardProfile!!.country}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )
+                    }
+                }
+            }
+
+            if (wardProfile != null && wardProfile!!.verificationStatus == "PENDING") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = if (isArabic) "طلب توثيق الهوية والوجه معلق:" else "Pending identity verification request:",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (isArabic) 
+                                "قام العضو الخاضع لإشرافك برفع صورة الهوية وصورة سيلفي لتوثيق حسابه. يرجى مراجعة وتأكيد الهوية."
+                            else 
+                                "Your ward has uploaded their ID and selfie for identity verification. Please review and verify their identity.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    authViewModel.adminUpdateVerification(wardUid, "VERIFIED")
+                                    loadWardData()
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(if (isArabic) "قبول التوثيق" else "Approve Verification")
+                            }
+                            Button(
+                                onClick = {
+                                    authViewModel.adminUpdateVerification(wardUid, "NONE")
+                                    loadWardData()
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(if (isArabic) "رفض" else "Reject")
+                            }
+                        }
                     }
                 }
             }

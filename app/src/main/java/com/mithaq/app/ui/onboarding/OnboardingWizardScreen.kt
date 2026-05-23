@@ -209,11 +209,6 @@ fun OnboardingWizardScreen(
                                             currentStep = 2
                                         }
                                     }
-                                },
-                                onMockApprove = {
-                                    authViewModel.mockAdminApproveVerification(context)
-                                    verStatusMsg = if (isArabic) "تم التوثيق الفوري بنجاح!" else "Instant verification approved!"
-                                    currentStep = 2
                                 }
                             )
 
@@ -407,8 +402,7 @@ fun StepVerificationContent(
     statusMsg: String?,
     onSelectId: () -> Unit,
     onSelectSelfie: () -> Unit,
-    onSubmit: () -> Unit,
-    onMockApprove: () -> Unit
+    onSubmit: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
@@ -513,20 +507,6 @@ fun StepVerificationContent(
                     fontWeight = FontWeight.Bold
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Demo Bypass
-        OutlinedButton(
-            onClick = onMockApprove,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Text(
-                text = if (isArabic) "تفعيل التوثيق الفوري (تجريبي)" else "Instant Mock Verification (Demo)",
-                fontSize = 12.sp
-            )
         }
     }
 }
