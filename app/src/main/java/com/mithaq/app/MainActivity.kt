@@ -27,6 +27,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.Done
 import com.google.firebase.FirebaseApp
@@ -749,13 +750,19 @@ fun SearchTabContent(
                 ) {
                     searchResults.forEach { profile ->
                         val score = MatchScoreCalculator.calculateScore(currentUser, profile)
+                        val isCompatible = viewModel.isCompatible(profile)
                         
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 6.dp),
+                                .padding(vertical = 6.dp)
+                                .let { if (!isCompatible) it.alpha(0.55f) else it },
                             shape = RoundedCornerShape(24.dp), // Premium rounded 24.dp
-                            onClick = { onSelectMatch(profile) }
+                            onClick = { 
+                                if (isCompatible) {
+                                    onSelectMatch(profile) 
+                                }
+                            }
                         ) {
                             Row(
                                 modifier = Modifier
@@ -770,33 +777,62 @@ fun SearchTabContent(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
+                                    val isBlurred = if (isCompatible) !isAccessApproved else true
+                                    
                                     Box(modifier = Modifier.size(52.dp)) {
                                         UserProfileImage(
-                                            imageUrl = profile.imageUrl,
+                                            imageUrl = if (isCompatible) profile.imageUrl else "",
                                             gender = profile.gender,
-                                            isBlurred = !isAccessApproved,
+                                            isBlurred = isBlurred,
                                             modifier = Modifier.fillMaxSize()
                                         )
                                     }
 
                                     Column {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(text = profile.name, fontWeight = FontWeight.Bold)
-                                            VerificationBadge(status = profile.verificationStatus)
+                                            Text(
+                                                text = if (isCompatible) profile.name else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"), 
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isCompatible) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            if (isCompatible) {
+                                                VerificationBadge(status = profile.verificationStatus)
+                                            }
                                         }
                                         val sectLabel = profile.sect.getDisplayName(isArabic)
                                         val ageSuffix = if (isArabic) "سنة" else "yrs"
                                         val modestyLabel = if (isArabic) "الحشمة: " else "Modesty: "
-                                        Text(text = "${profile.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
-                                        Text(text = "$modestyLabel${profile.modestyPreference.getDisplayName(isArabic)}", style = MaterialTheme.typography.bodySmall)
+                                        
+                                        if (isCompatible) {
+                                            Text(text = "${profile.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
+                                            Text(text = "$modestyLabel${profile.modestyPreference.getDisplayName(isArabic)}", style = MaterialTheme.typography.bodySmall)
+                                        } else {
+                                            Text(
+                                                text = if (isArabic) "البيانات والتفاصيل مخفية لعدم التوافق" else "Details hidden due to incompatibility",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                            )
+                                            Text(
+                                                text = if (isArabic) "اضغط على المرشحات لتعديل شروط بحثك" else "Adjust search filters to unlock details",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
                                     }
                                 }
                                 Box(
                                     modifier = Modifier.clickable {
-                                        breakdownPartner = profile
+                                        if (isCompatible) {
+                                            breakdownPartner = profile
+                                        }
                                     }
                                 ) {
-                                    MatchScoreBadge(score = score, size = 50.dp)
+                                    MatchScoreBadge(
+                                        score = score, 
+                                        size = 50.dp,
+                                        modifier = if (!isCompatible) Modifier.alpha(0.5f) else Modifier
+                                    )
                                 }
                             }
                         }

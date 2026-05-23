@@ -10,5 +10,8 @@ data class FilterCriteria(
     val prayerFrequencies: Set<PrayerFrequency> = emptySet(),
     val modestyPreferences: Set<ModestyPreference> = emptySet(),
     val relocationWillingness: Set<RelocationWillingness> = emptySet(),
-    val polygamyAcceptance: Boolean? = null // null means doesn't matter
+    val polygamyAcceptance: Boolean? = null, // null means doesn't matter
+    val country: String = "",
+    val city: String = ""
 )
+

@@ -346,30 +346,38 @@ class SearchViewModel(
     /**
      * Filters the cached list of user profiles locally.
      */
+    fun isCompatible(user: UserProfile, criteria: FilterCriteria = _filterCriteria.value): Boolean {
+        // 1. Age Range Check
+        if (user.age !in criteria.minAge..criteria.maxAge) return false
+        
+        // 2. Sect Check
+        if (criteria.sect != null && user.sect != criteria.sect) return false
+        
+        // 3. Prayer Frequency Check
+        if (criteria.prayerFrequencies.isNotEmpty() && user.prayerFrequency !in criteria.prayerFrequencies) return false
+        
+        // 4. Modesty Preference (Hijab/Niqab) Check
+        if (criteria.modestyPreferences.isNotEmpty() && user.modestyPreference !in criteria.modestyPreferences) return false
+        
+        // 5. Relocation Willingness Check
+        if (criteria.relocationWillingness.isNotEmpty() && user.relocationWillingness !in criteria.relocationWillingness) return false
+        
+        // 6. Polygamy Acceptance Check
+        if (criteria.polygamyAcceptance != null && user.polygamyAcceptance != criteria.polygamyAcceptance) return false
+
+        // 7. Country Check
+        if (criteria.country.isNotBlank() && !user.country.contains(criteria.country, ignoreCase = true)) return false
+
+        // 8. City Check
+        if (criteria.city.isNotBlank() && !user.city.contains(criteria.city, ignoreCase = true)) return false
+        
+        return true
+    }
+
     private fun applyLocalFilters() {
-        val criteria = _filterCriteria.value
-        val filtered = allUsersCache.filter { user ->
-            // 1. Age Range Check
-            if (user.age !in criteria.minAge..criteria.maxAge) return@filter false
-            
-            // 2. Sect Check
-            if (criteria.sect != null && user.sect != criteria.sect) return@filter false
-            
-            // 3. Prayer Frequency Check
-            if (criteria.prayerFrequencies.isNotEmpty() && user.prayerFrequency !in criteria.prayerFrequencies) return@filter false
-            
-            // 4. Modesty Preference (Hijab/Niqab) Check
-            if (criteria.modestyPreferences.isNotEmpty() && user.modestyPreference !in criteria.modestyPreferences) return@filter false
-            
-            // 5. Relocation Willingness Check
-            if (criteria.relocationWillingness.isNotEmpty() && user.relocationWillingness !in criteria.relocationWillingness) return@filter false
-            
-            // 6. Polygamy Acceptance Check
-            if (criteria.polygamyAcceptance != null && user.polygamyAcceptance != criteria.polygamyAcceptance) return@filter false
-            
-            true
-        }
-        _searchResults.value = filtered
+        // We show ALL profiles (filtered only by gender and not being current user)
+        // Compatibility shading/blurring will be handled in the UI based on isCompatible()
+        _searchResults.value = allUsersCache
     }
 
     fun resetFilters() {

@@ -3,6 +3,7 @@ package com.mithaq.app.ui.filter
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -34,6 +35,8 @@ fun SearchFilterBottomSheet(
     val selectedModesty = remember { mutableStateListOf<ModestyPreference>().apply { addAll(filterCriteria.modestyPreferences) } }
     val selectedRelocation = remember { mutableStateListOf<RelocationWillingness>().apply { addAll(filterCriteria.relocationWillingness) } }
     var polygamyAcceptance by remember { mutableStateOf(filterCriteria.polygamyAcceptance) }
+    var countryText by remember { mutableStateOf(filterCriteria.country) }
+    var cityText by remember { mutableStateOf(filterCriteria.city) }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -93,6 +96,36 @@ fun SearchFilterBottomSheet(
                         thumbColor = MaterialTheme.colorScheme.primary
                     )
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Country & City Filters
+                Text(
+                    text = if (isArabic) "الموقع الجغرافي" else "Location Filters",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = countryText,
+                        onValueChange = { countryText = it },
+                        label = { Text(if (isArabic) "الدولة" else "Country") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = cityText,
+                        onValueChange = { cityText = it },
+                        label = { Text(if (isArabic) "المدينة" else "City") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 2. Sect Selection
@@ -239,6 +272,8 @@ fun SearchFilterBottomSheet(
                         selectedModesty.clear()
                         selectedRelocation.clear()
                         polygamyAcceptance = null
+                        countryText = ""
+                        cityText = ""
                         
                         viewModel.resetFilters()
                         onDismissRequest()
@@ -257,7 +292,9 @@ fun SearchFilterBottomSheet(
                             prayerFrequencies = selectedPrayers.toSet(),
                             modestyPreferences = selectedModesty.toSet(),
                             relocationWillingness = selectedRelocation.toSet(),
-                            polygamyAcceptance = polygamyAcceptance
+                            polygamyAcceptance = polygamyAcceptance,
+                            country = countryText,
+                            city = cityText
                         )
                         viewModel.updateFilters(newCriteria)
                         onDismissRequest()
