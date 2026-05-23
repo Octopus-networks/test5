@@ -71,18 +71,18 @@ class AuthViewModel(
                     val existing = userDao.getAllUsers()
                     if (existing.isEmpty()) {
                         val mockUsers = listOf(
-                            CachedUserProfile(
+                            UserProfile(
                                 uid = "mock_user_2",
                                 name = "Fatima / فاطمة",
-                                gender = "FEMALE",
+                                gender = Gender.FEMALE,
                                 age = 24,
                                 city = "Cairo",
                                 country = "Egypt",
                                 imageUrl = "avatar_sister_purple",
-                                sect = "SUNNI",
-                                prayerFrequency = "ALWAYS",
-                                modestyPreference = "HIJAB",
-                                relocationWillingness = "OPEN",
+                                sect = Sect.SUNNI,
+                                prayerFrequency = PrayerFrequency.ALWAYS,
+                                modestyPreference = ModestyPreference.HIJAB,
+                                relocationWillingness = RelocationWillingness.OPEN,
                                 polygamyAcceptance = false,
                                 guardianName = "Mahmoud / محمود",
                                 guardianEmail = "mahmoud@mithaq.com",
@@ -101,19 +101,19 @@ class AuthViewModel(
                                     "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt4", "q5" to "opt1",
                                     "q6" to "opt1", "q7" to "opt2", "q8" to "opt1", "q9" to "opt2", "q10" to "opt1"
                                 )
-                            ),
-                            CachedUserProfile(
+                            ).toCached(),
+                            UserProfile(
                                 uid = "mock_user_3",
                                 name = "Ahmad / أحمد",
-                                gender = "MALE",
+                                gender = Gender.MALE,
                                 age = 29,
                                 city = "Riyadh",
                                 country = "Saudi Arabia",
                                 imageUrl = "avatar_brother_green",
-                                sect = "SUNNI",
-                                prayerFrequency = "ALWAYS",
-                                modestyPreference = "DOES_NOT_MATTER",
-                                relocationWillingness = "YES",
+                                sect = Sect.SUNNI,
+                                prayerFrequency = PrayerFrequency.ALWAYS,
+                                modestyPreference = ModestyPreference.DOES_NOT_MATTER,
+                                relocationWillingness = RelocationWillingness.YES,
                                 polygamyAcceptance = true,
                                 guardianName = null,
                                 guardianEmail = null,
@@ -132,19 +132,19 @@ class AuthViewModel(
                                     "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt1", "q5" to "opt2",
                                     "q6" to "opt2", "q7" to "opt1", "q8" to "opt2", "q9" to "opt1", "q10" to "opt2"
                                 )
-                            ),
-                            CachedUserProfile(
+                            ).toCached(),
+                            UserProfile(
                                 uid = "mock_user_4",
                                 name = "Sarah / سارة",
-                                gender = "FEMALE",
+                                gender = Gender.FEMALE,
                                 age = 27,
                                 city = "Dubai",
                                 country = "UAE",
                                 imageUrl = "avatar_sister_purple",
-                                sect = "SUNNI",
-                                prayerFrequency = "USUALLY",
-                                modestyPreference = "HIJAB",
-                                relocationWillingness = "OPEN",
+                                sect = Sect.SUNNI,
+                                prayerFrequency = PrayerFrequency.USUALLY,
+                                modestyPreference = ModestyPreference.HIJAB,
+                                relocationWillingness = RelocationWillingness.OPEN,
                                 polygamyAcceptance = false,
                                 guardianName = "Omar / عمر",
                                 guardianEmail = "omar@mithaq.com",
@@ -160,19 +160,19 @@ class AuthViewModel(
                                 isPremium = false,
                                 subscriptionPlan = "FREE",
                                 questionnaireAnswers = emptyMap()
-                            ),
-                            CachedUserProfile(
+                            ).toCached(),
+                            UserProfile(
                                 uid = "wali@mithaq.com",
                                 name = "Wali / ولي أمر",
-                                gender = "MALE",
+                                gender = Gender.MALE,
                                 age = 52,
                                 city = "Cairo",
                                 country = "Egypt",
                                 imageUrl = "avatar_brother_green",
-                                sect = "SUNNI",
-                                prayerFrequency = "ALWAYS",
-                                modestyPreference = "DOES_NOT_MATTER",
-                                relocationWillingness = "NO",
+                                sect = Sect.SUNNI,
+                                prayerFrequency = PrayerFrequency.ALWAYS,
+                                modestyPreference = ModestyPreference.DOES_NOT_MATTER,
+                                relocationWillingness = RelocationWillingness.NO,
                                 polygamyAcceptance = false,
                                 guardianName = null,
                                 guardianEmail = null,
@@ -188,19 +188,19 @@ class AuthViewModel(
                                 isPremium = false,
                                 subscriptionPlan = "FREE",
                                 questionnaireAnswers = emptyMap()
-                            ),
-                            CachedUserProfile(
+                            ).toCached(),
+                            UserProfile(
                                 uid = "admin@mithaq.com",
                                 name = "Admin / مدير النظام",
-                                gender = "MALE",
+                                gender = Gender.MALE,
                                 age = 35,
                                 city = "Cairo",
                                 country = "Egypt",
                                 imageUrl = "avatar_brother_green",
-                                sect = "SUNNI",
-                                prayerFrequency = "ALWAYS",
-                                modestyPreference = "DOES_NOT_MATTER",
-                                relocationWillingness = "OPEN",
+                                sect = Sect.SUNNI,
+                                prayerFrequency = PrayerFrequency.ALWAYS,
+                                modestyPreference = ModestyPreference.DOES_NOT_MATTER,
+                                relocationWillingness = RelocationWillingness.OPEN,
                                 polygamyAcceptance = false,
                                 guardianName = null,
                                 guardianEmail = null,
@@ -216,7 +216,7 @@ class AuthViewModel(
                                 isPremium = true,
                                 subscriptionPlan = "GOLD",
                                 questionnaireAnswers = emptyMap()
-                            )
+                            ).toCached()
                         )
                         userDao.insertUsers(mockUsers)
                     }
