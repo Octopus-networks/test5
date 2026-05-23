@@ -295,6 +295,157 @@ class AuthViewModel(
         }
     }
 
+    fun adminFetchAllUsers() {
+        viewModelScope.launch {
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (isMock) return@launch
+
+            try {
+                val snapshot = firestore.collection("users").get().await()
+                val profiles = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        val uid = doc.id
+                        val name = doc.getString("name") ?: ""
+                        val genderStr = doc.getString("gender") ?: "FEMALE"
+                        val gender = if (genderStr.equals("MALE", ignoreCase = true)) Gender.MALE else Gender.FEMALE
+                        val age = doc.getLong("age")?.toInt() ?: 18
+                        val city = doc.getString("city") ?: ""
+                        val country = doc.getString("country") ?: ""
+                        val imageUrl = doc.getString("imageUrl") ?: ""
+                        val sectStr = doc.getString("sect") ?: "SUNNI"
+                        val sect = try { Sect.valueOf(sectStr.uppercase()) } catch (e: Exception) { Sect.SUNNI }
+                        val prayerStr = doc.getString("prayerFrequency") ?: "ALWAYS"
+                        val prayer = try { PrayerFrequency.valueOf(prayerStr.uppercase()) } catch (e: Exception) { PrayerFrequency.ALWAYS }
+                        val modestyStr = doc.getString("modestyPreference") ?: "HIJAB"
+                        val modesty = try { ModestyPreference.valueOf(modestyStr.uppercase()) } catch (e: Exception) { ModestyPreference.HIJAB }
+                        val relocationStr = doc.getString("relocationWillingness") ?: "OPEN"
+                        val relocation = try { RelocationWillingness.valueOf(relocationStr.uppercase()) } catch (e: Exception) { RelocationWillingness.OPEN }
+                        val polygamy = doc.getBoolean("polygamyAcceptance") ?: false
+                        val guardianName = doc.getString("guardianName")
+                        val guardianEmail = doc.getString("guardianEmail")
+                        val guardianStatus = doc.getString("guardianStatus")
+                        val isWaliAccount = doc.getBoolean("isWaliAccount") ?: false
+                        val wardUid = doc.getString("wardUid")
+                        val verificationStatus = doc.getString("verificationStatus") ?: "NONE"
+                        val voiceIntroUrl = doc.getString("voiceIntroUrl")
+                        val isAdmin = doc.getBoolean("isAdmin") ?: false
+                        val isPremium = doc.getBoolean("isPremium") ?: false
+                        val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
+                        val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
+
+                        UserProfile(
+                            uid = uid,
+                            name = name,
+                            gender = gender,
+                            age = age,
+                            city = city,
+                            country = country,
+                            imageUrl = imageUrl,
+                            sect = sect,
+                            prayerFrequency = prayer,
+                            modestyPreference = modesty,
+                            relocationWillingness = relocation,
+                            polygamyAcceptance = polygamy,
+                            guardianName = guardianName,
+                            guardianEmail = guardianEmail,
+                            guardianStatus = guardianStatus,
+                            isWaliAccount = isWaliAccount,
+                            wardUid = wardUid,
+                            verificationStatus = verificationStatus,
+                            voiceIntroUrl = voiceIntroUrl,
+                            isAdmin = isAdmin,
+                            isPremium = isPremium,
+                            subscriptionPlan = subscriptionPlan,
+                            questionnaireAnswers = questionnaireAnswers
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                profiles.forEach { userDao?.insertUser(it.toCached()) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun adminUpdateUserPremium(targetUid: String, isPremium: Boolean, plan: String) {
+        viewModelScope.launch {
+            val cachedUser = userDao?.getUser(targetUid)
+            if (cachedUser != null) {
+                userDao.insertUser(cachedUser.copy(isPremium = isPremium, subscriptionPlan = plan))
+            }
+            if (targetUid == _currentUserProfile.value?.uid) {
+                _currentUserProfile.value = _currentUserProfile.value?.copy(isPremium = isPremium, subscriptionPlan = plan)
+            }
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (!isMock) {
+                try {
+                    firestore.collection("users").document(targetUid)
+                        .update("isPremium", isPremium, "subscriptionPlan", plan).await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    fun adminUpdateUserRole(targetUid: String, isWali: Boolean, isAdmin: Boolean) {
+        viewModelScope.launch {
+            val cachedUser = userDao?.getUser(targetUid)
+            if (cachedUser != null) {
+                userDao.insertUser(cachedUser.copy(isWaliAccount = isWali, isAdmin = isAdmin))
+            }
+            if (targetUid == _currentUserProfile.value?.uid) {
+                _currentUserProfile.value = _currentUserProfile.value?.copy(isWaliAccount = isWali, isAdmin = isAdmin)
+            }
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (!isMock) {
+                try {
+                    firestore.collection("users").document(targetUid)
+                        .update("isWaliAccount", isWali, "isAdmin", isAdmin).await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    fun adminDeleteUser(targetUid: String) {
+        viewModelScope.launch {
+            try {
+                userDao?.deleteUser(targetUid)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (!isMock) {
+                try {
+                    firestore.collection("users").document(targetUid).delete().await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+
     fun saveQuestionnaireAnswers(answers: Map<String, String>) {
         viewModelScope.launch {
             val current = _currentUserProfile.value ?: return@launch

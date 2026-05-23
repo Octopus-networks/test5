@@ -132,6 +132,9 @@ interface UserDao {
 
     @Query("DELETE FROM cached_users")
     suspend fun clearUsers()
+
+    @Query("DELETE FROM cached_users WHERE uid = :uid")
+    suspend fun deleteUser(uid: String)
 }
 
 @Dao

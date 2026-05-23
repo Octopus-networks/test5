@@ -41,6 +41,10 @@ fun AdminConsoleScreen(
     val verifiedUsers = allUsers.count { it.verificationStatus == "VERIFIED" }
     val totalWali = allUsers.count { it.isWaliAccount }
 
+    LaunchedEffect(Unit) {
+        viewModel.adminFetchAllUsers()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -79,6 +83,11 @@ fun AdminConsoleScreen(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     text = { Text(text = if (isArabic) "الإحصائيات" else "System Stats") }
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text(text = if (isArabic) "إدارة الأعضاء (${allUsers.size})" else "Members (${allUsers.size})") }
                 )
             }
 
@@ -140,7 +149,7 @@ fun AdminConsoleScreen(
                         }
                     }
                 }
-            } else {
+            } else if (selectedTab == 1) {
                 // Statistics Dashboard
                 Column(
                     modifier = Modifier
@@ -221,6 +230,13 @@ fun AdminConsoleScreen(
                         }
                     }
                 }
+            } else {
+                ManageMembersTab(
+                    allUsers = allUsers,
+                    isArabic = isArabic,
+                    currentUid = viewModel.currentUserProfile.collectAsState().value?.uid ?: "",
+                    viewModel = viewModel
+                )
             }
         }
     }
@@ -417,3 +433,180 @@ fun StatCard(
         }
     }
 }
+
+@Composable
+fun ManageMembersTab(
+    allUsers: List<UserProfile>,
+    isArabic: Boolean,
+    currentUid: String,
+    viewModel: AuthViewModel
+) {
+    var userToDelete by remember { mutableStateOf<UserProfile?>(null) }
+
+    if (userToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { userToDelete = null },
+            title = { Text(if (isArabic) "حذف الحساب" else "Delete Account") },
+            text = { Text(if (isArabic) "هل أنت متأكد من رغبتك في حذف حساب العضو ${userToDelete?.name} نهائياً من النظام؟" else "Are you sure you want to permanently delete the account of ${userToDelete?.name}?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        userToDelete?.let { viewModel.adminDeleteUser(it.uid) }
+                        userToDelete = null
+                    }
+                ) {
+                    Text(if (isArabic) "تأكيد الحذف" else "Confirm", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { userToDelete = null }) {
+                    Text(if (isArabic) "إلغاء" else "Cancel")
+                }
+            }
+        )
+    }
+
+    if (allUsers.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = if (isArabic) "لا يوجد أعضاء مسجلين حالياً" else "No registered members found",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(allUsers) { user ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column {
+                                Text(
+                                    text = user.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "${if (user.isWaliAccount) (if (isArabic) "مشرف (ولي أمر)" else "Wali") else if (user.isAdmin) (if (isArabic) "مسؤول (إدمن)" else "Admin") else (if (isArabic) "عضو عادي" else "Regular Member")} • ${if (user.isPremium) (if (isArabic) "مميز (${user.subscriptionPlan})" else "Premium (${user.subscriptionPlan})") else (if (isArabic) "عضو مجاني" else "Free")}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            if (user.uid != currentUid) {
+                                IconButton(
+                                    onClick = { userToDelete = user },
+                                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Close, contentDescription = "Delete")
+                                }
+                            }
+                        }
+
+                        if (user.uid != currentUid) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // Role Switch buttons
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Toggle Premium button
+                                Button(
+                                    onClick = {
+                                        viewModel.adminUpdateUserPremium(
+                                            user.uid,
+                                            isPremium = !user.isPremium,
+                                            plan = if (!user.isPremium) "GOLD" else "FREE"
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (user.isPremium) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Text(
+                                        text = if (user.isPremium) {
+                                            if (isArabic) "إلغاء التميز" else "Remove Premium"
+                                        } else {
+                                            if (isArabic) "ترقية لمميز" else "Grant Premium"
+                                        },
+                                        fontSize = 10.sp
+                                    )
+                                }
+
+                                // Toggle Wali button
+                                Button(
+                                    onClick = {
+                                        viewModel.adminUpdateUserRole(
+                                            user.uid,
+                                            isWali = !user.isWaliAccount,
+                                            isAdmin = false
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (user.isWaliAccount) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline
+                                    )
+                                ) {
+                                    Text(
+                                        text = if (user.isWaliAccount) {
+                                            if (isArabic) "عضو عادي" else "Make Member"
+                                        } else {
+                                            if (isArabic) "ترقية لولي" else "Make Wali"
+                                        },
+                                        fontSize = 10.sp
+                                    )
+                                }
+
+                                // Toggle Admin button
+                                Button(
+                                    onClick = {
+                                        viewModel.adminUpdateUserRole(
+                                            user.uid,
+                                            isWali = false,
+                                            isAdmin = !user.isAdmin
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (user.isAdmin) Color(0xFFC62828) else MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = if (user.isAdmin) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                ) {
+                                    Text(
+                                        text = if (user.isAdmin) {
+                                            if (isArabic) "تنزيل لمشرف" else "Remove Admin"
+                                        } else {
+                                            if (isArabic) "ترقية لإدمن" else "Make Admin"
+                                        },
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

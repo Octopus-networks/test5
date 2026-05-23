@@ -42,15 +42,21 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            val channelId = "mithaq_chat_notifications"
+            val channelId = "mithaq_notifications_v3"
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val soundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channelName = "Mithaq Chat Notifications"
+                val channelName = "Mithaq Notifications"
                 val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = "Mithaq chat messages notifications"
+                    description = "Mithaq app alerts and notifications"
                     enableLights(true)
                     enableVibration(true)
+                    val attributes = android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                    setSound(soundUri, attributes)
                 }
                 notificationManager.createNotificationChannel(channel)
             }
@@ -62,7 +68,9 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setSound(soundUri)
+                .setVibrate(longArrayOf(1000, 1000, 1000, 1000, 1000))
+                .setDefaults(NotificationCompat.DEFAULT_LIGHTS)
 
             notificationManager.notify(System.currentTimeMillis().toInt(), notificationBuilder.build())
         }
