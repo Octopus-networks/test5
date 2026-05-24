@@ -78,6 +78,10 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import com.mithaq.app.ui.stats.MyStatsScreen
+import com.mithaq.app.ui.splash.SplashScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -103,14 +107,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var isArabic by remember { mutableStateOf(false) }
-            MithaqTheme(isArabic = isArabic) {
+            var isDarkMode by remember { mutableStateOf(false) }
+            MithaqTheme(isArabic = isArabic, darkTheme = isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     MithaqAppNavigation(
                         isArabic = isArabic,
-                        onLanguageChange = { isArabic = it }
+                        onLanguageChange = { isArabic = it },
+                        isDarkMode = isDarkMode,
+                        onDarkModeChange = { isDarkMode = it }
                     )
                 }
             }
@@ -121,9 +128,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MithaqAppNavigation(
     isArabic: Boolean,
-    onLanguageChange: (Boolean) -> Unit
+    onLanguageChange: (Boolean) -> Unit,
+    isDarkMode: Boolean = false,
+    onDarkModeChange: (Boolean) -> Unit = {}
 ) {
-    var currentScreen by remember { mutableStateOf("login") }
+    var currentScreen by remember { mutableStateOf("splash") }
     var currentUserId by remember { mutableStateOf("") }
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
 
@@ -165,6 +174,9 @@ fun MithaqAppNavigation(
     }
 
     when (currentScreen) {
+        "splash" -> {
+            SplashScreen(onComplete = { currentScreen = "login" })
+        }
         "login" -> {
             LoginScreen(
                 onNavigateToRegister = { currentScreen = "register" },
@@ -228,6 +240,8 @@ fun MithaqAppNavigation(
                         searchViewModel = searchViewModel,
                         guardianViewModel = guardianViewModel,
                         isArabic = isArabic,
+                        isDarkMode = isDarkMode,
+                        onDarkModeChange = onDarkModeChange,
                         initialTab = initialTab,
                         initialChatUser = initialChatUser,
                         onClearInitialChat = {
@@ -327,6 +341,17 @@ fun MithaqAppNavigation(
                 onBack = { currentScreen = "home" }
             )
         }
+        "stats" -> {
+            val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
+            val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            MyStatsScreen(
+                currentUser = profile,
+                likesRepository = likesRepository,
+                isArabic = isArabic,
+                onBack = { currentScreen = "home" }
+            )
+        }
     }
 }
 
@@ -339,6 +364,8 @@ fun HomeScreen(
     searchViewModel: SearchViewModel,
     guardianViewModel: GuardianViewModel,
     isArabic: Boolean,
+    isDarkMode: Boolean = false,
+    onDarkModeChange: (Boolean) -> Unit = {},
     onLanguageChange: (Boolean) -> Unit,
     onLogout: () -> Unit,
     onNavigateToScreen: (String) -> Unit,
@@ -386,6 +413,13 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text(strings.appName, style = MaterialTheme.typography.titleLarge) },
                 actions = {
+                    IconButton(onClick = { onDarkModeChange(!isDarkMode) }) {
+                        Icon(
+                            imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (isDarkMode) "Light Mode" else "Dark Mode",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     TextButton(onClick = { onLanguageChange(!isArabic) }) {
                         Text(if (isArabic) "English" else "العربية", color = MaterialTheme.colorScheme.primary)
                     }
@@ -471,7 +505,8 @@ fun HomeScreen(
                         onSelectMatch = { match ->
                             onNavigateToDetail(match)
                         },
-                        onNavigateToUpgrade = { onNavigateToScreen("premium_store_platinum") }
+                        onNavigateToUpgrade = { onNavigateToScreen("premium_store_platinum") },
+                        onNavigateToScreen = onNavigateToScreen
                     )
                     1 -> LikesTabContent(
                         currentUser = profile,
@@ -520,7 +555,8 @@ fun SearchTabContent(
     viewModel: SearchViewModel,
     isArabic: Boolean,
     onSelectMatch: (UserProfile) -> Unit,
-    onNavigateToUpgrade: () -> Unit
+    onNavigateToUpgrade: () -> Unit,
+    onNavigateToScreen: (String) -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
     var activeSubTab by remember { mutableStateOf(0) }
@@ -529,6 +565,7 @@ fun SearchTabContent(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.errorMessage.collectAsState()
     var breakdownPartner by remember { mutableStateOf<UserProfile?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
     val isDark = isSystemInDarkTheme()
 
     val glassBgColor = if (isDark) GlassSurfaceDark else GlassSurfaceLight
@@ -704,6 +741,121 @@ fun SearchTabContent(
                         }
                     }
                 }
+                
+                // Questionnaire Banner (only if not done)
+                if (!hasQuiz) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToScreen("questionnaire") },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                                        )
+                                    )
+                                )
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (isArabic) "⚡ أكمل استبيان التوافق!" else "⚡ Complete Your Compatibility Quiz!",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = if (isArabic) "رفع نسبة التوافق مع الشركاء بنسبة 3x أعلى" else "Get 3x better matches by completing the quiz",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Mini Stats Row
+                val context2 = androidx.compose.ui.platform.LocalContext.current
+                val likesRepo2 = remember { com.mithaq.app.data.LikesRepository(context2) }
+                var statsViews by remember { mutableStateOf(0) }
+                var statsLikes by remember { mutableStateOf(0) }
+                var statsMatches by remember { mutableStateOf(0) }
+                LaunchedEffect(currentUser.uid) {
+                    try {
+                        statsViews = likesRepo2.getProfileVisitors(currentUser.uid).size
+                        statsLikes = likesRepo2.getWhoLikedMe(currentUser.uid).size
+                        statsMatches = likesRepo2.getMutualMatches(currentUser.uid).size
+                    } catch (_: Exception) {}
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    listOf(
+                        Triple(Icons.Default.Visibility, if (isArabic) "مشاهدات" else "Views", statsViews),
+                        Triple(Icons.Default.Favorite, if (isArabic) "إعجابات" else "Likes", statsLikes),
+                        Triple(Icons.Default.CheckCircle, if (isArabic) "تطابقات" else "Matches", statsMatches)
+                    ).forEach { (icon, label, count) ->
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(imageVector = icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Text(text = "$count", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+
+                Button(
+                    onClick = { onNavigateToScreen("stats") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Text(if (isArabic) "عرض إحصائيات ملفي الشخصي" else "View My Detailed Stats", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
 
                 val topMatch = remember(searchResults) {
                     if (searchResults.isNotEmpty()) {
@@ -816,6 +968,30 @@ fun SearchTabContent(
                 }
             }
         } else {
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text(if (isArabic) "ابحث بالاسم أو المدينة..." else "Search by name or city...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Done, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                shape = RoundedCornerShape(16.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                )
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -879,8 +1055,16 @@ fun SearchTabContent(
                     Text(text = if (isArabic) "لا توجد نتائج مطابقة. يرجى تعديل خيارات البحث." else "No matches found. Try adjusting filters.", modifier = Modifier.padding(16.dp))
                 }
             } else {
-                val processedResults = remember(searchResults, selectedCategory, currentUser) {
+                val processedResults = remember(searchResults, selectedCategory, currentUser, searchQuery) {
                     var list = searchResults
+                    // Filter by search query first
+                    if (searchQuery.isNotBlank()) {
+                        list = list.filter {
+                            it.name.contains(searchQuery, ignoreCase = true) ||
+                            it.city.contains(searchQuery, ignoreCase = true) ||
+                            it.country.contains(searchQuery, ignoreCase = true)
+                        }
+                    }
                     when (selectedCategory) {
                         "Matches" -> {
                             list = list.sortedByDescending { MatchScoreCalculator.calculateScore(currentUser, it) }
