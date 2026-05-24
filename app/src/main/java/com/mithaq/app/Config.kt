@@ -6,5 +6,5 @@ package com.mithaq.app
  * disabling all simulated mock modes, developer bypasses, and fake data helpers.
  */
 object Config {
-    const val IS_PRODUCTION = true
+    const val IS_PRODUCTION = false
 }
