@@ -108,8 +108,14 @@ dependencies {
   implementation(libs.androidx.room.ktx)
   add("kapt", libs.androidx.room.compiler)
 }
-
 tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask>().configureEach {
-    kaptProcessJvmArgs.add("-Dorg.sqlite.tmpdir=C:/Users/ahmed/.gemini/antigravity/sqlite_tmp")
-    kaptProcessJvmArgs.add("-Djava.io.tmpdir=C:/Users/ahmed/.gemini/antigravity/sqlite_tmp")
+    if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) {
+        val userHome = System.getProperty("user.home")
+        val sqliteTmpDir = File(userHome, ".gemini/antigravity/sqlite_tmp")
+        if (!sqliteTmpDir.exists()) {
+            sqliteTmpDir.mkdirs()
+        }
+        kaptProcessJvmArgs.add("-Dorg.sqlite.tmpdir=${sqliteTmpDir.absolutePath}")
+        kaptProcessJvmArgs.add("-Djava.io.tmpdir=${sqliteTmpDir.absolutePath}")
+    }
 }
