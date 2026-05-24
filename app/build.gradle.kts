@@ -107,6 +107,9 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.room.ktx)
   add("kapt", libs.androidx.room.compiler)
+
+  // Google Generative AI (Gemini) SDK
+  implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 }
 tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask>().configureEach {
     if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) {
