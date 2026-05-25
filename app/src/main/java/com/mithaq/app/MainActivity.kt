@@ -1371,7 +1371,7 @@ fun SearchTabContent(
         SearchFilterBottomSheet(
             onDismissRequest = { showFilters = false },
             viewModel = viewModel,
-            isPlatinum = currentUser.isPremium && currentUser.subscriptionPlan.lowercase() == "platinum",
+            isPlatinum = currentUser.isPremium && (currentUser.subscriptionPlan.lowercase() == "platinum" || currentUser.subscriptionPlan.lowercase() == "gold"),
             onNavigateToUpgrade = onNavigateToUpgrade
         )
     }

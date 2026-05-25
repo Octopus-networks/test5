@@ -483,6 +483,7 @@ fun ManageMembersTab(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(allUsers) { user ->
+                var showPremiumMenu by remember { mutableStateOf(false) }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -526,29 +527,57 @@ fun ManageMembersTab(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                // Toggle Premium button
-                                Button(
-                                    onClick = {
-                                        viewModel.adminUpdateUserPremium(
-                                            user.uid,
-                                            isPremium = !user.isPremium,
-                                            plan = if (!user.isPremium) "GOLD" else "FREE"
+                                // Premium Dropdown Button
+                                Box(modifier = Modifier.weight(1f)) {
+                                    Button(
+                                        onClick = { showPremiumMenu = true },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (user.isPremium) {
+                                                if (user.subscriptionPlan.uppercase() == "PLATINUM") Color(0xFF1E88E5) // Platinum Blue
+                                                else Color(0xFFD4AF37) // Gold Color
+                                            } else {
+                                                MaterialTheme.colorScheme.primary
+                                            }
                                         )
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (user.isPremium) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
-                                    )
-                                ) {
-                                    Text(
-                                        text = if (user.isPremium) {
-                                            if (isArabic) "إلغاء التميز" else "Remove Premium"
-                                        } else {
-                                            if (isArabic) "ترقية لمميز" else "Grant Premium"
-                                        },
-                                        fontSize = 10.sp
-                                    )
+                                    ) {
+                                        Text(
+                                            text = if (user.isPremium) {
+                                                user.subscriptionPlan.uppercase()
+                                            } else {
+                                                if (isArabic) "ترقية لمميز" else "Grant Premium"
+                                            },
+                                            fontSize = 10.sp
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = showPremiumMenu,
+                                        onDismissRequest = { showPremiumMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text(if (isArabic) "عضو مجاني (FREE)" else "Free Member") },
+                                            onClick = {
+                                                showPremiumMenu = false
+                                                viewModel.adminUpdateUserPremium(user.uid, isPremium = false, plan = "FREE")
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(if (isArabic) "باقة ذهبية (GOLD)" else "Gold Package") },
+                                            onClick = {
+                                                showPremiumMenu = false
+                                                viewModel.adminUpdateUserPremium(user.uid, isPremium = true, plan = "GOLD")
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(if (isArabic) "باقة بلاتينية (PLATINUM)" else "Platinum Package") },
+                                            onClick = {
+                                                showPremiumMenu = false
+                                                viewModel.adminUpdateUserPremium(user.uid, isPremium = true, plan = "PLATINUM")
+                                            }
+                                        )
+                                    }
                                 }
 
                                 // Toggle Wali button
