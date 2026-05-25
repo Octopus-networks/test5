@@ -571,6 +571,44 @@ class AuthViewModel(
                         emptyList<String>()
                     }
 
+                    val username = prefs.getString("username", "") ?: ""
+                    val oathChecked = prefs.getBoolean("oathChecked", false)
+                    val skinColor = prefs.getString("skinColor", "") ?: ""
+                    val healthStatusStr = prefs.getString("healthStatus", "[]") ?: "[]"
+                    val healthStatus = try {
+                        val arr = org.json.JSONArray(healthStatusStr)
+                        val list = mutableListOf<String>()
+                        for (i in 0 until arr.length()) { list.add(arr.getString(i)) }
+                        list
+                    } catch (e: Exception) { emptyList<String>() }
+                    val nationality = prefs.getString("nationality", "") ?: ""
+                    val educationLevel = prefs.getString("educationLevel", "") ?: ""
+                    val jobTitle = prefs.getString("jobTitle", "") ?: ""
+                    val incomeLevel = prefs.getString("incomeLevel", "") ?: ""
+                    val fastingHabit = prefs.getString("fastingHabit", "") ?: ""
+                    val weddingTimeline = prefs.getString("weddingTimeline", "") ?: ""
+                    val wifeWorking = prefs.getString("wifeWorking", "") ?: ""
+                    val householdExpenses = prefs.getString("householdExpenses", "") ?: ""
+                    val aymaView = prefs.getString("aymaView", "") ?: ""
+                    val shabkaView = prefs.getString("shabkaView", "") ?: ""
+                    val gpsLocationEnabled = prefs.getBoolean("gpsLocationEnabled", false)
+                    val blurPictures = prefs.getBoolean("blurPictures", true)
+                    val height = prefs.getInt("height", 170)
+                    val weight = prefs.getInt("weight", 70)
+                    val bodyType = prefs.getString("bodyType", "average") ?: "average"
+                    val hairColor = prefs.getString("hairColor", "black") ?: "black"
+                    val eyeColor = prefs.getString("eyeColor", "brown") ?: "brown"
+                    val ethnicity = prefs.getString("ethnicity", "arab_middle_eastern") ?: "arab_middle_eastern"
+                    val maritalStatus = prefs.getString("maritalStatus", "single") ?: "single"
+                    val haveChildren = prefs.getString("haveChildren", "no") ?: "no"
+                    val languagesSpokenStr = prefs.getString("languagesSpoken", "[]") ?: "[]"
+                    val languagesSpoken = try {
+                        val arr = org.json.JSONArray(languagesSpokenStr)
+                        val list = mutableListOf<String>()
+                        for (i in 0 until arr.length()) { list.add(arr.getString(i)) }
+                        list
+                    } catch (e: Exception) { emptyList<String>() }
+
                     val profile = UserProfile(
                         uid = savedUid,
                         name = name,
@@ -594,7 +632,32 @@ class AuthViewModel(
                         subscriptionPlan = subscriptionPlan,
                         questionnaireAnswers = questionnaireAnswers,
                         aboutYourself = prefs.getString("aboutYourself", "") ?: "",
-                        idealPartner = prefs.getString("idealPartner", "") ?: ""
+                        idealPartner = prefs.getString("idealPartner", "") ?: "",
+                        username = username,
+                        oathChecked = oathChecked,
+                        skinColor = skinColor,
+                        healthStatus = healthStatus,
+                        nationality = nationality,
+                        educationLevel = educationLevel,
+                        jobTitle = jobTitle,
+                        incomeLevel = incomeLevel,
+                        fastingHabit = fastingHabit,
+                        weddingTimeline = weddingTimeline,
+                        wifeWorking = wifeWorking,
+                        householdExpenses = householdExpenses,
+                        aymaView = aymaView,
+                        shabkaView = shabkaView,
+                        gpsLocationEnabled = gpsLocationEnabled,
+                        blurPictures = blurPictures,
+                        height = height,
+                        weight = weight,
+                        bodyType = bodyType,
+                        hairColor = hairColor,
+                        eyeColor = eyeColor,
+                        ethnicity = ethnicity,
+                        maritalStatus = maritalStatus,
+                        haveChildren = haveChildren,
+                        languagesSpoken = languagesSpoken
                     )
                     _currentUserProfile.value = profile
                     userDao?.insertUser(profile.toCached())
@@ -692,6 +755,32 @@ class AuthViewModel(
                     val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
                     val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
 
+                    val username = doc.getString("username") ?: ""
+                    val oathChecked = doc.getBoolean("oathChecked") ?: false
+                    val skinColor = doc.getString("skinColor") ?: ""
+                    val healthStatus = doc.get("healthStatus") as? List<String> ?: emptyList()
+                    val nationality = doc.getString("nationality") ?: ""
+                    val educationLevel = doc.getString("educationLevel") ?: ""
+                    val jobTitle = doc.getString("jobTitle") ?: ""
+                    val incomeLevel = doc.getString("incomeLevel") ?: ""
+                    val fastingHabit = doc.getString("fastingHabit") ?: ""
+                    val weddingTimeline = doc.getString("weddingTimeline") ?: ""
+                    val wifeWorking = doc.getString("wifeWorking") ?: ""
+                    val householdExpenses = doc.getString("householdExpenses") ?: ""
+                    val aymaView = doc.getString("aymaView") ?: ""
+                    val shabkaView = doc.getString("shabkaView") ?: ""
+                    val gpsLocationEnabled = doc.getBoolean("gpsLocationEnabled") ?: false
+                    val blurPictures = doc.getBoolean("blurPictures") ?: true
+                    val height = doc.getLong("height")?.toInt() ?: 170
+                    val weight = doc.getLong("weight")?.toInt() ?: 70
+                    val bodyType = doc.getString("bodyType") ?: "average"
+                    val hairColor = doc.getString("hairColor") ?: "black"
+                    val eyeColor = doc.getString("eyeColor") ?: "brown"
+                    val ethnicity = doc.getString("ethnicity") ?: "arab_middle_eastern"
+                    val maritalStatus = doc.getString("maritalStatus") ?: "single"
+                    val haveChildren = doc.getString("haveChildren") ?: "no"
+                    val languagesSpoken = doc.get("languagesSpoken") as? List<String> ?: emptyList()
+
                     val profile = UserProfile(
                         uid = uid,
                         name = name,
@@ -720,7 +809,32 @@ class AuthViewModel(
                         subscriptionPlan = subscriptionPlan,
                         questionnaireAnswers = questionnaireAnswers,
                         aboutYourself = doc.getString("aboutYourself") ?: "",
-                        idealPartner = doc.getString("idealPartner") ?: ""
+                        idealPartner = doc.getString("idealPartner") ?: "",
+                        username = username,
+                        oathChecked = oathChecked,
+                        skinColor = skinColor,
+                        healthStatus = healthStatus,
+                        nationality = nationality,
+                        educationLevel = educationLevel,
+                        jobTitle = jobTitle,
+                        incomeLevel = incomeLevel,
+                        fastingHabit = fastingHabit,
+                        weddingTimeline = weddingTimeline,
+                        wifeWorking = wifeWorking,
+                        householdExpenses = householdExpenses,
+                        aymaView = aymaView,
+                        shabkaView = shabkaView,
+                        gpsLocationEnabled = gpsLocationEnabled,
+                        blurPictures = blurPictures,
+                        height = height,
+                        weight = weight,
+                        bodyType = bodyType,
+                        hairColor = hairColor,
+                        eyeColor = eyeColor,
+                        ethnicity = ethnicity,
+                        maritalStatus = maritalStatus,
+                        haveChildren = haveChildren,
+                        languagesSpoken = languagesSpoken
                     )
                     _currentUserProfile.value = profile
                     userDao?.insertUser(profile.toCached())
@@ -846,6 +960,35 @@ class AuthViewModel(
                         putString("voiceIntroUrl", finalVoiceUrl)
                         putString("verificationStatus", "NONE")
                         putBoolean("isWaliAccount", false)
+                        
+                        putString("username", profile.username)
+                        putBoolean("oathChecked", profile.oathChecked)
+                        putString("skinColor", profile.skinColor)
+                        putString("healthStatus", org.json.JSONArray(profile.healthStatus).toString())
+                        putString("nationality", profile.nationality)
+                        putString("educationLevel", profile.educationLevel)
+                        putString("jobTitle", profile.jobTitle)
+                        putString("incomeLevel", profile.incomeLevel)
+                        putString("fastingHabit", profile.fastingHabit)
+                        putString("weddingTimeline", profile.weddingTimeline)
+                        putString("wifeWorking", profile.wifeWorking)
+                        putString("householdExpenses", profile.householdExpenses)
+                        putString("aymaView", profile.aymaView)
+                        putString("shabkaView", profile.shabkaView)
+                        putBoolean("gpsLocationEnabled", profile.gpsLocationEnabled)
+                        putBoolean("blurPictures", profile.blurPictures)
+                        putInt("height", profile.height)
+                        putInt("weight", profile.weight)
+                        putString("bodyType", profile.bodyType)
+                        putString("hairColor", profile.hairColor)
+                        putString("eyeColor", profile.eyeColor)
+                        putString("ethnicity", profile.ethnicity)
+                        putString("maritalStatus", profile.maritalStatus)
+                        putString("haveChildren", profile.haveChildren)
+                        putString("languagesSpoken", org.json.JSONArray(profile.languagesSpoken).toString())
+                        putString("aboutYourself", profile.aboutYourself)
+                        putString("idealPartner", profile.idealPartner)
+
                         apply()
                     }
                     _currentUserProfile.value = profile.copy(
@@ -903,7 +1046,36 @@ class AuthViewModel(
                         "isPremium" to false,
                         "isWaliAccount" to false,
                         "verificationStatus" to "NONE",
-                        "voiceIntroUrl" to (finalVoiceUrl ?: "")
+                        "voiceIntroUrl" to (finalVoiceUrl ?: ""),
+                        
+                        "username" to profile.username,
+                        "oathChecked" to profile.oathChecked,
+                        "skinColor" to profile.skinColor,
+                        "healthStatus" to profile.healthStatus,
+                        "nationality" to profile.nationality,
+                        "educationLevel" to profile.educationLevel,
+                        "jobTitle" to profile.jobTitle,
+                        "incomeLevel" to profile.incomeLevel,
+                        "fastingHabit" to profile.fastingHabit,
+                        "weddingTimeline" to profile.weddingTimeline,
+                        "wifeWorking" to profile.wifeWorking,
+                        "householdExpenses" to profile.householdExpenses,
+                        "aymaView" to profile.aymaView,
+                        "shabkaView" to profile.shabkaView,
+                        "gpsLocationEnabled" to profile.gpsLocationEnabled,
+                        "blurPictures" to profile.blurPictures,
+                        
+                        "height" to profile.height,
+                        "weight" to profile.weight,
+                        "bodyType" to profile.bodyType,
+                        "hairColor" to profile.hairColor,
+                        "eyeColor" to profile.eyeColor,
+                        "ethnicity" to profile.ethnicity,
+                        "maritalStatus" to profile.maritalStatus,
+                        "haveChildren" to profile.haveChildren,
+                        "languagesSpoken" to profile.languagesSpoken,
+                        "aboutYourself" to profile.aboutYourself,
+                        "idealPartner" to profile.idealPartner
                     )
 
                     firestore.collection("users")

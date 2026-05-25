@@ -82,6 +82,8 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.List
 import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
 
@@ -563,6 +565,7 @@ fun SearchTabContent(
     val coroutineScope = rememberCoroutineScope()
     var activeSubTab by remember { mutableStateOf(0) }
     var showFilters by remember { mutableStateOf(false) }
+    var isGridView by remember { mutableStateOf(false) }
     val searchResults by viewModel.searchResults.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.errorMessage.collectAsState()
@@ -1031,6 +1034,20 @@ fun SearchTabContent(
                 ) {
                     Text(if (isArabic) "تصفية البحث" else "Filters")
                 }
+
+                IconButton(
+                    onClick = { isGridView = !isGridView },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isGridView) Icons.Default.List else Icons.Default.GridView,
+                        contentDescription = "Toggle Grid/List",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1128,258 +1145,344 @@ fun SearchTabContent(
                             .weight(1f)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        processedResults.forEach { profile ->
-                            val score = MatchScoreCalculator.calculateScore(currentUser, profile)
-                            val isCompatible = viewModel.isCompatible(profile)
-                            
-                            val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
-                            val isBlurred = if (isCompatible) !isAccessApproved else true
-
-                            val context = androidx.compose.ui.platform.LocalContext.current
-                            val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
-                            var isFav by remember { mutableStateOf(false) }
-                            var isLiked by remember { mutableStateOf(false) }
-                            
-                            LaunchedEffect(currentUser.uid, profile.uid) {
-                                isFav = likesRepository.getFavorites(currentUser.uid).contains(profile.uid)
-                                isLiked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
+                        if (isGridView) {
+                            val chunkedResults = remember(processedResults) {
+                                processedResults.chunked(2)
                             }
+                            chunkedResults.forEach { rowProfiles ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    rowProfiles.forEach { profile ->
+                                        val score = MatchScoreCalculator.calculateScore(currentUser, profile)
+                                        val isCompatible = viewModel.isCompatible(profile)
+                                        
+                                        val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
+                                        val isBlurred = if (isCompatible) !isAccessApproved else true
 
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp)
-                                    .padding(vertical = 8.dp)
-                                    .let { if (!isCompatible) it.alpha(0.55f) else it },
-                                shape = RoundedCornerShape(24.dp),
-                                onClick = { 
-                                    if (isCompatible) {
-                                        onSelectMatch(profile) 
-                                    }
-                                }
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    UserProfileImage(
-                                        imageUrl = if (isCompatible) profile.imageUrl else "",
-                                        gender = profile.gender,
-                                        isBlurred = isBlurred,
-                                        modifier = Modifier.fillMaxSize(),
-                                        shape = RoundedCornerShape(24.dp)
-                                    )
-                                    
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(
-                                                androidx.compose.ui.graphics.Brush.verticalGradient(
-                                                    colors = listOf(
-                                                        Color.Transparent,
-                                                        Color.Black.copy(alpha = 0.85f)
-                                                    ),
-                                                    startY = 200f
-                                                )
-                                            )
-                                    )
-                                    
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp)
-                                            .align(Alignment.TopStart),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(Color.Black.copy(alpha = 0.5f))
-                                                .clickable {
-                                                    if (isCompatible) {
-                                                        breakdownPartner = profile
+                                        val context = androidx.compose.ui.platform.LocalContext.current
+                                        val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+                                        var isFav by remember { mutableStateOf(false) }
+                                        var isLiked by remember { mutableStateOf(false) }
+                                        
+                                        LaunchedEffect(currentUser.uid, profile.uid) {
+                                            isFav = likesRepository.getFavorites(currentUser.uid).contains(profile.uid)
+                                            isLiked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
+                                        }
+
+                                        GridMatchCard(
+                                            currentUser = currentUser,
+                                            profile = profile,
+                                            isCompatible = isCompatible,
+                                            isArabic = isArabic,
+                                            onSelectMatch = onSelectMatch,
+                                            onFavoriteToggle = {
+                                                coroutineScope.launch {
+                                                    val added = likesRepository.toggleFavorite(currentUser.uid, profile.uid)
+                                                    isFav = added
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        if (added) {
+                                                            if (isArabic) "تمت الإضافة للمفضلة" else "Added to Favorites"
+                                                        } else {
+                                                            if (isArabic) "تمت الإزالة من المفضلة" else "Removed from Favorites"
+                                                        },
+                                                        android.widget.Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            },
+                                            onLikeToggle = {
+                                                coroutineScope.launch {
+                                                    val liked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
+                                                    if (!liked) {
+                                                        val isMutual = likesRepository.addLike(currentUser.uid, profile.uid)
+                                                        isLiked = true
+                                                        if (isMutual) {
+                                                            android.widget.Toast.makeText(
+                                                                context,
+                                                                if (isArabic) "لقد تم التطابق! ابدأ المحادثة الآن." else "Mutual Match! Chat unlocked.",
+                                                                android.widget.Toast.LENGTH_LONG
+                                                            ).show()
+                                                        } else {
+                                                            android.widget.Toast.makeText(
+                                                                context,
+                                                                if (isArabic) "تم تسجيل الإعجاب!" else "Liked!",
+                                                                android.widget.Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
                                                     }
                                                 }
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Text(
-                                                    text = "$score%",
-                                                    color = Color.White,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 14.sp
-                                                )
-                                                Text(
-                                                    text = if (isArabic) "توافق" else "Match",
-                                                    color = Color.White.copy(alpha = 0.8f),
-                                                    fontSize = 11.sp
-                                                )
-                                            }
-                                        }
-                                        
-                                        IconButton(
-                                            onClick = {
-                                                android.widget.Toast.makeText(
-                                                    context,
-                                                    if (isArabic) "تم إرسال بلاغ للمشرفين لمراجعة الملف." else "Report submitted to moderators.",
-                                                    android.widget.Toast.LENGTH_LONG
-                                                ).show()
                                             },
-                                            modifier = Modifier
-                                                .clip(CircleShape)
-                                                .background(Color.Black.copy(alpha = 0.5f))
-                                                .size(36.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Warning,
-                                                contentDescription = "Report",
-                                                tint = Color.White,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-
-                                    IconButton(
-                                        onClick = {
-                                            if (isCompatible) {
-                                                onSelectMatch(profile)
-                                            }
-                                        },
-                                        modifier = Modifier
-                                            .align(Alignment.Center)
-                                            .clip(CircleShape)
-                                            .background(Color.White.copy(alpha = 0.25f))
-                                            .size(48.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Info,
-                                            contentDescription = "View Details",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
+                                            onShowBreakdown = {
+                                                breakdownPartner = profile
+                                            },
+                                            isFav = isFav,
+                                            isLiked = isLiked,
+                                            modifier = Modifier.weight(1f)
                                         )
                                     }
-                                    
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp)
-                                            .align(Alignment.BottomStart),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
+                                    if (rowProfiles.size < 2) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        } else {
+                            processedResults.forEach { profile ->
+                                val score = MatchScoreCalculator.calculateScore(currentUser, profile)
+                                val isCompatible = viewModel.isCompatible(profile)
+                                
+                                val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
+                                val isBlurred = if (isCompatible) !isAccessApproved else true
+
+                                val context = androidx.compose.ui.platform.LocalContext.current
+                                val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+                                var isFav by remember { mutableStateOf(false) }
+                                var isLiked by remember { mutableStateOf(false) }
+                                
+                                LaunchedEffect(currentUser.uid, profile.uid) {
+                                    isFav = likesRepository.getFavorites(currentUser.uid).contains(profile.uid)
+                                    isLiked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
+                                }
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(300.dp)
+                                        .padding(vertical = 8.dp)
+                                        .let { if (!isCompatible) it.alpha(0.55f) else it },
+                                    shape = RoundedCornerShape(24.dp),
+                                    onClick = { 
+                                        if (isCompatible) {
+                                            onSelectMatch(profile) 
+                                        }
+                                    }
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        UserProfileImage(
+                                            imageUrl = if (isCompatible) profile.imageUrl else "",
+                                            gender = profile.gender,
+                                            isBlurred = isBlurred,
+                                            modifier = Modifier.fillMaxSize(),
+                                            shape = RoundedCornerShape(24.dp)
+                                        )
+                                        
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                                                        colors = listOf(
+                                                            Color.Transparent,
+                                                            Color.Black.copy(alpha = 0.85f)
+                                                        ),
+                                                        startY = 200f
+                                                    )
+                                                )
+                                        )
+                                        
                                         Row(
-                                            modifier = Modifier.fillMaxWidth(),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp)
+                                                .align(Alignment.TopStart),
                                             horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.Bottom
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Column(modifier = Modifier.weight(1f)) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(Color.Black.copy(alpha = 0.5f))
+                                                    .clickable {
+                                                        if (isCompatible) {
+                                                            breakdownPartner = profile
+                                                        }
+                                                    }
+                                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                                            ) {
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                 ) {
                                                     Text(
-                                                        text = if (isCompatible) profile.name else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
+                                                        text = "$score%",
                                                         color = Color.White,
                                                         fontWeight = FontWeight.Bold,
-                                                        fontSize = 20.sp
-                                                    )
-                                                    if (isCompatible) {
-                                                        VerificationBadge(status = profile.verificationStatus)
-                                                    }
-                                                }
-                                                
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                
-                                                if (isCompatible) {
-                                                    val sectLabel = profile.sect.getDisplayName(isArabic)
-                                                    val ageSuffix = if (isArabic) "سنة" else "yrs"
-                                                    Text(
-                                                        text = "${profile.age} $ageSuffix • $sectLabel • ${profile.gender.getDisplayName(isArabic)}",
-                                                        color = Color.White.copy(alpha = 0.9f),
                                                         fontSize = 14.sp
                                                     )
                                                     Text(
-                                                        text = "${profile.city}, ${profile.country}",
-                                                        color = Color.White.copy(alpha = 0.7f),
-                                                        fontSize = 12.sp
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = if (isArabic) "البيانات مخفية لعدم التوافق" else "Details hidden due to incompatibility",
-                                                        color = Color.White.copy(alpha = 0.7f),
-                                                        fontSize = 12.sp
+                                                        text = if (isArabic) "توافق" else "Match",
+                                                        color = Color.White.copy(alpha = 0.8f),
+                                                        fontSize = 11.sp
                                                     )
                                                 }
                                             }
                                             
-                                            if (isCompatible) {
-                                                Row(
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    IconButton(
-                                                        onClick = {
-                                                            coroutineScope.launch {
-                                                                val added = likesRepository.toggleFavorite(currentUser.uid, profile.uid)
-                                                                isFav = added
-                                                                android.widget.Toast.makeText(
-                                                                    context,
-                                                                    if (added) {
-                                                                        if (isArabic) "تمت الإضافة للمفضلة" else "Added to Favorites"
-                                                                    } else {
-                                                                        if (isArabic) "تمت الإزالة من المفضلة" else "Removed from Favorites"
-                                                                    },
-                                                                    android.widget.Toast.LENGTH_SHORT
-                                                                ).show()
-                                                            }
-                                                        },
-                                                        modifier = Modifier
-                                                            .clip(CircleShape)
-                                                            .background(Color.White.copy(alpha = 0.2f))
-                                                            .size(40.dp)
+                                            IconButton(
+                                                onClick = {
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        if (isArabic) "تم إرسال بلاغ للمشرفين لمراجعة الملف." else "Report submitted to moderators.",
+                                                        android.widget.Toast.LENGTH_LONG
+                                                    ).show()
+                                                },
+                                                modifier = Modifier
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.5f))
+                                                    .size(36.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Warning,
+                                                    contentDescription = "Report",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                if (isCompatible) {
+                                                    onSelectMatch(profile)
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .align(Alignment.Center)
+                                                .clip(CircleShape)
+                                                .background(Color.White.copy(alpha = 0.25f))
+                                                .size(48.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Info,
+                                                contentDescription = "View Details",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                        
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp)
+                                                .align(Alignment.BottomStart),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.Bottom
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                     ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Star,
-                                                            contentDescription = "Favorite",
-                                                            tint = if (isFav) Color(0xFFFFC107) else Color.White,
-                                                            modifier = Modifier.size(20.dp)
+                                                        Text(
+                                                            text = if (isCompatible) profile.name else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
+                                                            color = Color.White,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 20.sp
                                                         )
+                                                        if (isCompatible) {
+                                                            VerificationBadge(status = profile.verificationStatus)
+                                                        }
                                                     }
                                                     
-                                                    IconButton(
-                                                        onClick = {
-                                                            coroutineScope.launch {
-                                                                val liked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
-                                                                if (!liked) {
-                                                                    val isMutual = likesRepository.addLike(currentUser.uid, profile.uid)
-                                                                    isLiked = true
-                                                                    if (isMutual) {
-                                                                        android.widget.Toast.makeText(
-                                                                            context,
-                                                                            if (isArabic) "لقد تم التطابق! ابدأ المحادثة الآن." else "Mutual Match! Chat unlocked.",
-                                                                            android.widget.Toast.LENGTH_LONG
-                                                                        ).show()
-                                                                    } else {
-                                                                        android.widget.Toast.makeText(
-                                                                            context,
-                                                                            if (isArabic) "تم تسجيل الإعجاب!" else "Liked!",
-                                                                            android.widget.Toast.LENGTH_SHORT
-                                                                        ).show()
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    
+                                                    if (isCompatible) {
+                                                        val sectLabel = profile.sect.getDisplayName(isArabic)
+                                                        val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                                        Text(
+                                                            text = "${profile.age} $ageSuffix • $sectLabel • ${profile.gender.getDisplayName(isArabic)}",
+                                                            color = Color.White.copy(alpha = 0.9f),
+                                                            fontSize = 14.sp
+                                                        )
+                                                        Text(
+                                                            text = "${profile.city}, ${profile.country}",
+                                                            color = Color.White.copy(alpha = 0.7f),
+                                                            fontSize = 12.sp
+                                                        )
+                                                    } else {
+                                                        Text(
+                                                            text = if (isArabic) "البيانات مخفية لعدم التوافق" else "Details hidden due to incompatibility",
+                                                            color = Color.White.copy(alpha = 0.7f),
+                                                            fontSize = 12.sp
+                                                        )
+                                                    }
+                                                }
+                                                
+                                                if (isCompatible) {
+                                                    Row(
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        IconButton(
+                                                            onClick = {
+                                                                coroutineScope.launch {
+                                                                    val added = likesRepository.toggleFavorite(currentUser.uid, profile.uid)
+                                                                    isFav = added
+                                                                    android.widget.Toast.makeText(
+                                                                        context,
+                                                                        if (added) {
+                                                                            if (isArabic) "تمت الإضافة للمفضلة" else "Added to Favorites"
+                                                                        } else {
+                                                                            if (isArabic) "تمت الإزالة من المفضلة" else "Removed from Favorites"
+                                                                        },
+                                                                        android.widget.Toast.LENGTH_SHORT
+                                                                    ).show()
+                                                                }
+                                                            },
+                                                            modifier = Modifier
+                                                                .clip(CircleShape)
+                                                                .background(Color.White.copy(alpha = 0.2f))
+                                                                .size(40.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Star,
+                                                                contentDescription = "Favorite",
+                                                                tint = if (isFav) Color(0xFFFFC107) else Color.White,
+                                                                modifier = Modifier.size(20.dp)
+                                                            )
+                                                        }
+                                                        
+                                                        IconButton(
+                                                            onClick = {
+                                                                coroutineScope.launch {
+                                                                    val liked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
+                                                                    if (!liked) {
+                                                                        val isMutual = likesRepository.addLike(currentUser.uid, profile.uid)
+                                                                        isLiked = true
+                                                                        if (isMutual) {
+                                                                            android.widget.Toast.makeText(
+                                                                                context,
+                                                                                if (isArabic) "لقد تم التطابق! ابدأ المحادثة الآن." else "Mutual Match! Chat unlocked.",
+                                                                                android.widget.Toast.LENGTH_LONG
+                                                                            ).show()
+                                                                        } else {
+                                                                            android.widget.Toast.makeText(
+                                                                                context,
+                                                                                if (isArabic) "تم تسجيل الإعجاب!" else "Liked!",
+                                                                                android.widget.Toast.LENGTH_SHORT
+                                                                            ).show()
+                                                                        }
                                                                     }
                                                                 }
-                                                            }
-                                                        },
-                                                        modifier = Modifier
-                                                            .clip(CircleShape)
-                                                            .background(Color.White.copy(alpha = 0.2f))
-                                                            .size(40.dp)
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Favorite,
-                                                            contentDescription = "Like",
-                                                            tint = if (isLiked) Color.Red else Color.White,
-                                                            modifier = Modifier.size(20.dp)
-                                                        )
+                                                            },
+                                                            modifier = Modifier
+                                                                .clip(CircleShape)
+                                                                .background(Color.White.copy(alpha = 0.2f))
+                                                                .size(40.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Favorite,
+                                                                contentDescription = "Like",
+                                                                tint = if (isLiked) Color.Red else Color.White,
+                                                                modifier = Modifier.size(20.dp)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1410,6 +1513,182 @@ fun SearchTabContent(
             isArabic = isArabic,
             onDismiss = { breakdownPartner = null }
         )
+    }
+}
+
+@Composable
+fun GridMatchCard(
+    currentUser: UserProfile,
+    profile: UserProfile,
+    isCompatible: Boolean,
+    isArabic: Boolean,
+    onSelectMatch: (UserProfile) -> Unit,
+    onFavoriteToggle: () -> Unit,
+    onLikeToggle: () -> Unit,
+    onShowBreakdown: () -> Unit,
+    isFav: Boolean,
+    isLiked: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val score = MatchScoreCalculator.calculateScore(currentUser, profile)
+    val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
+    val isBlurred = if (isCompatible) !isAccessApproved else true
+
+    Card(
+        modifier = modifier
+            .height(200.dp)
+            .padding(vertical = 4.dp)
+            .let { if (!isCompatible) it.alpha(0.55f) else it },
+        shape = RoundedCornerShape(16.dp),
+        onClick = {
+            if (isCompatible) {
+                onSelectMatch(profile)
+            }
+        }
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            UserProfileImage(
+                imageUrl = if (isCompatible) profile.imageUrl else "",
+                gender = profile.gender,
+                isBlurred = isBlurred,
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.85f)
+                            ),
+                            startY = 100f
+                        )
+                    )
+            )
+
+            // Compatibility Score Badge top-left
+            Box(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .align(Alignment.TopStart)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable {
+                        if (isCompatible) {
+                            onShowBreakdown()
+                        }
+                    }
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "$score%",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp
+                )
+            }
+
+            // Like / Favorite Buttons at the top-right
+            if (isCompatible) {
+                Row(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .align(Alignment.TopEnd),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = onFavoriteToggle,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Favorite",
+                            tint = if (isFav) Color(0xFFFFC107) else Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = onLikeToggle,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Like",
+                            tint = if (isLiked) Color.Red else Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
+            // Profile info at the bottom
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .align(Alignment.BottomStart),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = if (isCompatible) profile.name else (if (isArabic) "غير متوافق" else "Incompatible"),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isCompatible) {
+                        if (profile.verificationStatus == "VERIFIED") {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Verified",
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (isCompatible) {
+                    val sectLabel = profile.sect.getDisplayName(isArabic)
+                    val ageSuffix = if (isArabic) "سنة" else "yrs"
+                    Text(
+                        text = "${profile.age} $ageSuffix • $sectLabel",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${profile.city}, ${profile.country}",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                } else {
+                    Text(
+                        text = if (isArabic) "البيانات مخفية" else "Details hidden",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        }
     }
 }
 

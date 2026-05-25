@@ -275,6 +275,32 @@ class SearchViewModel(
                         val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
                         val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
 
+                        val username = doc.getString("username") ?: ""
+                        val oathChecked = doc.getBoolean("oathChecked") ?: false
+                        val skinColor = doc.getString("skinColor") ?: ""
+                        val healthStatus = doc.get("healthStatus") as? List<String> ?: emptyList()
+                        val nationality = doc.getString("nationality") ?: ""
+                        val educationLevel = doc.getString("educationLevel") ?: ""
+                        val jobTitle = doc.getString("jobTitle") ?: ""
+                        val incomeLevel = doc.getString("incomeLevel") ?: ""
+                        val fastingHabit = doc.getString("fastingHabit") ?: ""
+                        val weddingTimeline = doc.getString("weddingTimeline") ?: ""
+                        val wifeWorking = doc.getString("wifeWorking") ?: ""
+                        val householdExpenses = doc.getString("householdExpenses") ?: ""
+                        val aymaView = doc.getString("aymaView") ?: ""
+                        val shabkaView = doc.getString("shabkaView") ?: ""
+                        val gpsLocationEnabled = doc.getBoolean("gpsLocationEnabled") ?: false
+                        val blurPictures = doc.getBoolean("blurPictures") ?: true
+                        val height = doc.getLong("height")?.toInt() ?: 170
+                        val weight = doc.getLong("weight")?.toInt() ?: 70
+                        val bodyType = doc.getString("bodyType") ?: "average"
+                        val hairColor = doc.getString("hairColor") ?: "black"
+                        val eyeColor = doc.getString("eyeColor") ?: "brown"
+                        val ethnicity = doc.getString("ethnicity") ?: "arab_middle_eastern"
+                        val maritalStatus = doc.getString("maritalStatus") ?: "single"
+                        val haveChildren = doc.getString("haveChildren") ?: "no"
+                        val languagesSpoken = doc.get("languagesSpoken") as? List<String> ?: emptyList()
+
                         UserProfile(
                             uid = uid,
                             name = name,
@@ -299,7 +325,32 @@ class SearchViewModel(
                             isAdmin = isAdmin,
                             isPremium = isPremium,
                             subscriptionPlan = subscriptionPlan,
-                            questionnaireAnswers = questionnaireAnswers
+                            questionnaireAnswers = questionnaireAnswers,
+                            username = username,
+                            oathChecked = oathChecked,
+                            skinColor = skinColor,
+                            healthStatus = healthStatus,
+                            nationality = nationality,
+                            educationLevel = educationLevel,
+                            jobTitle = jobTitle,
+                            incomeLevel = incomeLevel,
+                            fastingHabit = fastingHabit,
+                            weddingTimeline = weddingTimeline,
+                            wifeWorking = wifeWorking,
+                            householdExpenses = householdExpenses,
+                            aymaView = aymaView,
+                            shabkaView = shabkaView,
+                            gpsLocationEnabled = gpsLocationEnabled,
+                            blurPictures = blurPictures,
+                            height = height,
+                            weight = weight,
+                            bodyType = bodyType,
+                            hairColor = hairColor,
+                            eyeColor = eyeColor,
+                            ethnicity = ethnicity,
+                            maritalStatus = maritalStatus,
+                            haveChildren = haveChildren,
+                            languagesSpoken = languagesSpoken
                         )
                     } catch (e: Exception) {
                         null // Skip malformed profile documents

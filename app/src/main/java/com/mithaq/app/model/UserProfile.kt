@@ -14,6 +14,24 @@ data class UserProfile(
     val imageUrl: String = "",
     val additionalImages: List<String> = emptyList(),
     
+    // New Onboarding Questionnaire fields
+    val username: String = "",
+    val oathChecked: Boolean = false,
+    val skinColor: String = "",
+    val healthStatus: List<String> = emptyList(),
+    val nationality: String = "",
+    val educationLevel: String = "",
+    val jobTitle: String = "",
+    val incomeLevel: String = "",
+    val fastingHabit: String = "",
+    val weddingTimeline: String = "",
+    val wifeWorking: String = "",
+    val householdExpenses: String = "",
+    val aymaView: String = "",
+    val shabkaView: String = "",
+    val gpsLocationEnabled: Boolean = false,
+    val blurPictures: Boolean = true,
+    
     // Islamic & Lifestyle Parameters
     val sect: Sect = Sect.SUNNI,
     val prayerFrequency: PrayerFrequency = PrayerFrequency.ALWAYS,

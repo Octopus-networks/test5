@@ -58,19 +58,35 @@ fun RegisterScreen(
     val scrollState = rememberScrollState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    // Step state: 1 = Core Credentials, 2 = Gender/Location preferences, 3 = Profile Details (Muslima values), 4 = Finalize & Register
+    // Step state: 1 to 7
     var currentStep by remember { mutableStateOf(1) }
 
-    // Account Inputs (Step 1)
+    // Screen 1: Account Setup & Oath
+    var username by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf(Gender.MALE) }
+    var oathChecked by remember { mutableStateOf(false) }
     var imageUrl by remember { mutableStateOf("avatar_brother_green") }
     var localImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
-    // Step 2 variables
+    // Screen 2: Physical Attributes
+    var height by remember { mutableStateOf("170") }
+    var weight by remember { mutableStateOf("70") }
+    var skinColor by remember { mutableStateOf(if (isArabic) "حنطي" else "Medium") }
+    var healthStatus by remember { mutableStateOf(emptyList<String>()) }
+
+    // Screen 3: Demographics & Socio-Economic Status
+    var nationality by remember { mutableStateOf(if (isArabic) "السعودية" else "Saudi Arabia") }
+    var maritalStatus by remember { mutableStateOf("single") }
+    var educationLevel by remember { mutableStateOf("Bachelor") }
+    var jobTitle by remember { mutableStateOf("") }
+    var incomeLevel by remember { mutableStateOf("Medium") }
+    var languagesSpoken by remember { mutableStateOf(emptyList<String>()) }
+    
+    // Previous search preference presets
     var partnerGender by remember { mutableStateOf(Gender.FEMALE) }
     var country by remember { mutableStateOf("Saudi Arabia") }
     var stateProvince by remember { mutableStateOf("Riyadh Region") }
@@ -78,18 +94,32 @@ fun RegisterScreen(
     var minAgePreference by remember { mutableStateOf(20) }
     var maxAgePreference by remember { mutableStateOf(35) }
 
-    // Step 3 variables (granularity with skips)
+    // Screen 4: Religious & Lifestyle Habits
     var sect by remember { mutableStateOf(Sect.SUNNI) }
-    var ethnicity by remember { mutableStateOf("arab_middle_eastern") }
-    var smokeStatus by remember { mutableStateOf("dont_smoke") }
-    var haveChildren by remember { mutableStateOf("no") }
-    var bodyType by remember { mutableStateOf("average") }
-    var modestyPreference by remember { mutableStateOf(ModestyPreference.HIJAB) }
-
-    // Step 4 variables
     var prayerFrequency by remember { mutableStateOf(PrayerFrequency.ALWAYS) }
+    var fastingHabit by remember { mutableStateOf(if (isArabic) "دائماً" else "Always") }
+    var smokeStatus by remember { mutableStateOf("dont_smoke") }
+    var alcoholStatus by remember { mutableStateOf("dont_drink") }
+
+    // Screen 5: Marriage Logistics & Future Plans
+    var weddingTimeline by remember { mutableStateOf("Within 6 months") }
+    var livingSituation by remember { mutableStateOf("Independent") }
     var relocationWillingness by remember { mutableStateOf(RelocationWillingness.OPEN) }
+    var haveChildren by remember { mutableStateOf("yes") }
+
+    // Screen 6: Cultural Views & Financial Responsibilities
+    var wifeWorking by remember { mutableStateOf("Open") }
+    var householdExpenses by remember { mutableStateOf("Shared") }
+    var aymaView by remember { mutableStateOf("Negotiable") }
+    var shabkaView by remember { mutableStateOf("Negotiable") }
     var polygamyAcceptance by remember { mutableStateOf(false) }
+
+    // Screen 7: Profile Description & Privacy/Media
+    var aboutYourself by remember { mutableStateOf("") }
+    var idealPartner by remember { mutableStateOf("") }
+    var gpsLocationEnabled by remember { mutableStateOf(false) }
+    var blurPictures by remember { mutableStateOf(true) }
+    var additionalImages by remember { mutableStateOf(emptyList<String>()) }
     var waliName by remember { mutableStateOf("") }
     var waliEmail by remember { mutableStateOf("") }
 
@@ -115,7 +145,6 @@ fun RegisterScreen(
             }
         }
     }
-
 
     val voiceRecorderManager = remember { com.mithaq.app.ui.photo.VoiceRecorderManager(context) }
     var isRecordingVoice by remember { mutableStateOf(false) }
@@ -149,6 +178,13 @@ fun RegisterScreen(
         if (authState is AuthState.Authenticated) {
             onRegisterSuccess((authState as AuthState.Authenticated).userId)
         }
+    }
+
+    fun validateUsername(u: String): Boolean {
+        if (u.length !in 3..14) return false
+        val digits = u.filter { it.isDigit() }
+        if (digits.length > 4) return false
+        return u.all { it.isLetterOrDigit() }
     }
 
     Box(
@@ -202,7 +238,7 @@ fun RegisterScreen(
                     }
 
                     Text(
-                        text = if (isArabic) "الخطوة $currentStep من 4" else "Step $currentStep of 4",
+                        text = if (isArabic) "الخطوة $currentStep من 7" else "Step $currentStep of 7",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary
@@ -212,7 +248,7 @@ fun RegisterScreen(
                 }
 
                 LinearProgressIndicator(
-                    progress = currentStep / 4f,
+                    progress = currentStep / 7f,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 12.dp),
@@ -224,15 +260,26 @@ fun RegisterScreen(
                 AnimatedContent(targetState = currentStep) { step ->
                     when (step) {
                         1 -> {
-                            // Step 1 Layout: Account details
+                            // Screen 1: Account Setup & Oath
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = strings.registerTitle,
+                                    text = if (isArabic) "إعداد الحساب والقسم الشرعي" else "Account & Religious Oath",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
+
+                                OutlinedTextField(
+                                    value = username,
+                                    onValueChange = { username = it },
+                                    label = { Text(if (isArabic) "اسم المستخدم (فريد)" else "Username (Unique)") },
+                                    placeholder = { Text(if (isArabic) "3-14 أحرف، أرقام فقط" else "3-14 chars, no spaces/symbols") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
 
                                 OutlinedTextField(
                                     value = name,
@@ -268,7 +315,7 @@ fun RegisterScreen(
                                 OutlinedTextField(
                                     value = age,
                                     onValueChange = { age = it },
-                                    label = { Text(if (isArabic) "العمر" else "Age") },
+                                    label = { Text(if (isArabic) "العمر (18 - 77)" else "Age (18 - 77)") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
@@ -276,12 +323,719 @@ fun RegisterScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                // Profile Photo Selection UI
+                                // Gender Card Selectors
                                 Text(
-                                    text = if (isArabic) "الصورة الشخصية" else "Profile Photo",
+                                    text = if (isArabic) "الجنس:" else "Gender:",
+                                    fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.align(Alignment.Start)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Card(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(60.dp)
+                                            .clickable {
+                                                gender = Gender.MALE
+                                                partnerGender = Gender.FEMALE
+                                            },
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (gender == Gender.MALE) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                                        ),
+                                        border = BorderStroke(
+                                            width = if (gender == Gender.MALE) 2.dp else 1.dp,
+                                            color = if (gender == Gender.MALE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                    ) {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = if (isArabic) "أخ (ذكر)" else "Brother (Male)",
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (gender == Gender.MALE) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+
+                                    Card(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(60.dp)
+                                            .clickable {
+                                                gender = Gender.FEMALE
+                                                partnerGender = Gender.MALE
+                                            },
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (gender == Gender.FEMALE) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                                        ),
+                                        border = BorderStroke(
+                                            width = if (gender == Gender.FEMALE) 2.dp else 1.dp,
+                                            color = if (gender == Gender.FEMALE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                    ) {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = if (isArabic) "أخت (أنثى)" else "Sister (Female)",
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (gender == Gender.FEMALE) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Oath checkbox
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = oathChecked,
+                                        onCheckedChange = { oathChecked = it }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (isArabic) "أقسم بالله العظيم أن استخدامي لهذا التطبيق هو لأغراض الزواج الشرعي، وأوافق على الشروط والأحكام" else "I swear to Allah Almighty that my use of this application is for marital purposes. I agree to the Terms & Conditions.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (oathChecked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Button(
+                                    onClick = {
+                                        val parsedAge = age.toIntOrNull()
+                                        if (username.isBlank() || name.isBlank() || email.isBlank() || password.isBlank() || parsedAge == null) {
+                                            localError = if (isArabic) "يرجى ملء جميع الحقول بشكل صحيح." else "Please fill in all fields correctly."
+                                        } else if (!validateUsername(username)) {
+                                            localError = if (isArabic) "اسم المستخدم غير صالح. يجب أن يتراوح طوله بين 3 و14 حرفاً، وبحد أقصى 4 أرقام، ولا يحتوي على مسافات أو رموز." else "Invalid username. Must be 3-14 chars, max 4 digits, and no spaces/symbols."
+                                        } else if (parsedAge !in 18..77) {
+                                            localError = if (isArabic) "عذرًا، يجب أن يكون عمرك بين 18 و 77 سنة للتسجيل." else "Sorry, you must be between 18 and 77 years to register."
+                                        } else if (!oathChecked) {
+                                            localError = if (isArabic) "يجب عليك الموافقة على القسم الشرعي للمتابعة." else "You must agree to the religious oath to proceed."
+                                        } else {
+                                            localError = null
+                                            currentStep = 2
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(strings.next)
+                                }
+                            }
+                        }
+
+                        2 -> {
+                            // Screen 2: Physical Attributes
+                            Column(
+                                horizontalAlignment = Alignment.Start,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (isArabic) "المواصفات الجسدية" else "Physical Attributes",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                OutlinedTextField(
+                                    value = height,
+                                    onValueChange = { height = it },
+                                    label = { Text(if (isArabic) "الطول (سم) (120 - 219)" else "Height (cm) (120 - 219)") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = weight,
+                                    onValueChange = { weight = it },
+                                    label = { Text(if (isArabic) "الوزن (كجم) (30 - 119)" else "Weight (kg) (30 - 119)") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                val skinOptions = if (isArabic) {
+                                    listOf("أبيض", "حنطي فاتح", "حنطي", "حنطي غامق", "أسمر")
+                                } else {
+                                    listOf("Light", "Fair", "Medium", "Olive", "Dark")
+                                }
+                                SimpleDropdown(
+                                    label = if (isArabic) "لون البشرة" else "Skin Color",
+                                    options = skinOptions,
+                                    selectedOption = skinColor,
+                                    onOptionSelected = { skinColor = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Text(
+                                    text = if (isArabic) "الحالة الصحية (اختر خيارين كحد أقصى):" else "Health Status (Select max 2):",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                val healthOptions = if (isArabic) {
+                                    listOf("سليم", "مرض مزمن", "ذوي احتياجات خاصة", "غير ذلك")
+                                } else {
+                                    listOf("Healthy", "Chronic Disease", "Special Needs", "Other")
+                                }
+
+                                healthOptions.forEach { option ->
+                                    val isChecked = healthStatus.contains(option)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                if (isChecked) {
+                                                    healthStatus = healthStatus - option
+                                                } else if (healthStatus.size < 2) {
+                                                    healthStatus = healthStatus + option
+                                                }
+                                            }
+                                            .padding(vertical = 4.dp)
+                                    ) {
+                                        Checkbox(
+                                            checked = isChecked,
+                                            onCheckedChange = {
+                                                if (isChecked) {
+                                                    healthStatus = healthStatus - option
+                                                } else if (healthStatus.size < 2) {
+                                                    healthStatus = healthStatus + option
+                                                }
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(option)
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { currentStep = 1 },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "السابق" else "Back")
+                                    }
+                                    Button(
+                                        onClick = {
+                                            val hVal = height.toIntOrNull()
+                                            val wVal = weight.toIntOrNull()
+                                            if (hVal == null || hVal !in 120..219) {
+                                                localError = if (isArabic) "يجب أن يكون الطول بين 120 و219 سم." else "Height must be between 120 and 219 cm."
+                                            } else if (wVal == null || wVal !in 30..119) {
+                                                localError = if (isArabic) "يجب أن يكون الوزن بين 30 و119 كجم." else "Weight must be between 30 and 119 kg."
+                                            } else {
+                                                localError = null
+                                                currentStep = 3
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "التالي" else "Next")
+                                    }
+                                }
+                            }
+                        }
+
+                        3 -> {
+                            // Screen 3: Demographics & Socio-Economic Status
+                            Column(
+                                horizontalAlignment = Alignment.Start,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (isArabic) "البيانات الديموغرافية والاجتماعية" else "Demographics & Socio-Economic",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "الجنسية" else "Nationality",
+                                    options = listOf("Saudi Arabia", "Egypt", "United Arab Emirates", "Jordan", "Syria", "Yemen", "Morocco", "Other"),
+                                    selectedOption = nationality,
+                                    onOptionSelected = { nationality = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                val maritalOptions = if (isArabic) {
+                                    listOf("single" to "أعزب / عزباء", "divorced" to "مطلق / مطلقة", "widowed" to "أرمل / أرملة")
+                                } else {
+                                    listOf("single" to "Single", "divorced" to "Divorced", "widowed" to "Widowed")
+                                }
+                                SimpleDropdown(
+                                    label = if (isArabic) "الحالة الاجتماعية" else "Marital Status",
+                                    options = maritalOptions.map { it.second },
+                                    selectedOption = maritalOptions.firstOrNull { it.first == maritalStatus }?.second ?: (if (isArabic) "أعزب / عزباء" else "Single"),
+                                    onOptionSelected = { selected ->
+                                        maritalStatus = maritalOptions.firstOrNull { it.second == selected }?.first ?: "single"
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "المستوى التعليمي" else "Education Level",
+                                    options = listOf("High School", "Bachelor", "Master", "PhD", "Other"),
+                                    selectedOption = educationLevel,
+                                    onOptionSelected = { educationLevel = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = jobTitle,
+                                    onValueChange = { jobTitle = it },
+                                    label = { Text(if (isArabic) "المسمى الوظيفي" else "Job Title") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "مستوى الدخل" else "Income Level",
+                                    options = listOf("Low", "Medium", "High", "No Say"),
+                                    selectedOption = incomeLevel,
+                                    onOptionSelected = { incomeLevel = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Text(
+                                    text = if (isArabic) "اللغات المتحدثة (اختر 3 كحد أقصى):" else "Languages Spoken (Select max 3):",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                val langOptions = listOf("Arabic", "English", "French", "Urdu", "Turkish", "Spanish", "German", "Other")
+                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
+                                    langOptions.forEach { lang ->
+                                        val isChecked = languagesSpoken.contains(lang)
+                                        FilterChip(
+                                            selected = isChecked,
+                                            onClick = {
+                                                if (isChecked) {
+                                                    languagesSpoken = languagesSpoken - lang
+                                                } else if (languagesSpoken.size < 3) {
+                                                    languagesSpoken = languagesSpoken + lang
+                                                }
+                                            },
+                                            label = { Text(lang) }
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { currentStep = 2 },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "السابق" else "Back")
+                                    }
+                                    Button(
+                                        onClick = {
+                                            if (jobTitle.isBlank()) {
+                                                localError = if (isArabic) "يرجى كتابة المسمى الوظيفي." else "Please enter your job title."
+                                            } else {
+                                                localError = null
+                                                currentStep = 4
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "التالي" else "Next")
+                                    }
+                                }
+                            }
+                        }
+
+                        4 -> {
+                            // Screen 4: Religious & Lifestyle Habits
+                            Column(
+                                horizontalAlignment = Alignment.Start,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (isArabic) "العادات الدينية ونمط الحياة" else "Religious & Lifestyle Habits",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Text(
+                                    text = if (isArabic) "المذهب الديني:" else "Religious Beliefs / Sect:",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Sect.values().forEach { s ->
+                                        FilterChip(
+                                            selected = sect == s,
+                                            onClick = { sect = s },
+                                            label = { Text(s.getDisplayName(isArabic)) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Text(
+                                    text = strings.selectPrayer,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
+                                    PrayerFrequency.values().forEach { pf ->
+                                        FilterChip(
+                                            selected = prayerFrequency == pf,
+                                            onClick = { prayerFrequency = pf },
+                                            label = { Text(pf.getDisplayName(isArabic)) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "الالتزام بالصيام" else "Fasting Habit",
+                                    options = listOf("Always", "Usually", "Sometimes", "Never"),
+                                    selectedOption = fastingHabit,
+                                    onOptionSelected = { fastingHabit = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "موقف التدخين" else "Smoking Status",
+                                    options = listOf("dont_smoke", "smoke", "occasionally"),
+                                    selectedOption = smokeStatus,
+                                    onOptionSelected = { smokeStatus = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "شرب الكحول" else "Alcohol Consumption",
+                                    options = listOf("dont_drink", "drink", "occasionally"),
+                                    selectedOption = alcoholStatus,
+                                    onOptionSelected = { alcoholStatus = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { currentStep = 3 },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "السابق" else "Back")
+                                    }
+                                    Button(
+                                        onClick = { currentStep = 5 },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "التالي" else "Next")
+                                    }
+                                }
+                            }
+                        }
+
+                        5 -> {
+                            // Screen 5: Marriage Logistics & Future Plans
+                            Column(
+                                horizontalAlignment = Alignment.Start,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (isArabic) "خطط الزواج والمستقبل" else "Marriage & Future Plans",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "موعد الزواج المتوقع" else "Wedding Timeline",
+                                    options = listOf("Immediate", "Within 6 months", "Within a year", "More than a year"),
+                                    selectedOption = weddingTimeline,
+                                    onOptionSelected = { weddingTimeline = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "ترتيبات السكن" else "Living Arrangement",
+                                    options = listOf("Independent", "Family home", "Other"),
+                                    selectedOption = livingSituation,
+                                    onOptionSelected = { livingSituation = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Text(
+                                    text = strings.selectRelocation,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
+                                    RelocationWillingness.values().forEach { rw ->
+                                        FilterChip(
+                                            selected = relocationWillingness == rw,
+                                            onClick = { relocationWillingness = rw },
+                                            label = { Text(rw.getDisplayName(isArabic)) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "الرغبة في الإنجاب" else "Desire for Kids",
+                                    options = listOf("yes", "no", "not_sure"),
+                                    selectedOption = haveChildren,
+                                    onOptionSelected = { haveChildren = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { currentStep = 4 },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "السابق" else "Back")
+                                    }
+                                    Button(
+                                        onClick = { currentStep = 6 },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "التالي" else "Next")
+                                    }
+                                }
+                            }
+                        }
+
+                        6 -> {
+                            // Screen 6: Cultural Views & Financial Responsibilities
+                            Column(
+                                horizontalAlignment = Alignment.Start,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (isArabic) "المسؤوليات المالية والآراء الثقافية" else "Cultural & Financial Responsibilities",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "عمل المرأة" else "Wife Working",
+                                    options = listOf("Acceptable", "Not acceptable", "Open"),
+                                    selectedOption = wifeWorking,
+                                    onOptionSelected = { wifeWorking = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "مصاريف المنزل" else "Household Expenses",
+                                    options = listOf("Fully by Husband", "Shared", "Other"),
+                                    selectedOption = householdExpenses,
+                                    onOptionSelected = { householdExpenses = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "الرأي في القائمة" else "View on El 2ayma",
+                                    options = listOf("Yes/Important", "No/Not important", "Negotiable"),
+                                    selectedOption = aymaView,
+                                    onOptionSelected = { aymaView = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                SimpleDropdown(
+                                    label = if (isArabic) "الرأي في الشبكة" else "View on Shabka",
+                                    options = listOf("Yes/Important", "No/Not important", "Negotiable"),
+                                    selectedOption = shabkaView,
+                                    onOptionSelected = { shabkaView = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = strings.polygamyAcceptance,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Switch(checked = polygamyAcceptance, onCheckedChange = { polygamyAcceptance = it })
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { currentStep = 5 },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "السابق" else "Back")
+                                    }
+                                    Button(
+                                        onClick = { currentStep = 7 },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(if (isArabic) "التالي" else "Next")
+                                    }
+                                }
+                            }
+                        }
+
+                        7 -> {
+                            // Screen 7: Profile Description & Privacy/Media
+                            Column(
+                                horizontalAlignment = Alignment.Start,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (isArabic) "نبذة التعريف والوسائط" else "Bio, Privacy & Media",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                OutlinedTextField(
+                                    value = aboutYourself,
+                                    onValueChange = { aboutYourself = it },
+                                    label = { Text(if (isArabic) "نبذة عن نفسي (80 - 250 حرفاً)" else "About Yourself (80 - 250 chars)") },
+                                    supportingText = { Text("${aboutYourself.length} / 250") },
+                                    minLines = 3,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                OutlinedTextField(
+                                    value = idealPartner,
+                                    onValueChange = { idealPartner = it },
+                                    label = { Text(if (isArabic) "مواصفات شريكي المثالي (80 - 250 حرفاً)" else "My Ideal Partner (80 - 250 chars)") },
+                                    supportingText = { Text("${idealPartner.length} / 250") },
+                                    minLines = 3,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // GPS Location Switch
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (isArabic) "تفعيل الموقع الجغرافي (GPS):" else "Enable GPS Location:",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Switch(checked = gpsLocationEnabled, onCheckedChange = { gpsLocationEnabled = it })
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Blur my pictures Switch
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (isArabic) "تعتيم صوري الشخصية افتراضياً:" else "Blur My Photos by Default:",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Switch(checked = blurPictures, onCheckedChange = { blurPictures = it })
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Guardian Info
+                                Text(
+                                    text = if (isArabic) "دعوة ولي الأمر / المشرف الشرعي (اختياري):" else "Invite a Guardian (Optional):",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                OutlinedTextField(
+                                    value = waliName,
+                                    onValueChange = { waliName = it },
+                                    label = { Text(if (isArabic) "اسم ولي الأمر" else "Guardian Name") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = waliEmail,
+                                    onValueChange = { waliEmail = it },
+                                    label = { Text(if (isArabic) "البريد الإلكتروني لولي الأمر" else "Guardian Email") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Profile Avatar / Upload selection
+                                Text(
+                                    text = if (isArabic) "الصورة الشخصية الرئيسية:" else "Primary Profile Photo:",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -292,7 +1046,7 @@ fun RegisterScreen(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(72.dp)
+                                            .size(64.dp)
                                             .clip(CircleShape)
                                             .background(MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
@@ -306,7 +1060,7 @@ fun RegisterScreen(
 
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = if (isArabic) "اختر رمزاً محتشماً:" else "Choose Modest Avatar:",
+                                            text = if (isArabic) "اختر رمزاً أو ارفع صورة:" else "Choose Avatar or Upload Photo:",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -334,11 +1088,11 @@ fun RegisterScreen(
 
                                 OutlinedButton(
                                     onClick = { showPhotoOptionDialog = true },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text(if (isArabic) "إضافة صورة شخصية" else "Add Profile Photo")
+                                    Text(if (isArabic) "رفع صورة شخصية رئيسية" else "Upload Primary Profile Photo")
                                 }
+                                Spacer(modifier = Modifier.height(12.dp))
 
                                 if (showPhotoOptionDialog) {
                                     AlertDialog(
@@ -382,546 +1136,9 @@ fun RegisterScreen(
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.height(24.dp))
-
-                                Button(
-                                    onClick = {
-                                        val parsedAge = age.toIntOrNull()
-                                        if (name.isBlank() || email.isBlank() || password.isBlank() || parsedAge == null) {
-                                            localError = if (isArabic) "يرجى ملء جميع الحقول الأساسية بشكل صحيح." else "Please fill in all core fields correctly."
-                                        } else if (parsedAge < 18) {
-                                            localError = if (isArabic) "عذرًا، يجب أن يكون عمرك 18 سنة أو أكثر للتسجيل في ميثاق." else "Sorry, you must be 18 years or older to register on Mithaq."
-                                        } else {
-                                            localError = null
-                                            currentStep = 2
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(strings.next)
-                                }
-                            }
-                        }
-
-                        2 -> {
-                            // Step 2 Layout: Gender Preferences & Cascading Locations/Ages
-                            Column(
-                                horizontalAlignment = Alignment.Start,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = if (isArabic) "خيارات الشريك والموقع" else "Partner preferences & Location",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Gender preference card selector
-                                Text(
-                                    text = if (isArabic) "أنا:" else "I am a:",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    Card(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(80.dp)
-                                            .clickable {
-                                                gender = Gender.MALE
-                                                partnerGender = Gender.FEMALE
-                                            },
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = if (gender == Gender.MALE) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                                        ),
-                                        border = BorderStroke(
-                                            width = if (gender == Gender.MALE) 2.dp else 1.dp,
-                                            color = if (gender == Gender.MALE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                                        )
-                                    ) {
-                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                            Text(
-                                                text = if (isArabic) "أخ (ذكر)" else "Brother / Male",
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (gender == Gender.MALE) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-
-                                    Card(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(80.dp)
-                                            .clickable {
-                                                gender = Gender.FEMALE
-                                                partnerGender = Gender.MALE
-                                            },
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = if (gender == Gender.FEMALE) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                                        ),
-                                        border = BorderStroke(
-                                            width = if (gender == Gender.FEMALE) 2.dp else 1.dp,
-                                            color = if (gender == Gender.FEMALE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                                        )
-                                    ) {
-                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                            Text(
-                                                text = if (isArabic) "أخت (أنثى)" else "Sister / Female",
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (gender == Gender.FEMALE) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = if (isArabic) "أبحث عن:" else "Looking for a:",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp)
-                                        .padding(vertical = 4.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                    ),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                ) {
-                                    Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
-                                        Text(
-                                            text = if (partnerGender == Gender.FEMALE) {
-                                                if (isArabic) "أخت (أنثى)" else "Sister / Female"
-                                            } else {
-                                                if (isArabic) "أخ (ذكر)" else "Brother / Male"
-                                            },
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Cascading Location Dropdowns
-                                Text(
-                                    text = if (isArabic) "الموقع الجغرافي:" else "Your Location:",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                val countriesList = listOf("Saudi Arabia", "Egypt", "United Arab Emirates", "Other")
-                                val statesMap = mapOf(
-                                    "Saudi Arabia" to listOf("Riyadh Region", "Makkah Region", "Eastern Province", "Other"),
-                                    "Egypt" to listOf("Cairo Governorate", "Giza Governorate", "Alexandria Governorate", "Other"),
-                                    "United Arab Emirates" to listOf("Dubai", "Abu Dhabi", "Sharjah", "Other"),
-                                    "Other" to listOf("Other")
-                                )
-                                val citiesMap = mapOf(
-                                    "Riyadh Region" to listOf("Riyadh", "Al Kharj", "Other"),
-                                    "Makkah Region" to listOf("Makkah", "Jeddah", "Taif", "Other"),
-                                    "Eastern Province" to listOf("Dammam", "Khobar", "Jubail", "Other"),
-                                    "Cairo Governorate" to listOf("Cairo", "New Cairo", "Other"),
-                                    "Giza Governorate" to listOf("Giza", "6th of October", "Other"),
-                                    "Alexandria Governorate" to listOf("Alexandria", "Other"),
-                                    "Dubai" to listOf("Dubai City", "Other"),
-                                    "Abu Dhabi" to listOf("Abu Dhabi City", "Al Ain", "Other"),
-                                    "Sharjah" to listOf("Sharjah City", "Other"),
-                                    "Other" to listOf("Other")
-                                )
-
-                                SimpleDropdown(
-                                    label = if (isArabic) "البلد" else "Country",
-                                    options = countriesList,
-                                    selectedOption = country,
-                                    onOptionSelected = {
-                                        country = it
-                                        stateProvince = statesMap[it]?.firstOrNull() ?: "Other"
-                                        city = citiesMap[stateProvince]?.firstOrNull() ?: "Other"
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                SimpleDropdown(
-                                    label = if (isArabic) "المنطقة / المحافظة" else "State / Province",
-                                    options = statesMap[country] ?: listOf("Other"),
-                                    selectedOption = stateProvince,
-                                    onOptionSelected = {
-                                        stateProvince = it
-                                        city = citiesMap[it]?.firstOrNull() ?: "Other"
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                SimpleDropdown(
-                                    label = if (isArabic) "المدينة" else "City",
-                                    options = citiesMap[stateProvince] ?: listOf("Other"),
-                                    selectedOption = city,
-                                    onOptionSelected = { city = it },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Cascading Dropdowns for Age Limits
-                                Text(
-                                    text = if (isArabic) "العمر المفضل للشريك:" else "Preferred Partner Age Limits:",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    val ageOptions = (18..70).map { it.toString() }
-                                    SimpleDropdown(
-                                        label = if (isArabic) "الحد الأدنى" else "Min Age",
-                                        options = ageOptions,
-                                        selectedOption = minAgePreference.toString(),
-                                        onOptionSelected = {
-                                            minAgePreference = it.toIntOrNull() ?: 18
-                                            if (maxAgePreference < minAgePreference) {
-                                                maxAgePreference = minAgePreference
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    val maxAgeOptions = (minAgePreference..70).map { it.toString() }
-                                    SimpleDropdown(
-                                        label = if (isArabic) "الحد الأقصى" else "Max Age",
-                                        options = maxAgeOptions,
-                                        selectedOption = maxAgePreference.toString(),
-                                        onOptionSelected = {
-                                            maxAgePreference = it.toIntOrNull() ?: 70
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(24.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    OutlinedButton(
-                                        onClick = { currentStep = 1 },
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text(if (isArabic) "السابق" else "Back")
-                                    }
-                                    Button(
-                                        onClick = { currentStep = 3 },
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text(if (isArabic) "التالي" else "Next")
-                                    }
-                                }
-                            }
-                        }
-
-                        3 -> {
-                            // Step 3: Granular Muslima Profile Details (with Skips)
-                            Column(
-                                horizontalAlignment = Alignment.Start,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = if (isArabic) "تفاصيل الملف الشخصي" else "Granular Profile Details",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Sect
-                                Text(
-                                    text = if (isArabic) "المذهب الديني:" else "Religious Beliefs / Sect:",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Sect.values().forEach { s ->
-                                        FilterChip(
-                                            selected = sect == s,
-                                            onClick = { sect = s },
-                                            label = { Text(s.getDisplayName(isArabic)) }
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Ethnicity
-                                val ethnicities = listOf(
-                                    "arab_middle_eastern" to (if (isArabic) "عربي / شرق أوسطي" else "Arab / Middle Eastern"),
-                                    "north_african" to (if (isArabic) "شمال أفريقي" else "North African"),
-                                    "south_asian" to (if (isArabic) "جنوب آسيوي" else "South Asian"),
-                                    "turkish" to (if (isArabic) "تركي" else "Turkish"),
-                                    "caucasian" to (if (isArabic) "قوقازي" else "Caucasian"),
-                                    "african" to (if (isArabic) "أفريقي" else "African"),
-                                    "east_asian" to (if (isArabic) "شرق آسيوي" else "East Asian"),
-                                    "other" to (if (isArabic) "آخر" else "Other")
-                                )
-                                Text(
-                                    text = if (isArabic) "الأصل العرقي:" else "Ethnicity:",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
-                                    ethnicities.forEach { eth ->
-                                        FilterChip(
-                                            selected = ethnicity == eth.first,
-                                            onClick = { ethnicity = eth.first },
-                                            label = { Text(eth.second) }
-                                        )
-                                    }
-                                    FilterChip(
-                                        selected = ethnicity == "no_say",
-                                        onClick = { ethnicity = "no_say" },
-                                        label = { Text(if (isArabic) "تخطي" else "Skip") },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer
-                                        )
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Smoking
-                                val smokeOptions = listOf(
-                                    "dont_smoke" to (if (isArabic) "لا أدخن" else "Don't Smoke"),
-                                    "smoke" to (if (isArabic) "أدخن" else "Smoke"),
-                                    "occasionally" to (if (isArabic) "أحياناً" else "Occasionally"),
-                                    "planning_to_quit" to (if (isArabic) "أخطط للإقلاع" else "Planning to quit")
-                                )
-                                Text(
-                                    text = if (isArabic) "موقف التدخين:" else "Smoking Preference:",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
-                                    smokeOptions.forEach { opt ->
-                                        FilterChip(
-                                            selected = smokeStatus == opt.first,
-                                            onClick = { smokeStatus = opt.first },
-                                            label = { Text(opt.second) }
-                                        )
-                                    }
-                                    FilterChip(
-                                        selected = smokeStatus == "no_say",
-                                        onClick = { smokeStatus = "no_say" },
-                                        label = { Text(if (isArabic) "تخطي" else "Skip") },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer
-                                        )
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Children
-                                val childrenOptions = listOf(
-                                    "no" to (if (isArabic) "لا أرغب" else "No"),
-                                    "yes" to (if (isArabic) "نعم أرغب" else "Yes"),
-                                    "not_sure" to (if (isArabic) "غير متأكد" else "Not sure"),
-                                    "open" to (if (isArabic) "قابل للنقاش" else "Open to discussion")
-                                )
-                                Text(
-                                    text = if (isArabic) "الرغبة في الأطفال:" else "Desire for Children:",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
-                                    childrenOptions.forEach { opt ->
-                                        FilterChip(
-                                            selected = haveChildren == opt.first,
-                                            onClick = { haveChildren = opt.first },
-                                            label = { Text(opt.second) }
-                                        )
-                                    }
-                                    FilterChip(
-                                        selected = haveChildren == "no_say",
-                                        onClick = { haveChildren = "no_say" },
-                                        label = { Text(if (isArabic) "تخطي" else "Skip") },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer
-                                        )
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Body Type
-                                val bodyOptions = listOf(
-                                    "slim" to (if (isArabic) "نحيف" else "Slim"),
-                                    "athletic" to (if (isArabic) "رياضي" else "Athletic"),
-                                    "average" to (if (isArabic) "متوسط" else "Average"),
-                                    "full_figured" to (if (isArabic) "ممتلئ" else "Full figured"),
-                                    "large" to (if (isArabic) "ضخم" else "Large")
-                                )
-                                Text(
-                                    text = if (isArabic) "بنية الجسم:" else "Body Type:",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
-                                    bodyOptions.forEach { opt ->
-                                        FilterChip(
-                                            selected = bodyType == opt.first,
-                                            onClick = { bodyType = opt.first },
-                                            label = { Text(opt.second) }
-                                        )
-                                    }
-                                    FilterChip(
-                                        selected = bodyType == "no_say",
-                                        onClick = { bodyType = "no_say" },
-                                        label = { Text(if (isArabic) "تخطي" else "Skip") },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer
-                                        )
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Modesty Preference
-                                val modestyLabel = if (gender == Gender.MALE) {
-                                    if (isArabic) "الالتزام بالزي الشرعي للشريك:" else "Partner's Modesty / Hijab:"
-                                } else {
-                                    if (isArabic) "الالتزام بالزي الشرعي:" else "Your Modesty / Hijab:"
-                                }
-                                Text(
-                                    text = modestyLabel,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
-                                    ModestyPreference.values().forEach { mp ->
-                                        FilterChip(
-                                            selected = modestyPreference == mp,
-                                            onClick = { modestyPreference = mp },
-                                            label = { Text(mp.getDisplayName(isArabic)) }
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(24.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    OutlinedButton(
-                                        onClick = { currentStep = 2 },
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text(if (isArabic) "السابق" else "Back")
-                                    }
-                                    Button(
-                                        onClick = { currentStep = 4 },
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text(if (isArabic) "التالي" else "Next")
-                                    }
-                                }
-                            }
-                        }
-
-                        4 -> {
-                            // Step 4: Finalize & Register
-                            Column(
-                                horizontalAlignment = Alignment.Start,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = if (isArabic) "إكمال التسجيل" else "Complete Registration",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Text(
-                                    text = if (isArabic) "دعوة ولي الأمر (اختياري):" else "Invite a Guardian / Wali (Optional):",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                OutlinedTextField(
-                                    value = waliName,
-                                    onValueChange = { waliName = it },
-                                    label = { Text(if (isArabic) "اسم ولي الأمر" else "Guardian Name") },
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                OutlinedTextField(
-                                    value = waliEmail,
-                                    onValueChange = { waliEmail = it },
-                                    label = { Text(if (isArabic) "البريد الإلكتروني لولي الأمر" else "Guardian Email") },
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Text(
-                                    text = strings.selectPrayer,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
-                                    PrayerFrequency.values().forEach { pf ->
-                                        FilterChip(
-                                            selected = prayerFrequency == pf,
-                                            onClick = { prayerFrequency = pf },
-                                            label = { Text(pf.getDisplayName(isArabic)) }
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Text(
-                                    text = strings.selectRelocation,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                FlowRow(mainAxisSpacing = 6.dp, crossAxisSpacing = 6.dp) {
-                                    RelocationWillingness.values().forEach { rw ->
-                                        FilterChip(
-                                            selected = relocationWillingness == rw,
-                                            onClick = { relocationWillingness = rw },
-                                            label = { Text(rw.getDisplayName(isArabic)) }
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
                                 // Voice Introduction
                                 Text(
-                                    text = if (isArabic) "التعريف الصوتي (اختياري - 30 ثانية)" else "Voice Introduction (Optional - 30s)",
+                                    text = if (isArabic) "التعريف الصوتي (اختياري):" else "Voice Intro (Optional):",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
@@ -995,69 +1212,83 @@ fun RegisterScreen(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = strings.polygamyAcceptance,
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Switch(checked = polygamyAcceptance, onCheckedChange = { polygamyAcceptance = it })
-                                }
-
                                 Spacer(modifier = Modifier.height(24.dp))
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     OutlinedButton(
-                                        onClick = { currentStep = 3 },
-                                        shape = RoundedCornerShape(12.dp),
-                                        modifier = Modifier.padding(end = 8.dp)
+                                        onClick = { currentStep = 6 },
+                                        shape = RoundedCornerShape(12.dp)
                                     ) {
                                         Text(if (isArabic) "السابق" else "Back")
                                     }
 
                                     Button(
                                         onClick = {
-                                            val ageInt = age.toIntOrNull() ?: 25
-                                            val userProfile = UserProfile(
-                                                name = name,
-                                                gender = gender,
-                                                age = ageInt,
-                                                city = city,
-                                                country = country,
-                                                imageUrl = imageUrl,
-                                                sect = sect,
-                                                prayerFrequency = prayerFrequency,
-                                                modestyPreference = modestyPreference,
-                                                relocationWillingness = relocationWillingness,
-                                                polygamyAcceptance = polygamyAcceptance,
-                                                
-                                                profileCreator = "self",
-                                                regionalCode = "MUS",
-                                                ethnicity = ethnicity,
-                                                smokeStatus = smokeStatus,
-                                                haveChildren = haveChildren,
-                                                bodyType = bodyType,
-                                                guardianName = if (waliName.isNotBlank()) waliName else null,
-                                                guardianEmail = if (waliEmail.isNotBlank()) waliEmail else null,
-                                                guardianStatus = if (waliEmail.isNotBlank()) "PENDING" else "None"
-                                            )
-                                            viewModel.signUp(
-                                                email = email,
-                                                passwordPass = password,
-                                                profile = userProfile,
-                                                localImageUri = localImageUri,
-                                                localVoiceUri = localVoiceUri,
-                                                context = context
-                                            )
+                                            if (aboutYourself.length !in 80..250) {
+                                                localError = if (isArabic) "يجب أن تكون النبذة عن نفسك بين 80 و 250 حرفاً." else "About Yourself must be between 80 and 250 characters."
+                                            } else if (idealPartner.length !in 80..250) {
+                                                localError = if (isArabic) "يجب أن تكون مواصفات الشريك بين 80 و 250 حرفاً." else "My Ideal Partner must be between 80 and 250 characters."
+                                            } else {
+                                                localError = null
+                                                val ageInt = age.toIntOrNull() ?: 25
+                                                val hInt = height.toIntOrNull() ?: 170
+                                                val wInt = weight.toIntOrNull() ?: 70
+                                                val userProfile = UserProfile(
+                                                    name = name,
+                                                    gender = gender,
+                                                    age = ageInt,
+                                                    city = city,
+                                                    country = country,
+                                                    imageUrl = imageUrl,
+                                                    sect = sect,
+                                                    prayerFrequency = prayerFrequency,
+                                                    modestyPreference = if (gender == Gender.FEMALE) ModestyPreference.HIJAB else ModestyPreference.DOES_NOT_MATTER,
+                                                    relocationWillingness = relocationWillingness,
+                                                    polygamyAcceptance = polygamyAcceptance,
+                                                    
+                                                    username = username,
+                                                    oathChecked = oathChecked,
+                                                    skinColor = skinColor,
+                                                    healthStatus = healthStatus,
+                                                    nationality = nationality,
+                                                    educationLevel = educationLevel,
+                                                    jobTitle = jobTitle,
+                                                    incomeLevel = incomeLevel,
+                                                    fastingHabit = fastingHabit,
+                                                    weddingTimeline = weddingTimeline,
+                                                    wifeWorking = wifeWorking,
+                                                    householdExpenses = householdExpenses,
+                                                    aymaView = aymaView,
+                                                    shabkaView = shabkaView,
+                                                    gpsLocationEnabled = gpsLocationEnabled,
+                                                    blurPictures = blurPictures,
+
+                                                    profileCreator = "self",
+                                                    regionalCode = "MUS",
+                                                    height = hInt,
+                                                    weight = wInt,
+                                                    bodyType = "average",
+                                                    smokeStatus = smokeStatus,
+                                                    haveChildren = haveChildren,
+                                                    languagesSpoken = languagesSpoken,
+                                                    guardianName = if (waliName.isNotBlank()) waliName else null,
+                                                    guardianEmail = if (waliEmail.isNotBlank()) waliEmail else null,
+                                                    guardianStatus = if (waliEmail.isNotBlank()) "PENDING" else "None",
+                                                    aboutYourself = aboutYourself,
+                                                    idealPartner = idealPartner
+                                                )
+                                                viewModel.signUp(
+                                                    email = email,
+                                                    passwordPass = password,
+                                                    profile = userProfile,
+                                                    localImageUri = localImageUri,
+                                                    localVoiceUri = localVoiceUri,
+                                                    context = context
+                                                )
+                                            }
                                         },
                                         enabled = authState !is AuthState.Loading,
                                         shape = RoundedCornerShape(12.dp),
