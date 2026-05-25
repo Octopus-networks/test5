@@ -1294,7 +1294,7 @@ fun SearchTabContent(
                                                     val sectLabel = profile.sect.getDisplayName(isArabic)
                                                     val ageSuffix = if (isArabic) "سنة" else "yrs"
                                                     Text(
-                                                        text = "${profile.age} $ageSuffix • $sectLabel",
+                                                        text = "${profile.age} $ageSuffix • $sectLabel • ${profile.gender.getDisplayName(isArabic)}",
                                                         color = Color.White.copy(alpha = 0.9f),
                                                         fontSize = 14.sp
                                                     )
@@ -2544,6 +2544,85 @@ fun ModestyTabContent(
         }
     }
 
+    var tempAdditionalCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var showAdditionalSourceDialog by remember { mutableStateOf(false) }
+
+    fun handleAdditionalImageUpload(uri: android.net.Uri) {
+        isUploadingImage = true
+        coroutineScope.launch {
+            val isMock = com.mithaq.app.Config.isMock()
+            val newIndex = currentUser.additionalImages.size
+            val finalUrl = if (isMock) {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val directory = java.io.File(context.filesDir, "profiles")
+                    if (!directory.exists()) {
+                        directory.mkdirs()
+                    }
+                    val localFile = java.io.File(directory, "${currentUser.uid}_additional_${newIndex}.jpg")
+                    val outputStream = java.io.FileOutputStream(localFile)
+                    inputStream?.use { input ->
+                        outputStream.use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    android.net.Uri.fromFile(localFile).toString()
+                } catch (e: Exception) {
+                    uri.toString()
+                }
+            } else {
+                try {
+                    val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
+                    val profileImageRef = storageRef.child("profiles/${currentUser.uid}_additional_${newIndex}.jpg")
+                    val inputStream = context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("Unable to open input stream")
+                    val bytes = inputStream.readBytes()
+                    inputStream.close()
+                    profileImageRef.putBytes(bytes).await()
+                    profileImageRef.downloadUrl.await().toString()
+                } catch (e: Exception) {
+                    try {
+                        val inputStream = context.contentResolver.openInputStream(uri)
+                        val directory = java.io.File(context.filesDir, "profiles")
+                        if (!directory.exists()) {
+                            directory.mkdirs()
+                        }
+                        val localFile = java.io.File(directory, "${currentUser.uid}_additional_${newIndex}.jpg")
+                        val outputStream = java.io.FileOutputStream(localFile)
+                        inputStream?.use { input ->
+                            outputStream.use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        android.net.Uri.fromFile(localFile).toString()
+                    } catch (ex: Exception) {
+                        uri.toString()
+                    }
+                }
+            }
+
+            val newList = currentUser.additionalImages + finalUrl
+            authViewModel.updateAdditionalImages(newList, context)
+            isUploadingImage = false
+            onRefreshProfile()
+        }
+    }
+
+    val additionalGalleryLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            handleAdditionalImageUpload(uri)
+        }
+    }
+
+    val additionalCameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = com.mithaq.app.ui.photo.CustomTakePictureContract()
+    ) { success ->
+        if (success) {
+            tempAdditionalCameraUri?.let { handleAdditionalImageUpload(it) }
+        }
+    }
+
     LaunchedEffect(currentUser.uid, targetUser?.uid) {
         if (targetUser != null) {
             photoState = photoAccessManager.checkPhotoAccessState(currentUser.uid, targetUser.uid)
@@ -2562,6 +2641,96 @@ fun ModestyTabContent(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 12.dp)
         )
+
+        // Own Basic Info Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = if (isArabic) "البيانات الأساسية" else "Basic Information",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                var nameText by remember { mutableStateOf(currentUser.name) }
+                var savingName by remember { mutableStateOf(false) }
+                
+                OutlinedTextField(
+                    value = nameText,
+                    onValueChange = { nameText = it },
+                    label = { Text(if (isArabic) "الاسم الكامل" else "Full Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Read-only Gender field
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isArabic) "الجنس" else "Gender",
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = currentUser.gender.getDisplayName(isArabic),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Button(
+                    onClick = {
+                        savingName = true
+                        coroutineScope.launch {
+                            try {
+                                authViewModel.updateBasicInfo(nameText, context)
+                                android.widget.Toast.makeText(
+                                    context,
+                                    if (isArabic) "تم تحديث الاسم بنجاح!" else "Name updated successfully!",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                                onRefreshProfile()
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(context, "فشل حفظ الاسم: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                            } finally {
+                                savingName = false
+                            }
+                        }
+                    },
+                    enabled = !savingName && nameText.isNotBlank() && nameText != currentUser.name,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    if (savingName) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(if (isArabic) "حفظ الاسم" else "Save Name")
+                    }
+                }
+            }
+        }
 
         // Own Profile Photo Section
         Card(
@@ -2717,6 +2886,131 @@ fun ModestyTabContent(
                             Text(if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "حفظ" else "Save")
                         }
                     }
+                }
+
+                // ------------------ ADDITIONAL PHOTOS SECTION ------------------
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text(
+                    text = if (isArabic) "صور إضافية (حتى 4 صور)" else "Additional Photos (Up to 4)",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    currentUser.additionalImages.forEach { img ->
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        ) {
+                            UserProfileImage(
+                                imageUrl = img,
+                                gender = currentUser.gender,
+                                isBlurred = false,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            // Delete button overlay
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.error)
+                                    .clickable {
+                                        val newList = currentUser.additionalImages.filter { it != img }
+                                        authViewModel.updateAdditionalImages(newList, context)
+                                        onRefreshProfile()
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Delete",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    if (currentUser.additionalImages.size < 4) {
+                        // Add Button Slot
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
+                                .clickable { showAdditionalSourceDialog = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Photo",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (showAdditionalSourceDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showAdditionalSourceDialog = false },
+                        title = { Text(if (isArabic) "إضافة صورة إضافية" else "Add Additional Photo") },
+                        text = { Text(if (isArabic) "اختر مصدر الصورة:" else "Choose photo source:") },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showAdditionalSourceDialog = false
+                                    additionalGalleryLauncher.launch(
+                                        androidx.activity.result.PickVisualMediaRequest(
+                                            androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        )
+                                    )
+                                }
+                            ) {
+                                Text(if (isArabic) "المعرض" else "Gallery")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = {
+                                    showAdditionalSourceDialog = false
+                                    val uri = getCameraImageUri(context)
+                                    tempAdditionalCameraUri = uri
+                                    try {
+                                        additionalCameraLauncher.launch(uri)
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
+                                            android.widget.Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            ) {
+                                Text(if (isArabic) "الكاميرا" else "Camera")
+                            }
+                        }
+                    )
                 }
             }
         }

@@ -13,6 +13,7 @@ data class CachedUserProfile(
     val city: String,
     val country: String,
     val imageUrl: String,
+    val additionalImages: List<String>,
     
     val sect: String,
     val prayerFrequency: String,
@@ -256,6 +257,7 @@ fun UserProfile.toCached(): CachedUserProfile = CachedUserProfile(
     city = city,
     country = country,
     imageUrl = imageUrl,
+    additionalImages = additionalImages,
     sect = sect.name,
     prayerFrequency = prayerFrequency.name,
     modestyPreference = modestyPreference.name,
@@ -324,6 +326,7 @@ fun CachedUserProfile.toDomain(): UserProfile = UserProfile(
     city = city,
     country = country,
     imageUrl = imageUrl,
+    additionalImages = additionalImages,
     sect = try { Sect.valueOf(sect) } catch (e: Exception) { Sect.SUNNI },
     prayerFrequency = try { PrayerFrequency.valueOf(prayerFrequency) } catch (e: Exception) { PrayerFrequency.ALWAYS },
     modestyPreference = try { ModestyPreference.valueOf(modestyPreference) } catch (e: Exception) { ModestyPreference.HIJAB },

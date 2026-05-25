@@ -336,6 +336,7 @@ class AuthViewModel(
                         val isPremium = doc.getBoolean("isPremium") ?: false
                         val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
                         val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
+                        val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
 
                         UserProfile(
                             uid = uid,
@@ -345,6 +346,7 @@ class AuthViewModel(
                             city = city,
                             country = country,
                             imageUrl = imageUrl,
+                            additionalImages = additionalImages,
                             sect = sect,
                             prayerFrequency = prayer,
                             modestyPreference = modesty,
@@ -557,6 +559,17 @@ class AuthViewModel(
                     } catch (e: Exception) {
                         emptyMap<String, String>()
                     }
+                    val additionalImagesStr = prefs.getString("additionalImages", "[]") ?: "[]"
+                    val additionalImages = try {
+                        val arr = org.json.JSONArray(additionalImagesStr)
+                        val list = mutableListOf<String>()
+                        for (i in 0 until arr.length()) {
+                            list.add(arr.getString(i))
+                        }
+                        list
+                    } catch (e: Exception) {
+                        emptyList<String>()
+                    }
 
                     val profile = UserProfile(
                         uid = savedUid,
@@ -566,6 +579,7 @@ class AuthViewModel(
                         city = city,
                         country = country,
                         imageUrl = imageUrl,
+                        additionalImages = additionalImages,
                         sect = sect,
                         prayerFrequency = prayer,
                         modestyPreference = modesty,
@@ -676,6 +690,7 @@ class AuthViewModel(
                     val isPremium = doc.getBoolean("isPremium") ?: false
                     val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
                     val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
+                    val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
 
                     val profile = UserProfile(
                         uid = uid,
@@ -685,6 +700,7 @@ class AuthViewModel(
                         city = city,
                         country = country,
                         imageUrl = imageUrl,
+                        additionalImages = additionalImages,
                         sect = sect,
                         prayerFrequency = prayer,
                         modestyPreference = modesty,
@@ -1186,6 +1202,60 @@ class AuthViewModel(
                 try {
                     firestore.collection("users").document(current.uid)
                         .update("aboutYourself", aboutYourself, "idealPartner", idealPartner).await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    fun updateBasicInfo(name: String, context: android.content.Context) {
+        viewModelScope.launch {
+            val current = _currentUserProfile.value ?: return@launch
+            val updated = current.copy(name = name)
+            _currentUserProfile.value = updated
+            userDao?.insertUser(updated.toCached())
+            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            prefs.edit().apply {
+                putString("name", name)
+                apply()
+            }
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (!isMock && current.uid.isNotEmpty()) {
+                try {
+                    firestore.collection("users").document(current.uid)
+                        .update("name", name).await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    fun updateAdditionalImages(images: List<String>, context: android.content.Context) {
+        viewModelScope.launch {
+            val current = _currentUserProfile.value ?: return@launch
+            val updated = current.copy(additionalImages = images)
+            _currentUserProfile.value = updated
+            userDao?.insertUser(updated.toCached())
+            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            val arr = org.json.JSONArray()
+            images.forEach { arr.put(it) }
+            prefs.edit().putString("additionalImages", arr.toString()).apply()
+            
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (!isMock && current.uid.isNotEmpty()) {
+                try {
+                    firestore.collection("users").document(current.uid)
+                        .update("additionalImages", images).await()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }

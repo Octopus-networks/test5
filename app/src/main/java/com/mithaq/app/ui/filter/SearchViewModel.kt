@@ -273,6 +273,7 @@ class SearchViewModel(
                         val isPremium = doc.getBoolean("isPremium") ?: false
                         val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
                         val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
+                        val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
 
                         UserProfile(
                             uid = uid,
@@ -282,6 +283,7 @@ class SearchViewModel(
                             city = city,
                             country = country,
                             imageUrl = imageUrl,
+                            additionalImages = additionalImages,
                             sect = sect,
                             prayerFrequency = prayer,
                             modestyPreference = modesty,

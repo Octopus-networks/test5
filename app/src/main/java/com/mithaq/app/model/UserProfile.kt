@@ -12,6 +12,7 @@ data class UserProfile(
     val city: String = "",
     val country: String = "",
     val imageUrl: String = "",
+    val additionalImages: List<String> = emptyList(),
     
     // Islamic & Lifestyle Parameters
     val sect: Sect = Sect.SUNNI,

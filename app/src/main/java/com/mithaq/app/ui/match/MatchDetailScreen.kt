@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mithaq.app.model.*
 import com.mithaq.app.ui.photo.UserProfileImage
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import com.mithaq.app.ui.theme.GlassBorderDark
 import com.mithaq.app.ui.theme.GlassBorderLight
 import com.mithaq.app.ui.theme.GlassSurfaceDark
@@ -88,17 +90,47 @@ fun MatchDetailScreen(
                     .fillMaxWidth()
                     .height(380.dp)
             ) {
-                // Partner image or blurred placeholder
-                val isAccessApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
-                val isBlurred = if (isCompatible) !isAccessApproved else true
+                // Partner image pager or blurred placeholder
+                val allImages = remember(partner.imageUrl, partner.additionalImages) {
+                    listOfNotNull(partner.imageUrl.takeIf { it.isNotEmpty() }) + partner.additionalImages
+                }
+                val pagerState = rememberPagerState(pageCount = { allImages.size.coerceAtLeast(1) })
 
-                UserProfileImage(
-                    imageUrl = if (isCompatible) partner.imageUrl else "",
-                    gender = partner.gender,
-                    isBlurred = isBlurred,
-                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
+                HorizontalPager(
+                    state = pagerState,
                     modifier = Modifier.fillMaxSize()
-                )
+                ) { page ->
+                    val imgUrl = allImages.getOrNull(page) ?: ""
+                    val isAccessApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
+                    val isBlurred = if (isCompatible) !isAccessApproved else true
+
+                    UserProfileImage(
+                        imageUrl = if (isCompatible) imgUrl else "",
+                        gender = partner.gender,
+                        isBlurred = isBlurred,
+                        shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                if (allImages.size > 1) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        repeat(allImages.size) { index ->
+                            val isSelected = pagerState.currentPage == index
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.5f))
+                            )
+                        }
+                    }
+                }
 
                 // Dark gradient overlay at the bottom of image
                 Box(
@@ -158,7 +190,7 @@ fun MatchDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = if (isCompatible) "${partner.name}, ${partner.age}" else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
+                            text = if (isCompatible) "${partner.name}، ${partner.age} (${partner.gender.getDisplayName(isArabic)})" else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
