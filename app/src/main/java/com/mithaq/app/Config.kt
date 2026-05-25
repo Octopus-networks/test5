@@ -9,7 +9,7 @@ import com.google.firebase.firestore.FirebaseFirestore
  */
 object Config {
     const val IS_PRODUCTION = false
-    const val GEMINI_API_KEY = "YOUR_GEMINI_API_KEY" // Add your Gemini API key here
+    const val GEMINI_API_KEY = "AIzaSyCz-A23MzxTRXPTHwWdQSz9_twGfjSyEWs" // Add your Gemini API key here
 
     /**
      * Centralized utility to check if the app is running in simulated mock/demo mode.
