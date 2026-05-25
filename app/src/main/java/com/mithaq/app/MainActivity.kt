@@ -80,6 +80,7 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Delete
 import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
 
@@ -4969,6 +4970,75 @@ fun ProfileSettingsScreen(
                 isArabic = isArabic,
                 onInviteSuccess = onRefreshProfile
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+            val context = androidx.compose.ui.platform.LocalContext.current
+
+            if (showDeleteConfirmDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteConfirmDialog = false },
+                    title = {
+                        Text(
+                            text = if (isArabic) "حذف الحساب نهائياً" else "Delete Account Permanently",
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = if (isArabic) 
+                                "هل أنت متأكد من رغبتك في حذف حسابك؟ سيؤدي ذلك إلى مسح جميع بيانات ملفك الشخصي ومحادثاتك بالكامل ولن تتمكن من استعادتها." 
+                                else "Are you sure you want to delete your account? This will permanently delete all your profile data and chats and cannot be undone."
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDeleteConfirmDialog = false
+                                authViewModel.deleteCurrentUserAccount(context) {
+                                    onNavigateToScreen("login")
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = if (isArabic) "نعم، احذف حسابي" else "Yes, Delete Account",
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                            Text(text = if (isArabic) "إلغاء" else "Cancel")
+                        }
+                    }
+                )
+            }
+
+            Button(
+                onClick = { showDeleteConfirmDialog = true },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isArabic) "حذف الحساب نهائياً" else "Delete Account Permanently",
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

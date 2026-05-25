@@ -1192,4 +1192,44 @@ class AuthViewModel(
             }
         }
     }
+
+    fun deleteCurrentUserAccount(context: android.content.Context, onComplete: () -> Unit) {
+        val user = auth.currentUser
+        val uid = user?.uid ?: _currentUserProfile.value?.uid
+        viewModelScope.launch {
+            if (uid != null) {
+                // 1. Delete from Firestore
+                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                    auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                } catch (e: Exception) {
+                    true
+                }
+                if (!isMock) {
+                    try {
+                        firestore.collection("users").document(uid).delete().await()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                // 2. Delete from local database (Room)
+                userDao?.deleteUser(uid)
+            }
+            // 3. Clear Shared Preferences
+            context.getSharedPreferences("mithaq_prefs", android.content.Context.MODE_PRIVATE).edit().clear().apply()
+            context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE).edit().clear().apply()
+            
+            // 4. Delete Firebase Auth User
+            if (user != null) {
+                try {
+                    user.delete().await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // 5. Sign Out & Reset State
+            signOut()
+            onComplete()
+        }
+    }
 }
