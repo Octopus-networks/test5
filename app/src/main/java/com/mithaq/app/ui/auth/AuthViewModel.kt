@@ -578,7 +578,9 @@ class AuthViewModel(
                         isAdmin = isAdmin,
                         isPremium = isPremium,
                         subscriptionPlan = subscriptionPlan,
-                        questionnaireAnswers = questionnaireAnswers
+                        questionnaireAnswers = questionnaireAnswers,
+                        aboutYourself = prefs.getString("aboutYourself", "") ?: "",
+                        idealPartner = prefs.getString("idealPartner", "") ?: ""
                     )
                     _currentUserProfile.value = profile
                     userDao?.insertUser(profile.toCached())
@@ -700,7 +702,9 @@ class AuthViewModel(
                         isAdmin = isAdmin,
                         isPremium = isPremium,
                         subscriptionPlan = subscriptionPlan,
-                        questionnaireAnswers = questionnaireAnswers
+                        questionnaireAnswers = questionnaireAnswers,
+                        aboutYourself = doc.getString("aboutYourself") ?: "",
+                        idealPartner = doc.getString("idealPartner") ?: ""
                     )
                     _currentUserProfile.value = profile
                     userDao?.insertUser(profile.toCached())
@@ -969,7 +973,7 @@ class AuthViewModel(
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
-                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                val isMock = com.mithaq.app.Config.isMock()
                 if (isMock) {
                     kotlinx.coroutines.delay(800)
                     _authState.value = AuthState.Authenticated("mock_user_google_123")
@@ -993,7 +997,7 @@ class AuthViewModel(
                             "imageUrl" to (user.photoUrl?.toString() ?: "avatar_brother_green"),
                             "sect" to "Sunni",
                             "prayerFrequency" to "Always",
-                            "modestyPreference" to "High",
+                            "modestyPreference" to "HIJAB",
                             "relocationWillingness" to "Open",
                             "polygamyAcceptance" to false,
                             "guardianStatus" to "None",
@@ -1154,6 +1158,34 @@ class AuthViewModel(
                 try {
                     firestore.collection("users").document(current.uid)
                         .update("isWaliAccount", isWali, "isAdmin", isAdmin).await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    fun updateBio(aboutYourself: String, idealPartner: String, context: android.content.Context) {
+        viewModelScope.launch {
+            val current = _currentUserProfile.value ?: return@launch
+            val updated = current.copy(aboutYourself = aboutYourself, idealPartner = idealPartner)
+            _currentUserProfile.value = updated
+            userDao?.insertUser(updated.toCached())
+            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            prefs.edit().apply {
+                putString("aboutYourself", aboutYourself)
+                putString("idealPartner", idealPartner)
+                apply()
+            }
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (!isMock && current.uid.isNotEmpty()) {
+                try {
+                    firestore.collection("users").document(current.uid)
+                        .update("aboutYourself", aboutYourself, "idealPartner", idealPartner).await()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }

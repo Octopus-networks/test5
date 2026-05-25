@@ -175,8 +175,8 @@ $receiverJson
     private fun userProfileToJson(profile: UserProfile): String {
         return try {
             JSONObject().apply {
-                put("uid", profile.uid)
-                put("name", profile.name)
+                put("uid", "anonymous_user")
+                put("name", "عضو ميثاق")
                 put("gender", profile.gender.name)
                 put("age", profile.age)
                 put("city", profile.city)

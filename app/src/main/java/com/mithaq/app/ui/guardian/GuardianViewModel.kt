@@ -36,7 +36,7 @@ class GuardianViewModel(
      * Updates the current user's document in Firestore with the guardian details and sets the status to "Pending".
      */
     fun inviteGuardian(name: String, email: String) {
-        val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
+        val isMock = com.mithaq.app.Config.isMock()
         if (isMock) {
             val trimmedName = name.trim()
             val trimmedEmail = email.trim().lowercase()

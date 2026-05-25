@@ -384,14 +384,37 @@ fun QuestionnaireScreen(
 
 @Composable
 fun CompatibilityBreakdownDialog(
-    userAnswers: Map<String, String>,
-    partnerAnswers: Map<String, String>,
-    partnerName: String,
+    currentUser: UserProfile,
+    partner: UserProfile,
     isArabic: Boolean,
     onDismiss: () -> Unit
 ) {
+    val userAnswers = currentUser.questionnaireAnswers
+    val partnerAnswers = partner.questionnaireAnswers
+    val partnerName = partner.name
+
     val result = remember(userAnswers, partnerAnswers) {
         QuestionnaireData.calculateDetailedScore(userAnswers, partnerAnswers)
+    }
+
+    var aiLoading by remember { mutableStateOf(false) }
+    var aiResult by remember { mutableStateOf<com.mithaq.app.service.GeminiService.CompatibilityResult?>(null) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(currentUser.uid, partner.uid) {
+        val apiKey = com.mithaq.app.Config.GEMINI_API_KEY
+        if (apiKey.isNotEmpty() && apiKey != "YOUR_GEMINI_API_KEY") {
+            aiLoading = true
+            try {
+                val service = com.mithaq.app.service.GeminiService(apiKey)
+                val res = service.calculateCompatibility(currentUser, partner)
+                aiResult = res
+            } catch(e: Exception) {
+                errorMsg = e.localizedMessage
+            } finally {
+                aiLoading = false
+            }
+        }
     }
 
     Dialog(
@@ -525,6 +548,90 @@ fun CompatibilityBreakdownDialog(
                     color = Color(0xFF6B4FA8),
                     isArabic = isArabic
                 )
+
+                // AI Compatibility Report
+                Spacer(modifier = Modifier.height(20.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = if (isArabic) "تقرير التوافق بالذكاء الاصطناعي (AI)" else "AI Compatibility Report",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (com.mithaq.app.Config.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY" || com.mithaq.app.Config.GEMINI_API_KEY.isEmpty()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = if (isArabic) 
+                                "تنبيه: ميزة الذكاء الاصطناعي غير مفعلة حالياً. يرجى تهيئة مفتاح GEMINI_API_KEY في ملف Config.kt لتفعيل تحليل التوافق الذكي."
+                                else "Note: AI analysis is not active. Please configure GEMINI_API_KEY in Config.kt to enable smart compatibility analysis.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(12.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else if (aiLoading) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().padding(16.dp)
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (isArabic) "جاري تحليل التوافق ذكياً بواسطة Gemini AI..." else "Analyzing compatibility with Gemini AI...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else if (aiResult != null) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (isArabic) "نسبة التوافق الذكي:" else "Smart Match Score:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "${aiResult!!.score}%",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = aiResult!!.reason,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else if (errorMsg != null) {
+                    Text(
+                        text = if (isArabic) "فشل التحليل: $errorMsg" else "Analysis failed: $errorMsg",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 

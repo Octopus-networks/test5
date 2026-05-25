@@ -17,6 +17,14 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         val prefs = getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
         prefs.edit().putString("fcm_token", token).apply()
+
+        // Upload token to Firestore if current user is logged in
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        if (uid != null) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users").document(uid)
+                .update("fcmToken", token)
+        }
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -33,6 +41,8 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     companion object {
+        private val notificationIdCounter = java.util.concurrent.atomic.AtomicInteger((System.currentTimeMillis() % 100000).toInt())
+
         fun showLocalNotification(context: Context, title: String, body: String) {
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -72,7 +82,7 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 .setVibrate(longArrayOf(1000, 1000, 1000, 1000, 1000))
                 .setDefaults(NotificationCompat.DEFAULT_LIGHTS)
 
-            notificationManager.notify(System.currentTimeMillis().toInt(), notificationBuilder.build())
+            notificationManager.notify(notificationIdCounter.incrementAndGet(), notificationBuilder.build())
         }
     }
 }

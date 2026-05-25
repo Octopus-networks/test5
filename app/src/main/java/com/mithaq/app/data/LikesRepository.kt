@@ -11,12 +11,7 @@ class LikesRepository(private val context: Context) {
     private val db by lazy { FirebaseFirestore.getInstance() }
     
     private val isMock: Boolean
-        get() = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-            db.app?.options?.apiKey == "mock-api-key-for-testing" ||
-            db.app?.options?.apiKey?.contains("mock") == true
-        } catch (e: Exception) {
-            true
-        }
+        get() = com.mithaq.app.Config.isMock()
 
     private val prefs by lazy {
         context.getSharedPreferences("mithaq_interactions_prefs", Context.MODE_PRIVATE)
@@ -61,26 +56,28 @@ class LikesRepository(private val context: Context) {
             return mutual
         } else {
             try {
-                // Write like document
                 val likeDocId = "${fromUid}_${toUid}"
                 val inverseDocId = "${toUid}_${fromUid}"
                 
-                // Check if inverse like exists
-                val inverseSnap = db.collection("likes").document(inverseDocId).get().await()
-                val isMutual = inverseSnap.exists()
-
-                val likeData = hashMapOf(
-                    "fromUid" to fromUid,
-                    "toUid" to toUid,
-                    "isMutual" to isMutual,
-                    "timestamp" to System.currentTimeMillis()
-                )
-                db.collection("likes").document(likeDocId).set(likeData).await()
+                val isMutual = db.runTransaction { transaction ->
+                    val inverseSnap = transaction.get(db.collection("likes").document(inverseDocId))
+                    val exists = inverseSnap.exists()
+                    
+                    val likeData = hashMapOf(
+                        "fromUid" to fromUid,
+                        "toUid" to toUid,
+                        "isMutual" to exists,
+                        "timestamp" to System.currentTimeMillis()
+                    )
+                    transaction.set(db.collection("likes").document(likeDocId), likeData)
+                    
+                    if (exists) {
+                        transaction.update(db.collection("likes").document(inverseDocId), "isMutual", true)
+                    }
+                    exists
+                }.await()
 
                 if (isMutual) {
-                    // Update inverse doc as mutual too
-                    db.collection("likes").document(inverseDocId).update("isMutual", true).await()
-                    // Create live chatroom
                     createLiveChatRoom(fromUid, toUid)
                 }
                 return isMutual

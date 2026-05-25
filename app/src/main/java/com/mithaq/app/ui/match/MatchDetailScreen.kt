@@ -188,7 +188,7 @@ fun MatchDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val isOnline = partner.uid.hashCode() % 2 == 0
+                        val isOnline = kotlin.math.abs(partner.uid.hashCode()) % 3 == 0
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
@@ -595,12 +595,35 @@ fun MatchDetailScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    if (isArabic) "تم حظر العضو بنجاح" else "User blocked successfully",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
-                                onBack()
+                                coroutineScope.launch {
+                                    val isMock = com.mithaq.app.Config.isMock()
+                                    if (isMock) {
+                                        val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+                                        val blockedStr = prefs.getString("blocked_users_${currentUser.uid}", "[]") ?: "[]"
+                                        val array = org.json.JSONArray(blockedStr)
+                                        array.put(partner.uid)
+                                        prefs.edit().putString("blocked_users_${currentUser.uid}", array.toString()).apply()
+                                    } else {
+                                        try {
+                                            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                            db.collection("blocks").document("${currentUser.uid}_${partner.uid}").set(
+                                                mapOf(
+                                                    "blockerId" to currentUser.uid,
+                                                    "blockedId" to partner.uid,
+                                                    "timestamp" to System.currentTimeMillis()
+                                                )
+                                            )
+                                        } catch (e: java.lang.Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        if (isArabic) "تم حظر العضو بنجاح" else "User blocked successfully",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                    onBack()
+                                }
                             },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                         shape = RoundedCornerShape(16.dp)
@@ -636,11 +659,41 @@ fun MatchDetailScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    if (isArabic) "تم إرسال التقرير للإدارة للمراجعة" else "Report submitted to admin for review",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
+                                coroutineScope.launch {
+                                    val isMock = com.mithaq.app.Config.isMock()
+                                    if (isMock) {
+                                        val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+                                        val reportsStr = prefs.getString("user_reports", "[]") ?: "[]"
+                                        val array = org.json.JSONArray(reportsStr)
+                                        val reportObj = org.json.JSONObject().apply {
+                                            put("reporterId", currentUser.uid)
+                                            put("reportedId", partner.uid)
+                                            put("timestamp", System.currentTimeMillis())
+                                        }
+                                        array.put(reportObj)
+                                        prefs.edit().putString("user_reports", array.toString()).apply()
+                                    } else {
+                                        try {
+                                            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                            db.collection("reports").add(
+                                                mapOf(
+                                                    "reporterId" to currentUser.uid,
+                                                    "reportedId" to partner.uid,
+                                                    "reason" to "Spam / Inappropriate behavior",
+                                                    "timestamp" to System.currentTimeMillis()
+                                                )
+                                            )
+                                        } catch (e: java.lang.Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        if (isArabic) "تم إرسال التقرير للإدارة للمراجعة" else "Report submitted to admin for review",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                    onBack()
+                                }
                             },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                         shape = RoundedCornerShape(16.dp)
@@ -674,7 +727,7 @@ fun MatchDetailScreen(
 
                 // Member ID in footer
                 Text(
-                    text = if (isArabic) "رقم العضوية: ${partner.uid.hashCode().coerceAtLeast(1000000)}" else "Member id: ${partner.uid.hashCode().coerceAtLeast(1000000)}",
+                    text = if (isArabic) "رقم العضوية: ${(kotlin.math.abs(partner.uid.hashCode()) % 9000000) + 1000000}" else "Member id: ${(kotlin.math.abs(partner.uid.hashCode()) % 9000000) + 1000000}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,

@@ -119,11 +119,7 @@ class ChaperonedChatViewModel(
             return
         }
 
-        val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-            firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
-        } catch (e: Exception) {
-            true
-        }
+        val isMock = com.mithaq.app.Config.isMock()
         if (isMock) {
             val list = mutableListOf<ChatMessage>()
             val prefs = context?.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
@@ -243,11 +239,7 @@ class ChaperonedChatViewModel(
             return
         }
 
-        val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-            firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
-        } catch (e: Exception) {
-            true
-        }
+        val isMock = com.mithaq.app.Config.isMock()
 
         if (isMock) {
             viewModelScope.launch {
@@ -339,9 +331,9 @@ class ChaperonedChatViewModel(
         val emailPattern = Regex("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}")
         if (emailPattern.containsMatchIn(lowercase)) return true
         
-        // Phone number pattern (8 or more digits, even if spaces/dashes are present)
-        val cleanNumbers = lowercase.replace(Regex("[^0-9]"), "")
-        if (cleanNumbers.length >= 8) return true
+        // Phone number pattern (looks for a sequence of 8 or more contiguous digits)
+        val phoneCandidatePattern = Regex("\\d{8,}")
+        if (phoneCandidatePattern.containsMatchIn(lowercase)) return true
         
         // Check for common social media platforms and keywords
         val forbiddenKeywords = listOf(
@@ -364,27 +356,34 @@ class ChaperonedChatViewModel(
      * waliLogs subcollection for the guardian's review.
      */
     fun sendChatMessage(messageText: String) {
-        val currentUserId = auth.currentUser?.uid ?: "mock_user"
-        if (messageText.trim().isEmpty()) return
+        val currentUserId = auth.currentUser?.uid
+        val isMock = com.mithaq.app.Config.isMock()
+        if (!isMock && currentUserId == null) {
+            android.util.Log.e("ChaperonedChatViewModel", "Cannot send message: unauthenticated user in production.")
+            return
+        }
+        val senderId = currentUserId ?: "mock_user"
 
+        if (messageText.trim().isEmpty()) return
+ 
         if (containsContactInfo(messageText)) {
             _warningState.value = "تنبيه أمان: يُمنع تبادل أرقام الهواتف أو حسابات التواصل الاجتماعي لحمايتك ولضمان بقاء المحادثة تحت إشراف ولي الأمر."
             return
         }
-
+ 
         val isOfflineSimulated = context?.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
             ?.getBoolean("is_offline_simulated", false) ?: false
-
+ 
         if (isOfflineSimulated) {
             viewModelScope.launch {
                 val translationHelper = MockTranslationHelper()
                 val targetLang = if (messageText.any { it in '\u0600'..'\u06FF' }) "en" else "ar"
                 val translation = try { translationHelper.translateText(messageText, targetLang) } catch(e: Exception) { null }
-                val newMsg = ChatMessage(currentUserId, messageText.trim(), System.currentTimeMillis(), translation)
-                
+                val newMsg = ChatMessage(senderId, messageText.trim(), System.currentTimeMillis(), translation)
+                 
                 // Cache locally in Room DB immediately
                 chatDao?.insertMessage(newMsg.toCached(roomId))
-                
+                 
                 // Update local list manually so user sees it instantly
                 val list = _messages.value.toMutableList()
                 list.add(newMsg)
@@ -392,22 +391,16 @@ class ChaperonedChatViewModel(
             }
             return
         }
-
-        val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-            firestore.app?.options?.apiKey == "mock-api-key-for-testing" || firestore.app?.options?.apiKey?.contains("mock") == true
-        } catch (e: Exception) {
-            true
-        }
-
+ 
         viewModelScope.launch {
             val translationHelper = MockTranslationHelper()
             val targetLang = if (messageText.any { it in '\u0600'..'\u06FF' }) "en" else "ar"
             val translation = try { translationHelper.translateText(messageText, targetLang) } catch(e: Exception) { null }
-            val newMsg = ChatMessage(currentUserId, messageText.trim(), System.currentTimeMillis(), translation)
-            
+            val newMsg = ChatMessage(senderId, messageText.trim(), System.currentTimeMillis(), translation)
+             
             // Cache locally in Room DB immediately
             chatDao?.insertMessage(newMsg.toCached(roomId))
-            
+             
             if (isMock) {
                 val list = _messages.value.toMutableList()
                 list.add(newMsg)
@@ -445,7 +438,7 @@ class ChaperonedChatViewModel(
             try {
                 val timestamp = System.currentTimeMillis()
                 val messagePayload = mutableMapOf<String, Any>(
-                    "senderId" to currentUserId,
+                    "senderId" to senderId,
                     "content" to messageText.trim(),
                     "timestamp" to timestamp
                 )
@@ -482,7 +475,7 @@ class ChaperonedChatViewModel(
                 val currentRoom = _chatRoom.value
                 if (currentRoom != null && currentRoom.isChaperoned && !currentRoom.waliEmail.isNullOrBlank()) {
                     val waliPayload = mutableMapOf<String, Any>(
-                        "senderId" to currentUserId,
+                        "senderId" to senderId,
                         "content" to messageText.trim(),
                         "timestamp" to timestamp,
                         "reviewedByWali" to false

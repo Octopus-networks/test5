@@ -1070,7 +1070,7 @@ fun SearchTabContent(
                             list = list.sortedByDescending { MatchScoreCalculator.calculateScore(currentUser, it) }
                         }
                         "Online" -> {
-                            list = list.filter { it.uid.hashCode() % 2 == 0 }
+                            list = list.filter { kotlin.math.abs(it.uid.hashCode()) % 3 == 0 }
                         }
                         "Popular" -> {
                             list = list.filter { it.isPremium || it.verificationStatus == "VERIFIED" }
@@ -1378,9 +1378,8 @@ fun SearchTabContent(
 
     if (breakdownPartner != null) {
         CompatibilityBreakdownDialog(
-            userAnswers = currentUser.questionnaireAnswers,
-            partnerAnswers = breakdownPartner!!.questionnaireAnswers,
-            partnerName = breakdownPartner!!.name,
+            currentUser = currentUser,
+            partner = breakdownPartner!!,
             isArabic = isArabic,
             onDismiss = { breakdownPartner = null }
         )
@@ -1462,6 +1461,14 @@ fun ChatTabContent(
     var partnerPhotoState by remember { mutableStateOf(PhotoAccessState.NONE) }
     var userPhotoStateForPartner by remember { mutableStateOf(PhotoAccessState.NONE) }
 
+    var icebreakers by remember { mutableStateOf<List<String>>(emptyList()) }
+    var loadingIcebreakers by remember { mutableStateOf(false) }
+
+    LaunchedEffect(targetUser?.uid) {
+        icebreakers = emptyList()
+        loadingIcebreakers = false
+    }
+
     LaunchedEffect(currentUser.uid, targetUser?.uid) {
         if (targetUser != null) {
             partnerPhotoState = photoAccessManager.checkPhotoAccessState(currentUser.uid, targetUser.uid)
@@ -1469,12 +1476,7 @@ fun ChatTabContent(
         }
     }
     
-    val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-        com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey == "mock-api-key-for-testing" ||
-        com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey?.contains("mock") == true
-    } catch (e: Exception) {
-        true
-    }
+    val isMock = com.mithaq.app.Config.isMock()
 
     if (targetUser == null) {
         var activeRooms by remember { mutableStateOf<List<ChatRoom>>(emptyList()) }
@@ -1768,10 +1770,10 @@ fun ChatTabContent(
                     val partnerId = room.memberIds.firstOrNull { it != currentUser.uid } ?: ""
                     when (activeSubTab) {
                         0 -> { // Received
-                            partnerId == "mock_user_2" || partnerId.hashCode() % 2 == 0
+                            partnerId == "mock_user_2" || kotlin.math.abs(partnerId.hashCode()) % 3 == 0
                         }
                         1 -> { // Sent
-                            partnerId != "mock_user_2" && partnerId.hashCode() % 2 != 0
+                            partnerId != "mock_user_2" && kotlin.math.abs(partnerId.hashCode()) % 3 != 0
                         }
                         else -> { // Favorites
                             favoritesIds.contains(partnerId)
@@ -2188,6 +2190,76 @@ fun ChatTabContent(
                     }
                 }
 
+                // AI Icebreakers suggestions row
+                if (targetUser != null && com.mithaq.app.Config.GEMINI_API_KEY.isNotEmpty() && com.mithaq.app.Config.GEMINI_API_KEY != "YOUR_GEMINI_API_KEY") {
+                    if (icebreakers.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            icebreakers.forEach { msg ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)),
+                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier
+                                        .widthIn(max = 280.dp)
+                                        .clickable {
+                                            messageText = msg
+                                        }
+                                ) {
+                                    Text(
+                                        text = msg,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.padding(10.dp),
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    } else if (loadingIcebreakers) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (strings.appName == "ميثاق") "جاري توليد رسائل تعارف..." else "Generating icebreakers...",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    } else {
+                        TextButton(
+                            onClick = {
+                                loadingIcebreakers = true
+                                coroutineScope.launch {
+                                    try {
+                                        val service = com.mithaq.app.service.GeminiService(com.mithaq.app.Config.GEMINI_API_KEY)
+                                        icebreakers = service.suggestOpeningMessages(currentUser, targetUser)
+                                    } catch(e: Exception) {
+                                        e.printStackTrace()
+                                    } finally {
+                                        loadingIcebreakers = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.align(Alignment.Start)
+                        ) {
+                            Text(
+                                text = if (strings.appName == "ميثاق") "✨ اقتراح رسائل تعارف بالذكاء الاصطناعي" else "✨ Suggest Icebreakers with AI",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -2344,6 +2416,16 @@ fun ModestyTabContent(
     val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager() }
     var photoState by remember { mutableStateOf(com.mithaq.app.ui.photo.PhotoAccessState.NONE) }
 
+    var aboutYourselfText by remember { mutableStateOf(currentUser.aboutYourself) }
+    var idealPartnerText by remember { mutableStateOf(currentUser.idealPartner) }
+    var improvingBio by remember { mutableStateOf(false) }
+    var savingBio by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentUser.aboutYourself, currentUser.idealPartner) {
+        aboutYourselfText = currentUser.aboutYourself
+        idealPartnerText = currentUser.idealPartner
+    }
+
     val context = androidx.compose.ui.platform.LocalContext.current
     var isUploadingImage by remember { mutableStateOf(false) }
 
@@ -2352,12 +2434,7 @@ fun ModestyTabContent(
     fun handleProfileImageUpload(uri: android.net.Uri) {
         isUploadingImage = true
         coroutineScope.launch {
-            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                db.app?.options?.apiKey == "mock-api-key-for-testing" || db.app?.options?.apiKey?.contains("mock") == true
-            } catch (e: Exception) {
-                true
-            }
+            val isMock = com.mithaq.app.Config.isMock()
 
             val finalUrl = if (isMock) {
                 try {
@@ -2449,6 +2526,7 @@ fun ModestyTabContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -2612,6 +2690,116 @@ fun ModestyTabContent(
                         ) {
                             Text(if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "حفظ" else "Save")
                         }
+                    }
+                }
+            }
+        }
+
+        // ------------------ BIOGRAPHY & IDEAL PARTNER CARD ------------------
+        Spacer(modifier = Modifier.height(16.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = if (isArabic) "النبذة التعريفية والشريك المثالي" else "Profile Biography & Ideal Partner",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // About Yourself Field
+                OutlinedTextField(
+                    value = aboutYourselfText,
+                    onValueChange = { aboutYourselfText = it },
+                    label = { Text(if (isArabic) "عن نفسي (اهتماماتك، طبيعتك)" else "About Yourself (Interests, Nature)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    maxLines = 5
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Improve Bio with AI Button
+                Button(
+                    onClick = {
+                        if (aboutYourselfText.isNotBlank()) {
+                            improvingBio = true
+                            coroutineScope.launch {
+                                val apiKey = com.mithaq.app.Config.GEMINI_API_KEY
+                                if (apiKey.isNotEmpty() && apiKey != "YOUR_GEMINI_API_KEY") {
+                                    try {
+                                        val service = com.mithaq.app.service.GeminiService(apiKey)
+                                        val improved = service.improveProfile(aboutYourselfText)
+                                        aboutYourselfText = improved
+                                        android.widget.Toast.makeText(context, if (isArabic) "تم تحسين النبذة!" else "Bio improved!", android.widget.Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(context, "فشل تحسين النبذة: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                } else {
+                                    android.widget.Toast.makeText(context, if (isArabic) "يرجى تهيئة مفتاح GEMINI_API_KEY في ملف Config.kt أولاً." else "Please configure GEMINI_API_KEY in Config.kt first.", android.widget.Toast.LENGTH_LONG).show()
+                                }
+                                improvingBio = false
+                            }
+                        }
+                    },
+                    enabled = !improvingBio && aboutYourselfText.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    if (improvingBio) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(if (isArabic) "✨ تحسين بالذكاء الاصطناعي" else "✨ Improve with AI")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Ideal Partner Field
+                OutlinedTextField(
+                    value = idealPartnerText,
+                    onValueChange = { idealPartnerText = it },
+                    label = { Text(if (isArabic) "مواصفات الشريك المثالي" else "Ideal Partner Specifications") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    maxLines = 5
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Save Biography Button
+                Button(
+                    onClick = {
+                        savingBio = true
+                        coroutineScope.launch {
+                            try {
+                                authViewModel.updateBio(aboutYourselfText, idealPartnerText, context)
+                                android.widget.Toast.makeText(
+                                    context,
+                                    if (isArabic) "تم حفظ التعديلات بنجاح!" else "Changes saved successfully!",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                                onRefreshProfile()
+                            } catch(e: Exception) {
+                                android.widget.Toast.makeText(context, "فشل الحفظ: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                            } finally {
+                                savingBio = false
+                            }
+                        }
+                    },
+                    enabled = !savingBio,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    if (savingBio) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(if (isArabic) "حفظ التعديلات" else "Save Changes")
                     }
                 }
             }
@@ -3183,10 +3371,11 @@ fun ModestyTabContent(
                         devTapCount++
                         if (devTapCount >= 5) {
                             isDevMenuVisible = true
+                            authViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
                             android.widget.Toast.makeText(
                                 context,
-                                if (isArabic) "وضع المطور نشط الآن!" else "Developer mode activated!",
-                                android.widget.Toast.LENGTH_SHORT
+                                if (isArabic) "وضع المطور نشط الآن! وتمت ترقيتك إلى مسؤول (Admin)." else "Developer mode activated! You have been promoted to Admin.",
+                                android.widget.Toast.LENGTH_LONG
                             ).show()
                         }
                     }
@@ -3233,14 +3422,8 @@ fun WaliDashboardScreen(
     var isLoadingWard by remember { mutableStateOf(false) }
     var selectedMonitoringChat by remember { mutableStateOf<UserProfile?>(null) }
 
-    val wardUid = currentUserProfile?.wardUid ?: "mock_user_123"
-
-    val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-        com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey == "mock-api-key-for-testing" ||
-        com.google.firebase.firestore.FirebaseFirestore.getInstance().app?.options?.apiKey?.contains("mock") == true
-    } catch (e: Exception) {
-        true
-    }
+    val isMock = com.mithaq.app.Config.isMock()
+    val wardUid = currentUserProfile?.wardUid ?: if (isMock) "mock_user_123" else ""
 
     suspend fun approvePhotoAccess(wardUid: String, requestingUserId: String, context: android.content.Context, isMock: Boolean) {
         if (isMock) {
@@ -3300,6 +3483,11 @@ fun WaliDashboardScreen(
     }
 
     fun loadWardData() {
+        if (wardUid.isBlank()) {
+            isLoadingWard = false
+            wardProfile = null
+            return
+        }
         isLoadingWard = true
         coroutineScope.launch {
             if (isMock) {

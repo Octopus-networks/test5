@@ -389,6 +389,8 @@ fun RegisterScreen(
                                         val parsedAge = age.toIntOrNull()
                                         if (name.isBlank() || email.isBlank() || password.isBlank() || parsedAge == null) {
                                             localError = if (isArabic) "يرجى ملء جميع الحقول الأساسية بشكل صحيح." else "Please fill in all core fields correctly."
+                                        } else if (parsedAge < 18) {
+                                            localError = if (isArabic) "عذرًا، يجب أن يكون عمرك 18 سنة أو أكثر للتسجيل في ميثاق." else "Sorry, you must be 18 years or older to register on Mithaq."
                                         } else {
                                             localError = null
                                             currentStep = 2
