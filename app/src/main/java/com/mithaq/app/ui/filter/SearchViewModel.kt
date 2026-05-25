@@ -230,7 +230,7 @@ class SearchViewModel(
                     .get()
                     .await()
                 
-                val userGender = currentUserDoc.getString("gender") ?: "MALE"
+                val userGender = (currentUserDoc.getString("gender") ?: "MALE").uppercase()
                 val oppositeGender = if (userGender == "MALE") "FEMALE" else "MALE"
 
                 val snapshot = firestore.collection("users")
@@ -243,7 +243,7 @@ class SearchViewModel(
                         val uid = doc.id
                         val name = doc.getString("name") ?: ""
                         val genderStr = doc.getString("gender") ?: "FEMALE"
-                        val gender = if (genderStr == "MALE") Gender.MALE else Gender.FEMALE
+                        val gender = if (genderStr.uppercase() == "MALE") Gender.MALE else Gender.FEMALE
                         val age = doc.getLong("age")?.toInt() ?: 18
                         val city = doc.getString("city") ?: ""
                         val country = doc.getString("country") ?: ""

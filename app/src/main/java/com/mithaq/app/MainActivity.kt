@@ -81,6 +81,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Close
 import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
 
@@ -167,7 +168,7 @@ fun MithaqAppNavigation(
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
 
-    LaunchedEffect(currentUserId) {
+    LaunchedEffect(currentUserId, currentUserProfile?.gender) {
         if (currentUserId.isNotEmpty()) {
             authViewModel.fetchCurrentUserProfile(currentUserId)
             searchViewModel.fetchUsers()
@@ -568,6 +569,7 @@ fun SearchTabContent(
     var breakdownPartner by remember { mutableStateOf<UserProfile?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     val isDark = isSystemInDarkTheme()
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
     val glassBgColor = if (isDark) GlassSurfaceDark else GlassSurfaceLight
     val glassBorderColor = if (isDark) GlassBorderDark else GlassBorderLight
@@ -970,28 +972,52 @@ fun SearchTabContent(
             }
         } else {
             // Search bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text(if (isArabic) "ابحث بالاسم أو المدينة..." else "Search by name or city...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Done, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                },
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
-                shape = RoundedCornerShape(16.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text(if (isArabic) "ابحث بالاسم أو المدينة..." else "Search by name or city...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onSearch = {
+                            keyboardController?.hide()
+                        }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    )
                 )
-            )
+
+                Button(
+                    onClick = {
+                        keyboardController?.hide()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Text(if (isArabic) "بحث" else "Search")
+                }
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
