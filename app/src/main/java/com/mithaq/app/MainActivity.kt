@@ -571,6 +571,7 @@ fun SearchTabContent(
     val error by viewModel.errorMessage.collectAsState()
     var breakdownPartner by remember { mutableStateOf<UserProfile?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+    var showAllMembersMode by remember { mutableStateOf(true) }
     val isDark = isSystemInDarkTheme()
     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
@@ -974,6 +975,82 @@ fun SearchTabContent(
                 }
             }
         } else {
+            // Question Card: Do you want to show all members?
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (isArabic) "خيارات عرض الأعضاء:" else "Members Display Options:",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val opt1Selected = showAllMembersMode
+                        val opt1Bg = if (opt1Selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                        val opt1TextColor = if (opt1Selected) Color.White else MaterialTheme.colorScheme.onSurface
+                        val opt1Border = if (opt1Selected) Color.Transparent else MaterialTheme.colorScheme.outlineVariant
+                        
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(opt1Bg)
+                                .border(1.dp, opt1Border, RoundedCornerShape(12.dp))
+                                .clickable { showAllMembersMode = true }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isArabic) "إظهار كل المسجلين" else "Show All Registered",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = opt1TextColor,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
+                        val opt2Selected = !showAllMembersMode
+                        val opt2Bg = if (opt2Selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                        val opt2TextColor = if (opt2Selected) Color.White else MaterialTheme.colorScheme.onSurface
+                        val opt2Border = if (opt2Selected) Color.Transparent else MaterialTheme.colorScheme.outlineVariant
+                        
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(opt2Bg)
+                                .border(1.dp, opt2Border, RoundedCornerShape(12.dp))
+                                .clickable { showAllMembersMode = false }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isArabic) "تصفية (المتوافقين فقط)" else "Filter (Compatible Only)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = opt2TextColor,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+
             // Search bar
             Row(
                 modifier = Modifier
@@ -1099,8 +1176,12 @@ fun SearchTabContent(
                     Text(text = if (isArabic) "لا توجد نتائج مطابقة. يرجى تعديل خيارات البحث." else "No matches found. Try adjusting filters.", modifier = Modifier.padding(16.dp))
                 }
             } else {
-                val processedResults = remember(searchResults, selectedCategory, currentUser, searchQuery) {
+                val processedResults = remember(searchResults, selectedCategory, currentUser, searchQuery, showAllMembersMode) {
                     var list = searchResults
+                    
+                    // Enforce that males only see females, and females only see males
+                    list = list.filter { it.gender != currentUser.gender }
+                    
                     // Filter by search query first
                     if (searchQuery.isNotBlank()) {
                         list = list.filter {
@@ -1108,6 +1189,11 @@ fun SearchTabContent(
                             it.city.contains(searchQuery, ignoreCase = true) ||
                             it.country.contains(searchQuery, ignoreCase = true)
                         }
+                    }
+                    
+                    // If not showAllMembersMode (i.e. Filter mode), filter out incompatible members from list completely
+                    if (!showAllMembersMode) {
+                        list = list.filter { viewModel.isCompatible(it) }
                     }
                     when (selectedCategory) {
                         "Matches" -> {
@@ -1159,7 +1245,7 @@ fun SearchTabContent(
                                 ) {
                                     rowProfiles.forEach { profile ->
                                         val score = MatchScoreCalculator.calculateScore(currentUser, profile)
-                                        val isCompatible = viewModel.isCompatible(profile)
+                                        val isCompatible = if (showAllMembersMode) true else viewModel.isCompatible(profile)
                                         
                                         val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
                                         val isBlurred = if (isCompatible) !isAccessApproved else true
@@ -1233,7 +1319,7 @@ fun SearchTabContent(
                         } else {
                             processedResults.forEach { profile ->
                                 val score = MatchScoreCalculator.calculateScore(currentUser, profile)
-                                val isCompatible = viewModel.isCompatible(profile)
+                                val isCompatible = if (showAllMembersMode) true else viewModel.isCompatible(profile)
                                 
                                 val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
                                 val isBlurred = if (isCompatible) !isAccessApproved else true
@@ -1849,7 +1935,17 @@ fun ChatTabContent(
                 val partnersMap = mutableMapOf<String, UserProfile>()
                 for (room in roomsList) {
                     val partnerId = room.memberIds.firstOrNull { it != currentUser.uid } ?: "mock_user_2"
-                    partnersMap[room.roomId] = getMockUserProfile(partnerId)
+                    val partnerProfile = getMockUserProfile(partnerId)
+                    val oppositeGender = if (currentUser.gender == Gender.MALE) Gender.FEMALE else Gender.MALE
+                    partnersMap[room.roomId] = if (partnerProfile.gender != oppositeGender) {
+                        partnerProfile.copy(
+                            gender = oppositeGender,
+                            name = if (oppositeGender == Gender.MALE) "Ahmad / أحمد" else "Fatima / فاطمة",
+                            imageUrl = if (oppositeGender == Gender.MALE) "avatar_brother_green" else "avatar_sister_purple"
+                        )
+                    } else {
+                        partnerProfile
+                    }
                 }
                 roomPartners = partnersMap
                 isLoadingRooms = false
@@ -1904,21 +2000,23 @@ fun ChatTabContent(
                                                 val approved = userDoc.get("photoAccessApprovedUsers") as? List<String> ?: emptyList()
                                                 val requests = userDoc.get("photoAccessRequests") as? List<String> ?: emptyList()
 
-                                                partnersMap[room.roomId] = UserProfile(
-                                                    uid = partnerId,
-                                                    name = name,
-                                                    gender = gender,
-                                                    age = age,
-                                                    city = city,
-                                                    country = country,
-                                                    imageUrl = imageUrl,
-                                                    sect = sect,
-                                                    prayerFrequency = prayer,
-                                                    modestyPreference = modesty,
-                                                    relocationWillingness = relocation,
-                                                    photoAccessApprovedUsers = approved,
-                                                    photoAccessRequests = requests
-                                                )
+                                                if (gender != currentUser.gender) {
+                                                    partnersMap[room.roomId] = UserProfile(
+                                                        uid = partnerId,
+                                                        name = name,
+                                                        gender = gender,
+                                                        age = age,
+                                                        city = city,
+                                                        country = country,
+                                                        imageUrl = imageUrl,
+                                                        sect = sect,
+                                                        prayerFrequency = prayer,
+                                                        modestyPreference = modesty,
+                                                        relocationWillingness = relocation,
+                                                        photoAccessApprovedUsers = approved,
+                                                        photoAccessRequests = requests
+                                                    )
+                                                }
                                             }
                                             fetched++
                                             if (fetched == partnerFetchCount) {
@@ -4719,11 +4817,27 @@ fun getCameraImageUri(context: android.content.Context): android.net.Uri {
 @Composable
 fun rememberUserProfileResolver(
     searchViewModel: SearchViewModel,
-    isMock: Boolean
+    isMock: Boolean,
+    currentUser: UserProfile
 ): (String) -> UserProfile {
     val searchResults by searchViewModel.searchResults.collectAsState()
     return { uid ->
-        searchResults.find { it.uid == uid } ?: getMockUserProfile(uid)
+        val found = searchResults.find { it.uid == uid }
+        if (found != null) {
+            found
+        } else {
+            val mock = getMockUserProfile(uid)
+            val oppositeGender = if (currentUser.gender == Gender.MALE) Gender.FEMALE else Gender.MALE
+            if (mock.gender != oppositeGender) {
+                mock.copy(
+                    gender = oppositeGender,
+                    name = if (oppositeGender == Gender.MALE) "Ahmad / أحمد" else "Fatima / فاطمة",
+                    imageUrl = if (oppositeGender == Gender.MALE) "avatar_brother_green" else "avatar_sister_purple"
+                )
+            } else {
+                mock
+            }
+        }
     }
 }
 
@@ -4737,7 +4851,7 @@ fun LikesTabContent(
     onNavigateToUpgrade: () -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true)
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true, currentUser = currentUser)
     val context = androidx.compose.ui.platform.LocalContext.current
     
     var activeSubTab by remember { mutableStateOf(0) } // 0: Who Liked Me, 1: My Likes, 2: Mutual Matches
@@ -5109,7 +5223,7 @@ fun ViewsTabContent(
     onSelectMatch: (UserProfile) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true)
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true, currentUser = currentUser)
     
     var activeSubTab by remember { mutableStateOf(0) } // 0: Viewed My Profile, 1: Profiles I Viewed
     
@@ -5298,7 +5412,7 @@ fun FavoritesTabContent(
     onSelectMatch: (UserProfile) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true)
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true, currentUser = currentUser)
     val context = androidx.compose.ui.platform.LocalContext.current
     
     var activeSubTab by remember { mutableStateOf(0) } // 0: Who Favorited Me, 1: My Favorites, 2: Mutual Favorites

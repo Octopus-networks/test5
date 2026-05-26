@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -44,7 +45,7 @@ fun OnboardingWizardScreen(
     onSkip: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var currentStep by remember { mutableStateOf(1) } // 1: ID, 2: Compatibility, 3: Guardian
+    var currentStep by remember { mutableStateOf(1) } // 1: Gender, 2: ID, 3: Compatibility, 4: Guardian
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
     val scrollState = rememberScrollState()
@@ -53,7 +54,7 @@ fun OnboardingWizardScreen(
     val glassBgColor = if (isDark) GlassSurfaceDark else GlassSurfaceLight
     val glassBorderColor = if (isDark) GlassBorderDark else GlassBorderLight
 
-    // Step 1 State: Verification
+    // Step 2 State: Verification
     var idCardUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var selfieUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var isSubmittingVer by remember { mutableStateOf(false) }
@@ -63,8 +64,6 @@ fun OnboardingWizardScreen(
     var tempSelfieCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var showIdOptionDialog by remember { mutableStateOf(false) }
     var showSelfieOptionDialog by remember { mutableStateOf(false) }
-
-
 
     val idCardLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -94,12 +93,12 @@ fun OnboardingWizardScreen(
         }
     }
 
-    // Step 2 State: Questionnaire
+    // Step 3 State: Questionnaire
     val questions = QuestionnaireData.questions
     var currentQuestionIdx by remember { mutableStateOf(0) }
     val answers = remember { mutableStateMapOf<String, String>() }
 
-    // Step 3 State: Guardian Invite
+    // Step 4 State: Guardian Invite
     var guardianName by remember { mutableStateOf("") }
     var guardianEmail by remember { mutableStateOf("") }
     val guardianState by guardianViewModel.uiState.collectAsState()
@@ -151,15 +150,17 @@ fun OnboardingWizardScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StepIndicator(step = 1, active = currentStep >= 1, completed = currentStep > 1, label = if (isArabic) "التوثيق" else "ID Check", isArabic = isArabic)
-                Divider(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), color = if (currentStep > 1) PrimaryEmeraldLight else MaterialTheme.colorScheme.outlineVariant, thickness = 2.dp)
-                StepIndicator(step = 2, active = currentStep >= 2, completed = currentStep > 2, label = if (isArabic) "التوافق" else "Quiz", isArabic = isArabic)
-                Divider(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), color = if (currentStep > 2) PrimaryEmeraldLight else MaterialTheme.colorScheme.outlineVariant, thickness = 2.dp)
-                StepIndicator(step = 3, active = currentStep >= 3, completed = false, label = if (isArabic) "ولي الأمر" else "Guardian", isArabic = isArabic)
+                StepIndicator(step = 1, active = currentStep >= 1, completed = currentStep > 1, label = if (isArabic) "الجنس" else "Gender", isArabic = isArabic)
+                Divider(modifier = Modifier.weight(1f).padding(horizontal = 4.dp), color = if (currentStep > 1) PrimaryEmeraldLight else MaterialTheme.colorScheme.outlineVariant, thickness = 2.dp)
+                StepIndicator(step = 2, active = currentStep >= 2, completed = currentStep > 2, label = if (isArabic) "التوثيق" else "ID Check", isArabic = isArabic)
+                Divider(modifier = Modifier.weight(1f).padding(horizontal = 4.dp), color = if (currentStep > 2) PrimaryEmeraldLight else MaterialTheme.colorScheme.outlineVariant, thickness = 2.dp)
+                StepIndicator(step = 3, active = currentStep >= 3, completed = currentStep > 3, label = if (isArabic) "التوافق" else "Quiz", isArabic = isArabic)
+                Divider(modifier = Modifier.weight(1f).padding(horizontal = 4.dp), color = if (currentStep > 3) PrimaryEmeraldLight else MaterialTheme.colorScheme.outlineVariant, thickness = 2.dp)
+                StepIndicator(step = 4, active = currentStep >= 4, completed = false, label = if (isArabic) "ولي الأمر" else "Guardian", isArabic = isArabic)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -187,6 +188,17 @@ fun OnboardingWizardScreen(
                 ) { step ->
                     when (step) {
                         1 -> {
+                            val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
+                            StepGenderSelectionContent(
+                                isArabic = isArabic,
+                                initialGender = currentUserProfile?.gender ?: com.mithaq.app.model.Gender.MALE,
+                                onGenderSelected = { selectedGender ->
+                                    authViewModel.updateGender(selectedGender, context)
+                                    currentStep = 2
+                                }
+                            )
+                        }
+                        2 -> {
                             StepVerificationContent(
                                 isArabic = isArabic,
                                 idCardUri = idCardUri,
@@ -206,7 +218,7 @@ fun OnboardingWizardScreen(
                                         isSubmittingVer = false
                                         verStatusMsg = message
                                         if (success) {
-                                            currentStep = 2
+                                            currentStep = 3
                                         }
                                     }
                                 }
@@ -230,7 +242,7 @@ fun OnboardingWizardScreen(
                                                         context,
                                                         if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
                                                         android.widget.Toast.LENGTH_LONG
-                                                    ).show()
+                                                     ).show()
                                                 }
                                             }
                                         ) {
@@ -288,7 +300,7 @@ fun OnboardingWizardScreen(
                                 )
                             }
                         }
-                        2 -> StepQuestionnaireContent(
+                        3 -> StepQuestionnaireContent(
                             questions = questions,
                             currentQuestionIdx = currentQuestionIdx,
                             answers = answers,
@@ -300,18 +312,18 @@ fun OnboardingWizardScreen(
                                 } else {
                                     // Save compatibility answers to ViewModel
                                     authViewModel.saveQuestionnaireAnswers(answers.toMap())
-                                    currentStep = 3
+                                    currentStep = 4
                                 }
                             },
                             onPrevQuestion = {
                                 if (currentQuestionIdx > 0) {
                                     currentQuestionIdx--
                                 } else {
-                                    currentStep = 1
+                                    currentStep = 2
                                 }
                             }
                         )
-                        3 -> StepGuardianContent(
+                        4 -> StepGuardianContent(
                             isArabic = isArabic,
                             guardianName = guardianName,
                             guardianEmail = guardianEmail,
@@ -321,7 +333,7 @@ fun OnboardingWizardScreen(
                             onSendInvitation = {
                                 guardianViewModel.inviteGuardian(guardianName, guardianEmail)
                             },
-                            onPrev = { currentStep = 2 },
+                            onPrev = { currentStep = 3 },
                             onFinish = onComplete
                         )
                     }
@@ -332,17 +344,131 @@ fun OnboardingWizardScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Footer navigation options: Skip for now
-            TextButton(
-                onClick = onSkip,
-                modifier = Modifier.padding(bottom = 16.dp)
-            ) {
-                Text(
-                    text = skipText,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
+            // Gender selection (Step 1) is mandatory, so hide skip button on Step 1
+            if (currentStep > 1) {
+                TextButton(
+                    onClick = onSkip,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Text(
+                        text = skipText,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+fun StepGenderSelectionContent(
+    isArabic: Boolean,
+    initialGender: com.mithaq.app.model.Gender,
+    onGenderSelected: (com.mithaq.app.model.Gender) -> Unit
+) {
+    var selectedGender by remember { mutableStateOf(initialGender) }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = if (isArabic) "الخطوة 1: تحديد الجنس" else "Step 1: Select Gender",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = if (isArabic) 
+                "يرجى اختيار جنسك بدقة. يظهر للرجال النساء فقط، وللنساء الرجال فقط لضمان بيئة شرعية ومحافظة."
+            else 
+                "Please select your gender. Males only see females, and females only see males to ensure a serious and Islamic environment.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Male Option
+            val isMale = selectedGender == com.mithaq.app.model.Gender.MALE
+            val maleBg = if (isMale) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+            val maleBorder = if (isMale) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+            
+            OutlinedButton(
+                onClick = { selectedGender = com.mithaq.app.model.Gender.MALE },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(140.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(2.dp, maleBorder),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = maleBg)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Male,
+                        contentDescription = "Male",
+                        tint = if (isMale) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = if (isArabic) "ذكر" else "Male",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isMale) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            // Female Option
+            val isFemale = selectedGender == com.mithaq.app.model.Gender.FEMALE
+            val femaleBg = if (isFemale) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+            val femaleBorder = if (isFemale) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+
+            OutlinedButton(
+                onClick = { selectedGender = com.mithaq.app.model.Gender.FEMALE },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(140.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(2.dp, femaleBorder),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = femaleBg)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Female,
+                        contentDescription = "Female",
+                        tint = if (isFemale) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = if (isArabic) "أنثى" else "Female",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isFemale) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = { onGenderSelected(selectedGender) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(
+                text = if (isArabic) "حفظ ومتابعة" else "Save & Continue",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
         }
     }
 }
@@ -406,7 +532,7 @@ fun StepVerificationContent(
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = if (isArabic) "الخطوة 1: توثيق الهوية والوجه" else "Step 1: Face & ID Verification",
+            text = if (isArabic) "الخطوة 2: توثيق الهوية والوجه" else "Step 2: Face & ID Verification",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -525,7 +651,7 @@ fun StepQuestionnaireContent(
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = if (isArabic) "الخطوة 2: استبيان التوافق" else "Step 2: Compatibility Quiz",
+            text = if (isArabic) "الخطوة 3: استبيان التوافق" else "Step 3: Compatibility Quiz",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -637,7 +763,7 @@ fun StepGuardianContent(
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = if (isArabic) "الخطوة 3: إشراك ولي الأمر" else "Step 3: Guardian Invitation",
+            text = if (isArabic) "الخطوة 4: إشراك ولي الأمر" else "Step 4: Guardian Invitation",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary

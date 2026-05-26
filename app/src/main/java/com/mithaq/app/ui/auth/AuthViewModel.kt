@@ -1418,6 +1418,33 @@ class AuthViewModel(
         }
     }
 
+    fun updateGender(gender: Gender, context: android.content.Context) {
+        viewModelScope.launch {
+            val current = _currentUserProfile.value ?: return@launch
+            val updated = current.copy(gender = gender)
+            _currentUserProfile.value = updated
+            userDao?.insertUser(updated.toCached())
+            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            prefs.edit().apply {
+                putString("gender", gender.name)
+                apply()
+            }
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (!isMock && current.uid.isNotEmpty()) {
+                try {
+                    firestore.collection("users").document(current.uid)
+                        .update("gender", gender.name).await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
     fun updateAdditionalImages(images: List<String>, context: android.content.Context) {
         viewModelScope.launch {
             val current = _currentUserProfile.value ?: return@launch
