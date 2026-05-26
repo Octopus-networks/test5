@@ -927,15 +927,25 @@ class AuthViewModel(
 
                 if (isMock) {
                     kotlinx.coroutines.delay(800)
-                    val uid = if (isWali) "mock_wali_123" else "mock_user_123"
+                    // Determine UID based on email for multi-identity testing
+                    val emailPrefix = email.substringBefore("@").lowercase()
+                    val uid = if (isWali) "mock_wali_$emailPrefix" else {
+                        when (emailPrefix) {
+                            "fatima" -> "mock_user_2"
+                            "ahmad" -> "mock_user_3"
+                            "sarah" -> "mock_user_4"
+                            else -> "mock_user_$emailPrefix"
+                        }
+                    }
+                    
                     context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
                         putString("uid", uid)
                         putBoolean("isWaliAccount", isWali)
                         if (isWali) {
-                            putString("name", "Guardian / ولي أمر")
+                            putString("name", "Guardian / ولي أمر ($emailPrefix)")
                             putString("wardUid", "mock_user_123")
                         } else {
-                            putString("name", "Mock User")
+                            putString("name", emailPrefix.replaceFirstChar { it.uppercase() })
                         }
                         apply()
                     }
