@@ -98,7 +98,8 @@ data class CachedUserProfile(
     val aboutYourself: String,
     val partnerPreferences: String,
     val profileHeading: String,
-    val idealPartner: String
+    val idealPartner: String,
+    val lastSeen: Long
 )
 
 @Entity(tableName = "cached_messages")
@@ -237,7 +238,7 @@ interface ChatDao {
 
 @Database(
     entities = [CachedUserProfile::class, CachedMessage::class, CachedChatRoom::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(MithaqConverters::class)
@@ -350,7 +351,8 @@ fun UserProfile.toCached(): CachedUserProfile = CachedUserProfile(
     aboutYourself = aboutYourself,
     partnerPreferences = partnerPreferences,
     profileHeading = profileHeading,
-    idealPartner = idealPartner
+    idealPartner = idealPartner,
+    lastSeen = lastSeen
 )
 
 fun CachedUserProfile.toDomain(): UserProfile = UserProfile(
@@ -437,5 +439,6 @@ fun CachedUserProfile.toDomain(): UserProfile = UserProfile(
     aboutYourself = aboutYourself,
     partnerPreferences = partnerPreferences,
     profileHeading = profileHeading,
-    idealPartner = idealPartner
+    idealPartner = idealPartner,
+    lastSeen = lastSeen
 )

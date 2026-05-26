@@ -957,7 +957,7 @@ fun ModestyTabContent(
                         }
 
                         val selfieCameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                            contract = com.mithaq.app.ui.photo.CustomTakePictureContract()
+                            contract = androidx.activity.result.contract.ActivityResultContracts.CaptureVideo()
                         ) { success ->
                             if (success) {
                                 tempSelfieCameraUri?.let { selfieUri = it }
@@ -1015,9 +1015,9 @@ fun ModestyTabContent(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Selfie Selection
+                        // Selfie Video Selection
                         Text(
-                            text = if (isArabic) "صورة شخصية حية (سيلفي لمطابقة الوجه)" else "Live Selfie (for face matching)",
+                            text = if (isArabic) "فيديو شخصي حي (سيلفي لمطابقة الوجه)" else "Live Selfie Video (for face matching)",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1030,7 +1030,7 @@ fun ModestyTabContent(
                                 onClick = {
                                     selfieLauncher.launch(
                                         androidx.activity.result.PickVisualMediaRequest(
-                                            androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
                                         )
                                     )
                                 },
@@ -1039,18 +1039,18 @@ fun ModestyTabContent(
                                     containerColor = if (selfieUri != null && selfieUri != tempSelfieCameraUri) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary
                                 )
                             ) {
-                                Text(if (isArabic) "السيلفي (المعرض)" else "Selfie (Gallery)")
+                                Text(if (isArabic) "فيديو السيلفي (المعرض)" else "Selfie Video (Gallery)")
                             }
                             Button(
                                 onClick = {
                                     try {
-                                        val uri = getCameraImageUri(context)
+                                        val uri = getCameraVideoUri(context)
                                         tempSelfieCameraUri = uri
                                         selfieCameraLauncher.launch(uri)
                                     } catch (e: Exception) {
                                         android.widget.Toast.makeText(
                                             context,
-                                            if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
+                                            if (isArabic) "عذرًا، فشل فتح الكاميرا لتسجيل الفيديو: ${e.localizedMessage}" else "Sorry, failed to open camera for video recording: ${e.localizedMessage}",
                                             android.widget.Toast.LENGTH_LONG
                                         ).show()
                                     }
@@ -1060,7 +1060,7 @@ fun ModestyTabContent(
                                     containerColor = if (selfieUri != null && selfieUri == tempSelfieCameraUri) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
                                 )
                             ) {
-                                Text(if (isArabic) "السيلفي (الكاميرا)" else "Selfie (Camera)")
+                                Text(if (isArabic) "تسجيل فيديو (الكاميرا)" else "Record Video (Camera)")
                             }
                         }
 
@@ -1079,11 +1079,11 @@ fun ModestyTabContent(
                         Button(
                             onClick = {
                                 if (idCardUri == null || selfieUri == null) {
-                                    statusMsg = if (isArabic) "يرجى اختيار كل من صورة الهوية والصورة الشخصية." else "Please select both ID Card and Selfie."
+                                    statusMsg = if (isArabic) "يرجى اختيار كل من صورة الهوية وفيديو السيلفي الحي." else "Please select both ID Card and Live Selfie Video."
                                     return@Button
                                 }
                                 isSubmitting = true
-                                statusMsg = if (isArabic) "جاري معالجة التحقق ومطابقة الوجه..." else "Processing verification & face matching..."
+                                statusMsg = if (isArabic) "جاري معالجة التحقق وإثبات الحيوية (Liveness)..." else "Processing verification & live face verification..."
                                 authViewModel.submitVerification(idCardUri!!, selfieUri!!, context) { success, message ->
                                     isSubmitting = false
                                     statusMsg = message

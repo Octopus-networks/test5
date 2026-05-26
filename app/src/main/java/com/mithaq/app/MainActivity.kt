@@ -170,10 +170,26 @@ fun MithaqAppNavigation(
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
 
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, currentUserId) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                if (currentUserId.isNotEmpty()) {
+                    authViewModel.updateOnlineStatus()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(currentUserId, currentUserProfile?.gender) {
         if (currentUserId.isNotEmpty()) {
             authViewModel.fetchCurrentUserProfile(currentUserId)
             searchViewModel.fetchUsers()
+            authViewModel.updateOnlineStatus()
         }
     }
 
@@ -354,6 +370,20 @@ fun MithaqAppNavigation(
                 likesRepository = likesRepository,
                 isArabic = isArabic,
                 onBack = { currentScreen = "home" }
+            )
+        }
+        "ai_matchmaker" -> {
+            val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            AiMatchmakerScreen(
+                currentUser = profile,
+                searchViewModel = searchViewModel,
+                isArabic = isArabic,
+                onBack = { currentScreen = "home" },
+                onSelectMatch = { partner ->
+                    selectedMatchProfile = partner
+                    currentScreen = "match_detail"
+                }
             )
         }
     }

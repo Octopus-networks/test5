@@ -86,7 +86,7 @@ fun OnboardingWizardScreen(
     }
 
     val selfieCameraLauncher = rememberLauncherForActivityResult(
-        contract = com.mithaq.app.ui.photo.CustomTakePictureContract()
+        contract = ActivityResultContracts.CaptureVideo()
     ) { success ->
         if (success) {
             tempSelfieCameraUri?.let { selfieUri = it }
@@ -265,36 +265,43 @@ fun OnboardingWizardScreen(
                             if (showSelfieOptionDialog) {
                                 AlertDialog(
                                     onDismissRequest = { showSelfieOptionDialog = false },
-                                    title = { Text(if (isArabic) "اختر طريقة الرفع" else "Choose Upload Method") },
-                                    text = { Text(if (isArabic) "هل تريد التقاط صورة شخصية بالكاميرا أم اختيارها من المعرض؟" else "Would you like to take a selfie with the camera or choose from gallery?") },
+                                    title = { Text(if (isArabic) "توثيق الفيديو الحي" else "Selfie Video Verification") },
+                                    text = {
+                                        Text(
+                                            if (isArabic)
+                                                "يرجى تسجيل فيديو سيلفي قصير (3 ثوانٍ) وأنت تحرك رأسك أو تلوح بيدك لإثبات الهوية الحية (Liveness)."
+                                            else
+                                                "Please record a short selfie video (3 seconds) waving or nodding to confirm live verification."
+                                        )
+                                    },
                                     confirmButton = {
                                         TextButton(
                                             onClick = {
                                                 showSelfieOptionDialog = false
-                                                val uri = getCameraImageUri(context)
+                                                val uri = getCameraVideoUri(context)
                                                 tempSelfieCameraUri = uri
                                                 try {
                                                     selfieCameraLauncher.launch(uri)
                                                 } catch (e: Exception) {
                                                     android.widget.Toast.makeText(
                                                         context,
-                                                        if (isArabic) "عذرًا، فشل فتح الكاميرا: ${e.localizedMessage}" else "Sorry, failed to open camera: ${e.localizedMessage}",
+                                                        if (isArabic) "عذرًا، فشل تسجيل الفيديو: ${e.localizedMessage}" else "Sorry, failed to start video recording: ${e.localizedMessage}",
                                                         android.widget.Toast.LENGTH_LONG
-                                                    ).show()
+                                                     ).show()
                                                 }
                                             }
                                         ) {
-                                            Text(if (isArabic) "الكاميرا" else "Camera")
+                                            Text(if (isArabic) "تسجيل فيديو" else "Record Video")
                                         }
                                     },
                                     dismissButton = {
                                         TextButton(
                                             onClick = {
                                                 showSelfieOptionDialog = false
-                                                selfieLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                                selfieLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
                                             }
                                         ) {
-                                            Text(if (isArabic) "المعرض" else "Gallery")
+                                            Text(if (isArabic) "اختيار فيديو" else "Choose Video")
                                         }
                                     }
                                 )
@@ -590,16 +597,16 @@ fun StepVerificationContent(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 8.dp)) {
                     Icon(
-                        imageVector = if (selfieUri != null) Icons.Default.CheckCircle else Icons.Default.AccountBox,
+                        imageVector = if (selfieUri != null) Icons.Default.CheckCircle else Icons.Default.Videocam,
                         contentDescription = null,
                         tint = if (selfieUri != null) SuccessGreen else MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = if (selfieUri != null)
-                            (if (isArabic) "تم اختيار الصورة" else "Selfie Selected")
+                            (if (isArabic) "تم تسجيل الفيديو" else "Video Recorded")
                         else
-                            (if (isArabic) "صورة شخصية" else "Selfie Photo"),
+                            (if (isArabic) "فيديو سيلفي" else "Selfie Video"),
                         textAlign = TextAlign.Center,
                         fontSize = 12.sp
                     )
@@ -897,6 +904,19 @@ private fun getCameraImageUri(context: android.content.Context): android.net.Uri
         directory.mkdirs()
     }
     val file = java.io.File(directory, "camera_capture_${System.currentTimeMillis()}.jpg")
+    return androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "com.mithaq.app.provider",
+        file
+    )
+}
+
+private fun getCameraVideoUri(context: android.content.Context): android.net.Uri {
+    val directory = java.io.File(context.cacheDir, "camera")
+    if (!directory.exists()) {
+        directory.mkdirs()
+    }
+    val file = java.io.File(directory, "camera_capture_${System.currentTimeMillis()}.mp4")
     return androidx.core.content.FileProvider.getUriForFile(
         context,
         "com.mithaq.app.provider",

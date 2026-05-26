@@ -4,7 +4,7 @@ import android.util.Log
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import com.google.ai.client.generativeai.type.generationConfig
-import com.mithaq.app.model.UserProfile
+import com.mithaq.app.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -194,6 +194,89 @@ $receiverJson
             }.toString()
         } catch (e: Exception) {
             "{}"
+        }
+    }
+
+    /**
+     * 4. Converse with the Al-Khattaba bot to get personalized recommendations.
+     * Returns a JSONObject with "response" (String) and "recommended_uids" (JSONArray of Strings).
+     */
+    suspend fun converseWithMatchmaker(
+        currentUser: UserProfile,
+        candidates: List<UserProfile>,
+        chatHistory: List<Pair<String, String>> // role to content
+    ): JSONObject = withContext(Dispatchers.IO) {
+        val candidatesJson = JSONArray().apply {
+            candidates.forEach { candidate ->
+                put(JSONObject().apply {
+                    put("uid", candidate.uid)
+                    put("name", candidate.name)
+                    put("gender", candidate.gender.name)
+                    put("age", candidate.age)
+                    put("city", candidate.city)
+                    put("country", candidate.country)
+                    put("sect", candidate.sect.name)
+                    put("prayerFrequency", candidate.prayerFrequency.name)
+                    put("modestyPreference", candidate.modestyPreference.name)
+                    put("relocationWillingness", candidate.relocationWillingness.name)
+                    put("aboutYourself", candidate.aboutYourself)
+                    put("idealPartner", candidate.idealPartner)
+                })
+            }
+        }.toString()
+
+        val currentUserJson = userProfileToJson(currentUser)
+
+        val historyString = StringBuilder()
+        chatHistory.forEach { (role, content) ->
+            val speaker = if (role == "user") "User" else "Al-Khattaba"
+            historyString.append("$speaker: $content\n")
+        }
+
+        val prompt = """
+You are "Al-Khattaba" (الخاطبة), an intelligent, wise, and respectful Islamic matchmaking assistant for the "Mithaq" app.
+Your goal is to guide the user and recommend compatible partners from the available candidates in a Sharia-compliant way.
+
+Available Candidate Profiles:
+$candidatesJson
+
+Current User Profile:
+$currentUserJson
+
+Conversation History:
+$historyString
+
+Respond to the user's last message. You must:
+1. Maintain a friendly, wise, and respectful tone, using appropriate Islamic etiquette.
+2. Analyze the user's criteria.
+3. Match it against the candidate profiles.
+4. Select up to 3 candidate profiles that best match.
+5. Provide your conversational response in the user's language (Arabic if they speak Arabic, English if they speak English).
+6. Always return your output in the following JSON format:
+{
+  "response": "Your conversational reply here...",
+  "recommended_uids": ["uid1", "uid2"]
+}
+Do not return any extra text. Return only the JSON object.
+        """.trimIndent()
+
+        try {
+            val response = jsonModel.generateContent(prompt)
+            val jsonText = response.text ?: "{}"
+            // Strip markdown block fences if model generates them
+            val cleanJson = jsonText.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+            JSONObject(cleanJson)
+        } catch (e: Exception) {
+            Log.e("GeminiService", "Error in converseWithMatchmaker: ${e.message}", e)
+            JSONObject().apply {
+                val errText = if (currentUser.gender == Gender.MALE) {
+                    "أعتذر منك يا أخي، حدث خطأ أثناء الاتصال بالخاطبة الذكية. يرجى المحاولة مرة أخرى."
+                } else {
+                    "أعتذر منكِ يا أختي، حدث خطأ أثناء الاتصال بالخاطبة الذكية. يرجى المحاولة مرة أخرى."
+                }
+                put("response", errText)
+                put("recommended_uids", JSONArray())
+            }
         }
     }
 }

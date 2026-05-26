@@ -339,6 +339,7 @@ class AuthViewModel(
                         val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
                         val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
                         val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
+                        val lastSeen = doc.getLong("lastSeen") ?: 0L
 
                         UserProfile(
                             uid = uid,
@@ -364,7 +365,8 @@ class AuthViewModel(
                             isAdmin = isAdmin,
                             isPremium = isPremium,
                             subscriptionPlan = subscriptionPlan,
-                            questionnaireAnswers = questionnaireAnswers
+                            questionnaireAnswers = questionnaireAnswers,
+                            lastSeen = lastSeen
                         )
                     } catch (e: Exception) {
                         null
@@ -549,6 +551,7 @@ class AuthViewModel(
                     val isPremium = prefs.getBoolean("isPremium", false)
                     val subscriptionPlan = prefs.getString("subscriptionPlan", "FREE") ?: "FREE"
                     val questionnaireAnswersStr = prefs.getString("questionnaireAnswers", "{}") ?: "{}"
+                    val lastSeen = prefs.getLong("lastSeen", 0L)
                     val questionnaireAnswers = try {
                         val obj = org.json.JSONObject(questionnaireAnswersStr)
                         val map = mutableMapOf<String, String>()
@@ -659,7 +662,8 @@ class AuthViewModel(
                         ethnicity = ethnicity,
                         maritalStatus = maritalStatus,
                         haveChildren = haveChildren,
-                        languagesSpoken = languagesSpoken
+                        languagesSpoken = languagesSpoken,
+                        lastSeen = lastSeen
                     )
                     _currentUserProfile.value = profile
                     userDao?.insertUser(profile.toCached())
@@ -782,6 +786,7 @@ class AuthViewModel(
                     val maritalStatus = doc.getString("maritalStatus") ?: "single"
                     val haveChildren = doc.getString("haveChildren") ?: "no"
                     val languagesSpoken = doc.get("languagesSpoken") as? List<String> ?: emptyList()
+                    val lastSeen = doc.getLong("lastSeen") ?: 0L
 
                     val profile = UserProfile(
                         uid = uid,
@@ -812,6 +817,7 @@ class AuthViewModel(
                         questionnaireAnswers = questionnaireAnswers,
                         aboutYourself = doc.getString("aboutYourself") ?: "",
                         idealPartner = doc.getString("idealPartner") ?: "",
+                        lastSeen = lastSeen,
                         username = username,
                         oathChecked = oathChecked,
                         skinColor = skinColor,
@@ -1224,7 +1230,21 @@ class AuthViewModel(
 
     fun verifySelfie(imageUri: android.net.Uri, context: android.content.Context, onSuccess: (Boolean) -> Unit) {
         try {
-            val image = InputImage.fromFilePath(context, imageUri)
+            val isVideo = context.contentResolver.getType(imageUri)?.startsWith("video") == true 
+                || imageUri.path?.endsWith(".mp4") == true
+                
+            val image: InputImage = if (isVideo) {
+                val retriever = android.media.MediaMetadataRetriever()
+                retriever.setDataSource(context, imageUri)
+                val bitmap = retriever.getFrameAtTime(1000000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    ?: retriever.frameAtTime 
+                    ?: throw java.lang.Exception("Could not extract frame from video")
+                retriever.release()
+                InputImage.fromBitmap(bitmap, 0)
+            } else {
+                InputImage.fromFilePath(context, imageUri)
+            }
+
             val options = FaceDetectorOptions.Builder()
                 .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
                 .build()
@@ -1242,9 +1262,10 @@ class AuthViewModel(
     }
 
     fun submitVerification(idCardUri: android.net.Uri, selfieUri: android.net.Uri, context: android.content.Context, onResult: (Boolean, String) -> Unit) {
+        val isArabic = java.util.Locale.getDefault().language == "ar"
         verifySelfie(selfieUri, context) { hasFace ->
             if (!hasFace) {
-                onResult(false, "لم يتم اكتشاف وجه في الصورة الشخصية. يرجى التقاط صورة شخصية واضحة.")
+                onResult(false, if (isArabic) "لم يتم اكتشاف وجه في فيديو السيلفي. يرجى تسجيل فيديو سيلفي واضح ومقرب بوجهك." else "No face detected in selfie video. Please record a clear, close-up selfie video of your face.")
                 return@verifySelfie
             }
             viewModelScope.launch {
@@ -1264,14 +1285,13 @@ class AuthViewModel(
                         val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
                         prefs.edit().putString("verificationStatus", "PENDING").apply()
                         _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "PENDING")
-                        val isArabic = java.util.Locale.getDefault().language == "ar"
                         com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
                             context,
                             if (isArabic) "ميثاق - تم إرسال طلب التوثيق" else "Mithaq - Verification Request Sent",
                             if (isArabic) 
-                                "تم إرسال طلب التوثيق بنجاح إلى مشرفك (ولي أمرك) وإلى الإدمن للمراجعة."
+                                "تم إرسال طلب التوثيق بالفيديو بنجاح إلى مشرفك (ولي أمرك) وإلى الإدمن للمراجعة."
                             else 
-                                "Verification request has been sent to your Wali & Admin for review."
+                                "Video verification request has been sent to your Wali & Admin for review."
                         )
                         onResult(true, if (isArabic) "تم تقديم طلب التوثيق بنجاح وإرساله إلى مشرفك (ولي أمرك) وإلى الإدمن للمراجعة." else "Verification request submitted successfully and sent to your supervisor (Wali) and the Admin for review.")
                         return@launch
@@ -1279,13 +1299,25 @@ class AuthViewModel(
 
                     val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
                     val idRef = storageRef.child("verification/$userId/id_card.jpg")
-                    val selfieRef = storageRef.child("verification/$userId/selfie.jpg")
+                    
+                    val isVideo = context.contentResolver.getType(selfieUri)?.startsWith("video") == true 
+                        || selfieUri.path?.endsWith(".mp4") == true
+                    val selfieRef = if (isVideo) {
+                        storageRef.child("verification/$userId/selfie_video.mp4")
+                    } else {
+                        storageRef.child("verification/$userId/selfie.jpg")
+                    }
 
                     val idStream = context.contentResolver.openInputStream(idCardUri) ?: throw java.io.IOException("Cannot open ID card")
                     val selfieStream = context.contentResolver.openInputStream(selfieUri) ?: throw java.io.IOException("Cannot open Selfie")
 
                     idRef.putBytes(idStream.readBytes()).await()
-                    selfieRef.putBytes(selfieStream.readBytes()).await()
+                    
+                    val metadata = com.google.firebase.storage.storageMetadata {
+                        contentType = if (isVideo) "video/mp4" else "image/jpeg"
+                    }
+                    selfieRef.putBytes(selfieStream.readBytes(), metadata).await()
+                    
                     idStream.close()
                     selfieStream.close()
 
@@ -1293,7 +1325,6 @@ class AuthViewModel(
                         .update("verificationStatus", "PENDING").await()
 
                     _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "PENDING")
-                    val isArabic = java.util.Locale.getDefault().language == "ar"
                     com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
                         context,
                         if (isArabic) "ميثاق - تم إرسال طلب التوثيق" else "Mithaq - Verification Request Sent",
@@ -1509,6 +1540,33 @@ class AuthViewModel(
             // 5. Sign Out & Reset State
             signOut()
             onComplete()
+        }
+    }
+
+    fun updateOnlineStatus() {
+        val current = _currentUserProfile.value ?: return
+        val now = System.currentTimeMillis()
+        val updated = current.copy(lastSeen = now)
+        _currentUserProfile.value = updated
+        viewModelScope.launch {
+            userDao?.insertUser(updated.toCached())
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
+            }
+            if (isMock) {
+                context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
+                    putLong("lastSeen", now)
+                    apply()
+                }
+            } else {
+                try {
+                    firestore.collection("users").document(current.uid).update("lastSeen", now).await()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
 }

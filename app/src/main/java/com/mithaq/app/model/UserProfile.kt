@@ -106,7 +106,8 @@ data class UserProfile(
     val aboutYourself: String = "",
     val partnerPreferences: String = "",
     val profileHeading: String = "",
-    val idealPartner: String = ""
+    val idealPartner: String = "",
+    val lastSeen: Long = 0L
 )
 
 enum class Gender(val displayNameEn: String, val displayNameAr: String) {

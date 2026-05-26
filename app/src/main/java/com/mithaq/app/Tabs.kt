@@ -213,7 +213,7 @@ fun GridMatchCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         text = if (isCompatible) profile.name else (if (isArabic) "غير متوافق" else "Incompatible"),
@@ -231,6 +231,23 @@ fun GridMatchCard(
                                 contentDescription = "Verified",
                                 tint = Color(0xFF4CAF50),
                                 modifier = Modifier.size(12.dp)
+                            )
+                        }
+                        val isOnline = (System.currentTimeMillis() - profile.lastSeen) < 300000
+                        val isActiveRecently = (System.currentTimeMillis() - profile.lastSeen) < 86400000
+                        if (isOnline) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF4CAF50))
+                            )
+                        } else if (isActiveRecently) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFF9800))
                             )
                         }
                     }
@@ -326,6 +343,19 @@ fun getCameraImageUri(context: android.content.Context): android.net.Uri {
         directory.mkdirs()
     }
     val file = java.io.File(directory, "camera_capture_${System.currentTimeMillis()}.jpg")
+    return androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "com.mithaq.app.provider",
+        file
+    )
+}
+
+fun getCameraVideoUri(context: android.content.Context): android.net.Uri {
+    val directory = java.io.File(context.cacheDir, "camera")
+    if (!directory.exists()) {
+        directory.mkdirs()
+    }
+    val file = java.io.File(directory, "camera_capture_${System.currentTimeMillis()}.mp4")
     return androidx.core.content.FileProvider.getUriForFile(
         context,
         "com.mithaq.app.provider",
@@ -630,7 +660,10 @@ fun LikesTabContent(
                                     }
                                     
                                     Column {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
                                             Text(
                                                 text = if (isCompatible) partner.name else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
                                                 fontWeight = FontWeight.Bold,
@@ -638,6 +671,23 @@ fun LikesTabContent(
                                             )
                                             if (isCompatible) {
                                                 VerificationBadge(status = partner.verificationStatus)
+                                                val isOnline = (System.currentTimeMillis() - partner.lastSeen) < 300000
+                                                val isActiveRecently = (System.currentTimeMillis() - partner.lastSeen) < 86400000
+                                                if (isOnline) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(8.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFF4CAF50))
+                                                    )
+                                                } else if (isActiveRecently) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(8.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFFF9800))
+                                                    )
+                                                }
                                             }
                                         }
                                         if (isCompatible) {
@@ -883,7 +933,10 @@ fun ViewsTabContent(
                                     }
                                     
                                     Column {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
                                             Text(
                                                 text = if (isCompatible) partner.name else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
                                                 fontWeight = FontWeight.Bold,
@@ -891,6 +944,23 @@ fun ViewsTabContent(
                                             )
                                             if (isCompatible) {
                                                 VerificationBadge(status = partner.verificationStatus)
+                                                val isOnline = (System.currentTimeMillis() - partner.lastSeen) < 300000
+                                                val isActiveRecently = (System.currentTimeMillis() - partner.lastSeen) < 86400000
+                                                if (isOnline) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(8.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFF4CAF50))
+                                                    )
+                                                } else if (isActiveRecently) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(8.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFFF9800))
+                                                    )
+                                                }
                                             }
                                         }
                                         if (isCompatible) {
@@ -1079,7 +1149,10 @@ fun FavoritesTabContent(
                                     }
                                     
                                     Column {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
                                             Text(
                                                 text = if (isCompatible) partner.name else (if (isArabic) "عضو غير متوافق" else "Incompatible Match"),
                                                 fontWeight = FontWeight.Bold,
@@ -1087,6 +1160,23 @@ fun FavoritesTabContent(
                                             )
                                             if (isCompatible) {
                                                 VerificationBadge(status = partner.verificationStatus)
+                                                val isOnline = (System.currentTimeMillis() - partner.lastSeen) < 300000
+                                                val isActiveRecently = (System.currentTimeMillis() - partner.lastSeen) < 86400000
+                                                if (isOnline) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(8.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFF4CAF50))
+                                                    )
+                                                } else if (isActiveRecently) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(8.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFFF9800))
+                                                    )
+                                                }
                                             }
                                         }
                                         if (isCompatible) {

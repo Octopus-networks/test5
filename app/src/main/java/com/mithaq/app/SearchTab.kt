@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -350,6 +351,71 @@ fun SearchTabContent(
                     }
                 }
 
+                // AI Khattaba Matchmaker Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToScreen("ai_matchmaker") },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                        Color(0xFFE28B15).copy(alpha = 0.12f)
+                                    )
+                                )
+                            )
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isArabic) "🤖 استشر الخاطبة الإلكترونية الذكية" else "🤖 Consult the AI Khattaba Matchmaker",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = if (isArabic) "تحدث مع الخاطبة الذكية ودعها ترشح لك شركاء متوافقين معك فورا!" else "Chat with our AI bot to get personalized spouse recommendations!",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 // Mini Stats Row
                 val context2 = androidx.compose.ui.platform.LocalContext.current
                 val likesRepo2 = remember { com.mithaq.app.data.LikesRepository(context2) }
@@ -444,9 +510,29 @@ fun SearchTabContent(
                                     )
                                 }
                                 Column {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
                                         Text(text = topMatch.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                                         VerificationBadge(status = topMatch.verificationStatus)
+                                        val isOnline = (System.currentTimeMillis() - topMatch.lastSeen) < 300000
+                                        val isActiveRecently = (System.currentTimeMillis() - topMatch.lastSeen) < 86400000
+                                        if (isOnline) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(8.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFF4CAF50))
+                                            )
+                                        } else if (isActiveRecently) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(8.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFFFF9800))
+                                            )
+                                        }
                                     }
                                     val sectLabel = topMatch.sect.getDisplayName(isArabic)
                                     val ageSuffix = if (isArabic) "سنة" else "yrs"
