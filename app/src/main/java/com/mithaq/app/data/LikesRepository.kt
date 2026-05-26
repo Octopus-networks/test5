@@ -36,11 +36,15 @@ class LikesRepository(private val context: Context) {
                 val likedByArray = JSONArray(likedByStr).apply { put(fromUid) }
                 prefs.edit().putString("who_liked_me_$toUid", likedByArray.toString()).apply()
 
+                // SEND AUTOMATIC MESSAGE to toUid
+                val fromName = context.getSharedPreferences("mithaq_mock_auth", Context.MODE_PRIVATE).getString("name", "عضو")
+                sendMockAutomaticMessage(fromUid, toUid, "لقد أعجب $fromName بملفك الشخصي!")
+
                 // TRIGGER NOTIFICATION for the recipient (toUid)
                 com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
                     context,
                     "ميثاق - إعجاب جديد",
-                    "هناك شخص معجب بملفك الشخصي! قم بتسجيل الدخول لمعرفته."
+                    "أعجب $fromName بملفك الشخصي للتو!"
                 )
             }
 
@@ -447,6 +451,42 @@ class LikesRepository(private val context: Context) {
                 )
                 roomRef.set(roomData).await()
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun sendMockAutomaticMessage(fromUid: String, toUid: String, content: String) {
+        try {
+            val roomId = if (fromUid < toUid) "${fromUid}_${toUid}" else "${toUid}_${fromUid}"
+            val chatPrefs = context.getSharedPreferences("mithaq_mock_chat", Context.MODE_PRIVATE)
+            
+            // 1. Ensure Room exists
+            createMockChatRoom(fromUid, toUid)
+            
+            // 2. Add message to history
+            val messagesStr = chatPrefs.getString("messages_$roomId", "[]") ?: "[]"
+            val messagesArray = JSONArray(messagesStr)
+            val msgObj = JSONObject().apply {
+                put("senderId", fromUid)
+                put("content", content)
+                put("timestamp", System.currentTimeMillis())
+            }
+            messagesArray.put(msgObj)
+            chatPrefs.edit().putString("messages_$roomId", messagesArray.toString()).apply()
+            
+            // 3. Update last message in room metadata
+            val roomsStr = chatPrefs.getString("mithaq_mock_rooms", "[]") ?: "[]"
+            val roomsArray = JSONArray(roomsStr)
+            for (i in 0 until roomsArray.length()) {
+                val room = roomsArray.getJSONObject(i)
+                if (room.getString("roomId") == roomId) {
+                    room.put("lastMessage", content)
+                    room.put("lastMessageTimestamp", System.currentTimeMillis())
+                }
+            }
+            chatPrefs.edit().putString("mithaq_mock_rooms", roomsArray.toString()).apply()
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
