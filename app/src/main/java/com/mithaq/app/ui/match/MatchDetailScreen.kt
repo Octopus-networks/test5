@@ -11,6 +11,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -156,7 +159,7 @@ fun MatchDetailScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = Color.White
                     )
@@ -215,24 +218,20 @@ fun MatchDetailScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Active Status Indicator
+                    // Activity Status Indicator
+                    // TODO: Replace with real Firestore lastSeen field for accurate presence.
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val isOnline = kotlin.math.abs(partner.uid.hashCode()) % 3 == 0
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
                                 .clip(CircleShape)
-                                .background(if (isOnline) Color(0xFF4CAF50) else Color(0xFFFF5252))
+                                .background(Color(0xFFFFA726)) // Amber — indicates recent but unknown exact status
                         )
                         Text(
-                            text = if (isOnline) {
-                                if (isArabic) "متصل الآن" else "Active now"
-                            } else {
-                                if (isArabic) "نشط منذ ٥ دقائق" else "Active 5m ago"
-                            },
+                            text = if (isArabic) "نشط مؤخراً" else "Recently active",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.9f)
                         )
@@ -300,7 +299,7 @@ fun MatchDetailScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Chat,
+                            imageVector = Icons.AutoMirrored.Filled.Chat,
                             contentDescription = "Chat",
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
@@ -502,7 +501,7 @@ fun MatchDetailScreen(
                                     InfoChip(icon = Icons.Default.Book, label = if (isArabic) "الديانة" else "Religion", value = partner.sect.getDisplayName(isArabic))
                                     InfoChip(icon = Icons.Default.Stars, label = if (isArabic) "الالتزام الديني" else "Religious values", value = if (isArabic) "ملتزم جداً" else "Very Religious")
                                     InfoChip(icon = Icons.Default.AccessTime, label = if (isArabic) "حضور الصلوات" else "Attend services", value = if (isArabic) "يومياً" else "Daily")
-                                    InfoChip(icon = Icons.Default.MenuBook, label = if (isArabic) "قراءة القرآن" else "Read Qur'an", value = if (isArabic) "يومياً" else "Daily")
+                                    InfoChip(icon = Icons.AutoMirrored.Filled.MenuBook, label = if (isArabic) "قراءة القرآن" else "Read Qur'an", value = if (isArabic) "يومياً" else "Daily")
                                     InfoChip(icon = Icons.Default.Accessibility, label = if (isArabic) "منشئ الملف" else "Profile creator", value = if (isArabic) "نفسي" else "Self")
                                 }
                             }

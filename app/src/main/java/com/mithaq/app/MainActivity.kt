@@ -1113,9 +1113,10 @@ fun SearchTabContent(
                         "Matches" -> {
                             list = list.sortedByDescending { MatchScoreCalculator.calculateScore(currentUser, it) }
                         }
-                        "Online" -> {
-                            list = list.filter { kotlin.math.abs(it.uid.hashCode()) % 3 == 0 }
-                        }
+                        "Online" ->
+                            // TODO: Replace with real Firestore presence (lastSeen field) when implemented.
+                            // For now, show verified members as a reasonable proxy for activity.
+                            list = list.filter { it.verificationStatus == "VERIFIED" || it.isPremium }
                         "Popular" -> {
                             list = list.filter { it.isPremium || it.verificationStatus == "VERIFIED" }
                         }
@@ -2075,11 +2076,12 @@ fun ChatTabContent(
                 val displayedRooms = activeRooms.filter { room ->
                     val partnerId = room.memberIds.firstOrNull { it != currentUser.uid } ?: ""
                     when (activeSubTab) {
-                        0 -> { // Received
-                            partnerId == "mock_user_2" || kotlin.math.abs(partnerId.hashCode()) % 3 == 0
+                        0 -> { // All received — show all conversations for now
+                            // TODO: When storing initiatorUid on the chatRoom document, filter by that.
+                            true
                         }
-                        1 -> { // Sent
-                            partnerId != "mock_user_2" && kotlin.math.abs(partnerId.hashCode()) % 3 != 0
+                        1 -> { // Sent — rooms where current user's uid comes first alphabetically
+                            currentUser.uid < partnerId
                         }
                         else -> { // Favorites
                             favoritesIds.contains(partnerId)

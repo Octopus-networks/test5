@@ -26,6 +26,8 @@ sealed interface AuthState {
     object Loading : AuthState
     data class Authenticated(val userId: String) : AuthState
     data class Error(val errorMessage: String) : AuthState
+    /** New Google Sign-In users who haven't completed the onboarding questionnaire yet. */
+    data class NeedsProfileCompletion(val userId: String) : AuthState
 }
 
 /**
@@ -162,7 +164,7 @@ class AuthViewModel(
                                 questionnaireAnswers = emptyMap()
                             ).toCached(),
                             UserProfile(
-                                uid = "wali@mithaq.com",
+                                uid = "mock_wali_001",
                                 name = "Wali / ولي أمر",
                                 gender = Gender.MALE,
                                 age = 52,
@@ -190,7 +192,7 @@ class AuthViewModel(
                                 questionnaireAnswers = emptyMap()
                             ).toCached(),
                             UserProfile(
-                                uid = "admin@mithaq.com",
+                                uid = "mock_admin_001",
                                 name = "Admin / مدير النظام",
                                 gender = Gender.MALE,
                                 age = 35,
@@ -734,11 +736,11 @@ class AuthViewModel(
                                         .await()
                                 }
                                 val wardStatus = wardDoc.getString("guardianStatus")
-                                if (wardStatus != "Verified") {
+                                if (wardStatus != "VERIFIED") {
                                     firestore.collection("users").document(foundWardUid)
-                                        .update("guardianStatus", "Verified")
+                                        .update("guardianStatus", "VERIFIED")
                                         .await()
-                                    guardianStatus = "Verified"
+                                    guardianStatus = "VERIFIED"
                                 }
                             }
                         } catch (e: Exception) {
@@ -923,6 +925,11 @@ class AuthViewModel(
             _authState.value = AuthState.Error("Core credentials cannot be blank.")
             return
         }
+        // Server-side age validation (defense-in-depth — UI also validates)
+        if (profile.age !in 18..77) {
+            _authState.value = AuthState.Error("Age must be between 18 and 77 years.")
+            return
+        }
 
         _authState.value = AuthState.Loading
         viewModelScope.launch {
@@ -1042,7 +1049,7 @@ class AuthViewModel(
                         "modestyPreference" to profile.modestyPreference.name,
                         "relocationWillingness" to profile.relocationWillingness.name,
                         "polygamyAcceptance" to profile.polygamyAcceptance,
-                        "guardianStatus" to "None",
+                        "guardianStatus" to "NONE",
                         "isPremium" to false,
                         "isWaliAccount" to false,
                         "verificationStatus" to "NONE",
@@ -1174,27 +1181,25 @@ class AuthViewModel(
                 if (user != null) {
                     val doc = firestore.collection("users").document(user.uid).get().await()
                     if (!doc.exists()) {
+                        // New Google user: create a minimal skeleton profile.
+                        // The user MUST complete the onboarding questionnaire before accessing the app.
+                        // Do NOT write hardcoded defaults (age, city, gender) — they must fill these in.
                         val name = user.displayName ?: user.email?.substringBefore("@") ?: "Google User"
                         val userProfilePayload = mapOf(
                             "uid" to user.uid,
                             "name" to name,
-                            "gender" to "MALE",
-                            "age" to 25,
-                            "city" to "Cairo",
-                            "country" to "Egypt",
-                            "imageUrl" to (user.photoUrl?.toString() ?: "avatar_brother_green"),
-                            "sect" to "SUNNI",
-                            "prayerFrequency" to "ALWAYS",
-                            "modestyPreference" to "HIJAB",
-                            "relocationWillingness" to "OPEN",
-                            "polygamyAcceptance" to false,
-                            "guardianStatus" to "None",
-                            "isPremium" to false
+                            "imageUrl" to (user.photoUrl?.toString() ?: ""),
+                            "isPremium" to false,
+                            "verificationStatus" to "NONE",
+                            "profileComplete" to false  // Flag: must complete onboarding
                         )
                         firestore.collection("users")
                             .document(user.uid)
                             .set(userProfilePayload)
                             .await()
+                        // Signal that profile completion (onboarding) is required
+                        _authState.value = AuthState.NeedsProfileCompletion(user.uid)
+                        return@launch
                     }
                     fetchCurrentUserProfile(user.uid)
                     _authState.value = AuthState.Authenticated(user.uid)
@@ -1326,6 +1331,11 @@ class AuthViewModel(
     }
 
     fun updateMockRole(isWali: Boolean, isAdmin: Boolean, context: android.content.Context) {
+        // SECURITY: Never allow role changes in production. This is strictly a dev/demo tool.
+        if (com.mithaq.app.Config.IS_PRODUCTION) {
+            android.util.Log.w("AuthViewModel", "updateMockRole called in production — blocked.")
+            return
+        }
         viewModelScope.launch {
             val current = _currentUserProfile.value ?: return@launch
             val updated = current.copy(isWaliAccount = isWali, isAdmin = isAdmin)

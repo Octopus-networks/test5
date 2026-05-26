@@ -85,13 +85,20 @@ fun LoginScreen(
         }
     }
 
-    // React to success and sign-out states
+    // React to success, profile-completion-required, and sign-out states
     LaunchedEffect(authState) {
-        if (authState is AuthState.Authenticated) {
-            onLoginSuccess((authState as AuthState.Authenticated).userId)
-        } else if (authState is AuthState.Idle) {
-            email = ""
-            password = ""
+        when (val state = authState) {
+            is AuthState.Authenticated -> onLoginSuccess(state.userId)
+            is AuthState.NeedsProfileCompletion -> {
+                // New Google user — navigate to register/onboarding to complete their profile
+                onNavigateToRegister()
+                viewModel.resetState()
+            }
+            is AuthState.Idle -> {
+                email = ""
+                password = ""
+            }
+            else -> Unit
         }
     }
 

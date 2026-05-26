@@ -331,9 +331,12 @@ class ChaperonedChatViewModel(
         val emailPattern = Regex("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}")
         if (emailPattern.containsMatchIn(lowercase)) return true
         
-        // Phone number pattern (looks for a sequence of 8 or more contiguous digits)
-        val phoneCandidatePattern = Regex("\\d{8,}")
-        if (phoneCandidatePattern.containsMatchIn(lowercase)) return true
+        // Phone number pattern: requires 10+ consecutive digits OR a shorter digit sequence preceded by
+        // international prefix indicators (+, 00, or a leading 0). This avoids false positives on
+        // normal text like verse numbers or years.
+        val phoneLongPattern = Regex("\\d{10,}")
+        val phoneWithPrefixPattern = Regex("(?:\\+|00|\\b0)\\d{8,}")
+        if (phoneLongPattern.containsMatchIn(lowercase) || phoneWithPrefixPattern.containsMatchIn(lowercase)) return true
         
         // Check for common social media platforms and keywords
         val forbiddenKeywords = listOf(
