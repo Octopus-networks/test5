@@ -10,6 +10,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.AbsoluteAlignment
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
@@ -56,7 +58,7 @@ fun ChatBubble(
         MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    val alignment = if (isCurrentUser) Alignment.End else Alignment.Start
+    val alignment = if (isCurrentUser) AbsoluteAlignment.Right else AbsoluteAlignment.Left
 
     Column(
         horizontalAlignment = alignment,
@@ -66,7 +68,7 @@ fun ChatBubble(
     ) {
         Row(
             verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start,
+            horizontalArrangement = if (isCurrentUser) Arrangement.Absolute.Right else Arrangement.Absolute.Left,
             modifier = Modifier.fillMaxWidth(0.85f)
         ) {
             // Translate Trigger Icon (Left of bubble for incoming messages, right of bubble for outgoing messages)
@@ -113,7 +115,9 @@ fun ChatBubble(
                     Text(
                         text = displayText,
                         color = textColor,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textDirection = TextDirection.ContentOrLtr
+                        ),
                         lineHeight = 20.sp
                     )
 

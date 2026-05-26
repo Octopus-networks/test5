@@ -89,6 +89,10 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.HelpCenter
 import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.text.style.TextDirection
 
 
 
@@ -743,13 +747,19 @@ fun ChatTabContent(
                     }
                 }
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
+                val listState = rememberLazyListState()
+                LaunchedEffect(messages.size) {
+                    if (messages.isNotEmpty()) {
+                        listState.animateScrollToItem(messages.size - 1)
+                    }
+                }
+
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    messages.forEach { msg ->
+                    items(messages) { msg ->
                         val isMe = msg.senderId == currentUser.uid
                         ChatBubble(
                             messageText = msg.content,
@@ -760,45 +770,47 @@ fun ChatTabContent(
                     // Interactive Photo Access Bubble inside chat
                     val isPartnerPhotoApproved = targetUser.photoAccessApprovedUsers.contains(currentUser.uid) || partnerPhotoState == PhotoAccessState.APPROVED
                     if (!isPartnerPhotoApproved) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f)),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                        item {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f)),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
                             ) {
-                                Text(
-                                    text = if (strings.appName == "ميثاق") "صورة الشريك مغطاة للحشمة." else "Partner's photo is blurred for modesty.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    textAlign = TextAlign.Center
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                if (partnerPhotoState == PhotoAccessState.PENDING) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
                                     Text(
-                                        text = if (strings.appName == "ميثاق") "طلب رؤية الصورة معلق بانتظار موافقة الشريك..." else "Photo access request is pending partner approval...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        text = if (strings.appName == "ميثاق") "صورة الشريك مغطاة للحشمة." else "Partner's photo is blurred for modesty.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
                                         textAlign = TextAlign.Center
                                     )
-                                } else {
-                                    Button(
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                val success = photoAccessManager.requestPhotoAccess(currentUser.uid, targetUser.uid)
-                                                if (success) {
-                                                    partnerPhotoState = PhotoAccessState.PENDING
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    if (partnerPhotoState == PhotoAccessState.PENDING) {
+                                        Text(
+                                            text = if (strings.appName == "ميثاق") "طلب رؤية الصورة معلق بانتظار موافقة الشريك..." else "Photo access request is pending partner approval...",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    } else {
+                                        Button(
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    val success = photoAccessManager.requestPhotoAccess(currentUser.uid, targetUser.uid)
+                                                    if (success) {
+                                                        partnerPhotoState = PhotoAccessState.PENDING
+                                                    }
                                                 }
-                                            }
-                                        },
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text(if (strings.appName == "ميثاق") "طلب رؤية الصورة" else "Request Photo Access")
+                                            },
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text(if (strings.appName == "ميثاق") "طلب رؤية الصورة" else "Request Photo Access")
+                                        }
                                     }
                                 }
                             }
@@ -810,61 +822,63 @@ fun ChatTabContent(
                     val hasRequestedUserPhoto = currentUser.photoAccessRequests.contains(targetUser.uid) || userPhotoStateForPartner == PhotoAccessState.PENDING
                     
                     if (!isUserPhotoApprovedForPartner && hasRequestedUserPhoto) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                        item {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                             ) {
-                                Text(
-                                    text = if (strings.appName == "ميثاق") "طلب الشريك رؤية صورتك الشخصية." else "Partner requested to view your profile photo.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    textAlign = TextAlign.Center
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                val success = photoAccessManager.approvePhotoAccess(currentUser.uid, targetUser.uid)
-                                                if (success) {
-                                                    userPhotoStateForPartner = PhotoAccessState.APPROVED
-                                                    android.widget.Toast.makeText(
-                                                        context,
-                                                        if (strings.appName == "ميثاق") "تم السماح برؤية صورتك!" else "Photo access approved!",
-                                                        android.widget.Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(12.dp)
+                                    Text(
+                                        text = if (strings.appName == "ميثاق") "طلب الشريك رؤية صورتك الشخصية." else "Partner requested to view your profile photo.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text(if (strings.appName == "ميثاق") "موافقة" else "Approve")
-                                    }
-                                    OutlinedButton(
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                val success = photoAccessManager.revokePhotoAccess(currentUser.uid, targetUser.uid)
-                                                if (success) {
-                                                    userPhotoStateForPartner = PhotoAccessState.NONE
+                                        Button(
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    val success = photoAccessManager.approvePhotoAccess(currentUser.uid, targetUser.uid)
+                                                    if (success) {
+                                                        userPhotoStateForPartner = PhotoAccessState.APPROVED
+                                                        android.widget.Toast.makeText(
+                                                            context,
+                                                            if (strings.appName == "ميثاق") "تم السماح برؤية صورتك!" else "Photo access approved!",
+                                                            android.widget.Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
                                                 }
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text(if (strings.appName == "ميثاق") "رفض" else "Reject")
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text(if (strings.appName == "ميثاق") "موافقة" else "Approve")
+                                        }
+                                        OutlinedButton(
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    val success = photoAccessManager.revokePhotoAccess(currentUser.uid, targetUser.uid)
+                                                    if (success) {
+                                                        userPhotoStateForPartner = PhotoAccessState.NONE
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text(if (strings.appName == "ميثاق") "رفض" else "Reject")
+                                        }
                                     }
                                 }
                             }
@@ -984,7 +998,8 @@ fun ChatTabContent(
                         onValueChange = { messageText = it },
                         placeholder = { Text(if (strings.appName == "ميثاق") "اكتب رسالة جادة..." else "Write serious message...") },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.ContentOrLtr)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
