@@ -49,19 +49,21 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
             }
             val pendingIntent = PendingIntent.getActivity(
                 context, 0, intent,
-                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            val channelId = "mithaq_alerts_channel_v4"
+            val channelId = "mithaq_urgent_channel_v1"
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val soundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channelName = "Mithaq Notifications"
+                val channelName = "Mithaq Official Alerts"
                 val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = "Mithaq app alerts and notifications"
+                    description = "Urgent alerts for messages and interactions"
                     enableLights(true)
                     enableVibration(true)
+                    setShowBadge(true)
+                    setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC)
                     val attributes = android.media.AudioAttributes.Builder()
                         .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
                         .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -72,15 +74,17 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
             }
 
             val notificationBuilder = NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.stat_notify_chat)
+                .setSmallIcon(android.R.drawable.ic_dialog_email)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setAutoCancel(true)
+                .setTicker(title)
                 .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setSound(soundUri)
-                .setVibrate(longArrayOf(1000, 1000, 1000, 1000, 1000))
-                .setDefaults(NotificationCompat.DEFAULT_LIGHTS)
+                .setVibrate(longArrayOf(0, 500, 200, 500))
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
 
             notificationManager.notify(notificationIdCounter.incrementAndGet(), notificationBuilder.build())
         }

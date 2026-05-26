@@ -215,10 +215,14 @@ fun MithaqAppNavigation(
     var initialChatUser by remember { mutableStateOf<UserProfile?>(null) }
     var premiumStoreInitialTab by remember { mutableStateOf(0) }
 
+    var hasNotificationPermission by remember { mutableStateOf(true) }
+
     // Request notification permission on Android 13+
     val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-    ) { _ -> }
+    ) { isGranted -> 
+        hasNotificationPermission = isGranted
+    }
 
     LaunchedEffect(Unit) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -226,7 +230,8 @@ fun MithaqAppNavigation(
                 context,
                 android.Manifest.permission.POST_NOTIFICATIONS
             )
-            if (permissionCheck != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            hasNotificationPermission = permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (!hasNotificationPermission) {
                 notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
             }
         }
