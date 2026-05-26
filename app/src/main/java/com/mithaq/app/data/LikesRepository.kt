@@ -35,6 +35,13 @@ class LikesRepository(private val context: Context) {
                 val likedByStr = prefs.getString("who_liked_me_$toUid", "[]") ?: "[]"
                 val likedByArray = JSONArray(likedByStr).apply { put(fromUid) }
                 prefs.edit().putString("who_liked_me_$toUid", likedByArray.toString()).apply()
+
+                // TRIGGER NOTIFICATION for the recipient (toUid)
+                com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                    context,
+                    "ميثاق - إعجاب جديد",
+                    "هناك شخص معجب بملفك الشخصي! قم بتسجيل الدخول لمعرفته."
+                )
             }
 
             // Check if toUid liked fromUid (Mutual)
@@ -185,6 +192,13 @@ class LikesRepository(private val context: Context) {
             if (!exists) {
                 array.put(viewerUid)
                 prefs.edit().putString("views_$viewedUid", array.toString()).apply()
+
+                // TRIGGER NOTIFICATION for the viewed user
+                com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                    context,
+                    "ميثاق - زائر جديد",
+                    "هناك عضو قام بزيارة ملفك الشخصي للتو!"
+                )
             }
 
             // Profiles viewed by viewerUid

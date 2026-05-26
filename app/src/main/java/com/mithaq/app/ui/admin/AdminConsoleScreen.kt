@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -89,154 +90,211 @@ fun AdminConsoleScreen(
                     onClick = { selectedTab = 2 },
                     text = { Text(text = if (isArabic) "إدارة الأعضاء (${allUsers.size})" else "Members (${allUsers.size})") }
                 )
+                Tab(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    text = { Text(text = if (isArabic) "الاختبار" else "Debug") }
+                )
             }
 
-            if (selectedTab == 0) {
-                // Pending Verifications List
-                if (pendingUsers.isEmpty()) {
-                    Box(
+            when (selectedTab) {
+                0 -> {
+                    // Pending Verifications List
+                    if (pendingUsers.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.outline
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = if (isArabic) "لا توجد طلبات توثيق معلقة حالياً" else "No pending verification requests",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp)
+                        ) {
+                            items(pendingUsers) { user ->
+                                val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+                                PendingUserVerificationCard(
+                                    user = user,
+                                    isArabic = isArabic,
+                                    onApprove = {
+                                        viewModel.adminUpdateVerification(user.uid, "VERIFIED")
+                                        com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                            context = context,
+                                            title = if (isArabic) "ميثاق - تم توثيق الحساب" else "Mithaq - Account Verified",
+                                            body = if (isArabic) "لقد تم قبول طلب توثيق الهوية للحساب ${user.name} بنجاح!"
+                                                   else "Identity verification request for ${user.name} has been approved!"
+                                        )
+                                    },
+                                    onReject = {
+                                        viewModel.adminUpdateVerification(user.uid, "NONE")
+                                        com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                            context = context,
+                                            title = if (isArabic) "ميثاق - رفض التوثيق" else "Mithaq - Verification Rejected",
+                                            body = if (isArabic) "تم رفض طلب توثيق الهوية للحساب ${user.name}."
+                                                   else "Identity verification request for ${user.name} has been rejected."
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                1 -> {
+                    // Statistics Dashboard
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp)
+                    ) {
+                        Text(
+                            text = if (isArabic) "نظرة عامة على النظام" else "Platform Overview",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            StatCard(
+                                title = if (isArabic) "الأعضاء المسجلين" else "Total Members",
+                                value = totalUsers.toString(),
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatCard(
+                                title = if (isArabic) "الحسابات الموثقة" else "Verified Members",
+                                value = verifiedUsers.toString(),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            StatCard(
+                                title = if (isArabic) "أولياء الأمور" else "Registered Walis",
+                                value = totalWali.toString(),
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatCard(
+                                title = if (isArabic) "نسبة التوثيق" else "Verification Rate",
+                                value = if (totalUsers > 0) "${((verifiedUsers.toFloat() / totalUsers) * 100).toInt()}%" else "0%",
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp)
+                            ) {
+                                Text(
+                                    text = if (isArabic) "إرشادات الإدارة والأمان" else "Admin Security Guidelines",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = if (isArabic)
+                                        "1. يرجى مطابقة صورة بطاقة الهوية بالصورة الشخصية وتأكيد تطابق الملامح والاسم.\n" +
+                                        "2. احرص على حماية خصوصية المستخدمين وعدم مشاركة بياناتهم الشخصية لأي جهة خارجية.\n" +
+                                        "3. في حال وجود اشتباه ببطاقة هوية مزورة، يرجى رفض الطلب لإلزام المستخدم برفعه مجدداً."
+                                    else "1. Compare the uploaded ID document with the selfie to confirm facial matches.\n" +
+                                          "2. Respect user privacy. Never share uploaded identity documents with external parties.\n" +
+                                          "3. Reject submissions containing blurry or fraudulent ID graphics immediately.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
+                    }
+                }
+                2 -> {
+                    ManageMembersTab(
+                        allUsers = allUsers,
+                        isArabic = isArabic,
+                        currentUid = viewModel.currentUserProfile.collectAsState().value?.uid ?: "",
+                        viewModel = viewModel
+                    )
+                }
+                3 -> {
+                    // Debug & Test Tab
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(24.dp),
-                        contentAlignment = Alignment.Center
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.outline
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = if (isArabic) "لا توجد طلبات توثيق معلقة حالياً" else "No pending verification requests",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        items(pendingUsers) { user ->
-                            val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
-                            PendingUserVerificationCard(
-                                user = user,
-                                isArabic = isArabic,
-                                onApprove = {
-                                    viewModel.adminUpdateVerification(user.uid, "VERIFIED")
-                                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
-                                        context = context,
-                                        title = if (isArabic) "ميثاق - تم توثيق الحساب" else "Mithaq - Account Verified",
-                                        body = if (isArabic) "لقد تم قبول طلب توثيق الهوية للحساب ${user.name} بنجاح!"
-                                               else "Identity verification request for ${user.name} has been approved!"
-                                    )
-                                },
-                                onReject = {
-                                    viewModel.adminUpdateVerification(user.uid, "NONE")
-                                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
-                                        context = context,
-                                        title = if (isArabic) "ميثاق - رفض التوثيق" else "Mithaq - Verification Rejected",
-                                        body = if (isArabic) "تم رفض طلب توثيق الهوية للحساب ${user.name}."
-                                               else "Identity verification request for ${user.name} has been rejected."
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-            } else if (selectedTab == 1) {
-                // Statistics Dashboard
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = if (isArabic) "نظرة عامة على النظام" else "Platform Overview",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        StatCard(
-                            title = if (isArabic) "الأعضاء المسجلين" else "Total Members",
-                            value = totalUsers.toString(),
-                            modifier = Modifier.weight(1f)
+                        val context = androidx.compose.ui.platform.LocalContext.current
+                        Text(
+                            text = if (isArabic) "أدوات اختبار النظام" else "Debug & Test Tools",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                        StatCard(
-                            title = if (isArabic) "الحسابات الموثقة" else "Verified Members",
-                            value = verifiedUsers.toString(),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        StatCard(
-                            title = if (isArabic) "أولياء الأمور" else "Registered Walis",
-                            value = totalWali.toString(),
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatCard(
-                            title = if (isArabic) "نسبة التوثيق" else "Verification Rate",
-                            value = if (totalUsers > 0) "${((verifiedUsers.toFloat() / totalUsers) * 100).toInt()}%" else "0%",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp)
+                        
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
-                            Text(
-                                text = if (isArabic) "إرشادات الإدارة والأمان" else "Admin Security Guidelines",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = if (isArabic)
-                                    "1. يرجى مطابقة صورة بطاقة الهوية بالصورة الشخصية وتأكيد تطابق الملامح والاسم.\n" +
-                                    "2. احرص على حماية خصوصية المستخدمين وعدم مشاركة بياناتهم الشخصية لأي جهة خارجية.\n" +
-                                    "3. في حال وجود اشتباه ببطاقة هوية مزورة، يرجى رفض الطلب لإلزام المستخدم برفعه مجدداً."
-                                else "1. Compare the uploaded ID document with the selfie to confirm facial matches.\n" +
-                                      "2. Respect user privacy. Never share uploaded identity documents with external parties.\n" +
-                                      "3. Reject submissions containing blurry or fraudulent ID graphics immediately.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                lineHeight = 18.sp
-                            )
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = if (isArabic) "اختبار الإشعارات" else "Test Notifications",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = if (isArabic) "اضغط للتأكد من ظهور الإشعارات على جهازك." else "Click to verify that notifications appear on your device.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = {
+                                        com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                            context = context,
+                                            title = if (isArabic) "ميثاق - إشعار تجريبي" else "Mithaq - Test Notification",
+                                            body = if (isArabic) "هذا إشعار تجريبي للتأكد من عمل النظام بنجاح." else "This is a test notification to ensure the system is working."
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (isArabic) "إرسال إشعار تجريبي" else "Send Test Notification")
+                                }
+                            }
                         }
                     }
                 }
-            } else {
-                ManageMembersTab(
-                    allUsers = allUsers,
-                    isArabic = isArabic,
-                    currentUid = viewModel.currentUserProfile.collectAsState().value?.uid ?: "",
-                    viewModel = viewModel
-                )
             }
         }
     }
@@ -350,7 +408,7 @@ fun PendingUserVerificationCard(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Gray
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = null,
@@ -638,4 +696,3 @@ fun ManageMembersTab(
         }
     }
 }
-

@@ -381,11 +381,14 @@ class ChaperonedChatViewModel(
                 _messages.value = list
                 saveMessagesMock(list)
 
-                // ALSO update the recipient's mock messages list if we want it to show up for them too
-                // (Assuming they share the same SharedPreferences on this device)
-                // The current saveMessagesMock(list) uses roomId, which is SHARED between both users.
-                // roomId = minOf(uid1, uid2)_maxOf(uid1, uid2)
-                // So if both users are on the same device, they should see the same messages.
+                // TRIGGER NOTIFICATION for the recipient
+                context?.let { ctx ->
+                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                        context = ctx,
+                        title = "ميثاق - رسالة جديدة",
+                        body = messageText.trim()
+                    )
+                }
 
                 // Simulate an automated reply after 3 seconds
                 viewModelScope.launch {
