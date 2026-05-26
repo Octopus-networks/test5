@@ -381,14 +381,12 @@ class ChaperonedChatViewModel(
                 _messages.value = list
                 saveMessagesMock(list)
 
-                // TRIGGER NOTIFICATION for the recipient
-                context?.let { ctx ->
-                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
-                        context = ctx,
-                        title = "ميثاق - رسالة جديدة",
-                        body = messageText.trim()
-                    )
-                }
+                // QUEUE NOTIFICATION for the recipient
+                queueMockNotification(
+                    recipientId = roomId.split("_").firstOrNull { it != senderId } ?: "target",
+                    title = "ميثاق - رسالة جديدة",
+                    body = messageText.trim()
+                )
 
                 // Simulate an automated reply after 3 seconds
                 viewModelScope.launch {
@@ -544,5 +542,23 @@ class ChaperonedChatViewModel(
         }
         
         prefs.edit().putString("mithaq_mock_rooms", array.toString()).apply()
+    }
+
+    private fun queueMockNotification(recipientId: String, title: String, body: String) {
+        try {
+            val context = context ?: return
+            val queuePrefs = context.getSharedPreferences("mithaq_notification_queue", android.content.Context.MODE_PRIVATE)
+            val queueStr = queuePrefs.getString("queue_$recipientId", "[]") ?: "[]"
+            val array = org.json.JSONArray(queueStr)
+            val notifObj = org.json.JSONObject().apply {
+                put("title", title)
+                put("body", body)
+                put("timestamp", System.currentTimeMillis())
+            }
+            array.put(notifObj)
+            queuePrefs.edit().putString("queue_$recipientId", array.toString()).apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

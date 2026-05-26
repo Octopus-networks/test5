@@ -40,9 +40,9 @@ class LikesRepository(private val context: Context) {
                 val fromName = context.getSharedPreferences("mithaq_mock_auth", Context.MODE_PRIVATE).getString("name", "عضو")
                 sendMockAutomaticMessage(fromUid, toUid, "لقد أعجب $fromName بملفك الشخصي!")
 
-                // TRIGGER NOTIFICATION for the recipient (toUid)
-                com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
-                    context,
+                // QUEUE NOTIFICATION for the recipient (toUid)
+                queueMockNotification(
+                    toUid,
                     "ميثاق - إعجاب جديد",
                     "أعجب $fromName بملفك الشخصي للتو!"
                 )
@@ -197,9 +197,9 @@ class LikesRepository(private val context: Context) {
                 array.put(viewerUid)
                 prefs.edit().putString("views_$viewedUid", array.toString()).apply()
 
-                // TRIGGER NOTIFICATION for the viewed user
-                com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
-                    context,
+                // QUEUE NOTIFICATION for the viewed user
+                queueMockNotification(
+                    viewedUid,
                     "ميثاق - زائر جديد",
                     "هناك عضو قام بزيارة ملفك الشخصي للتو!"
                 )
@@ -487,6 +487,23 @@ class LikesRepository(private val context: Context) {
             }
             chatPrefs.edit().putString("mithaq_mock_rooms", roomsArray.toString()).apply()
 
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun queueMockNotification(targetUid: String, title: String, body: String) {
+        try {
+            val queuePrefs = context.getSharedPreferences("mithaq_notification_queue", Context.MODE_PRIVATE)
+            val queueStr = queuePrefs.getString("queue_$targetUid", "[]") ?: "[]"
+            val array = JSONArray(queueStr)
+            val notifObj = JSONObject().apply {
+                put("title", title)
+                put("body", body)
+                put("timestamp", System.currentTimeMillis())
+            }
+            array.put(notifObj)
+            queuePrefs.edit().putString("queue_$targetUid", array.toString()).apply()
         } catch (e: Exception) {
             e.printStackTrace()
         }

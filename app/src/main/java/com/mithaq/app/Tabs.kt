@@ -286,49 +286,49 @@ fun getMockUserProfile(uid: String): UserProfile {
     return when (uid) {
         "mock_user_2" -> UserProfile(
             uid = "mock_user_2",
-            name = "Fatima Al-Zahra",
+            name = "Fatima / فاطمة",
             gender = Gender.FEMALE,
             age = 24,
-            city = "Riyadh",
-            country = "Saudi Arabia",
-            imageUrl = "",
+            city = "Cairo",
+            country = "Egypt",
+            imageUrl = "avatar_sister_purple",
             sect = Sect.SUNNI,
             prayerFrequency = PrayerFrequency.ALWAYS,
             modestyPreference = ModestyPreference.HIJAB,
-            relocationWillingness = RelocationWillingness.YES,
-            polygamyAcceptance = false
+            relocationWillingness = RelocationWillingness.OPEN,
+            verificationStatus = "VERIFIED"
         )
         "mock_user_3" -> UserProfile(
             uid = "mock_user_3",
-            name = "Aisha Khan",
+            name = "Ahmad / أحمد",
+            gender = Gender.MALE,
+            age = 29,
+            city = "Riyadh",
+            country = "Saudi Arabia",
+            imageUrl = "avatar_brother_green",
+            sect = Sect.SUNNI,
+            prayerFrequency = PrayerFrequency.ALWAYS,
+            modestyPreference = ModestyPreference.DOES_NOT_MATTER,
+            relocationWillingness = RelocationWillingness.YES,
+            verificationStatus = "VERIFIED"
+        )
+        "mock_user_4" -> UserProfile(
+            uid = "mock_user_4",
+            name = "Sarah / سارة",
             gender = Gender.FEMALE,
             age = 27,
             city = "Dubai",
             country = "UAE",
-            imageUrl = "",
-            sect = Sect.SUNNI,
-            prayerFrequency = PrayerFrequency.ALWAYS,
-            modestyPreference = ModestyPreference.NIQAB,
-            relocationWillingness = RelocationWillingness.OPEN,
-            polygamyAcceptance = true
-        )
-        "mock_user_4" -> UserProfile(
-            uid = "mock_user_4",
-            name = "Yasmin Masri",
-            gender = Gender.FEMALE,
-            age = 22,
-            city = "Cairo",
-            country = "Egypt",
-            imageUrl = "",
+            imageUrl = "avatar_sister_purple",
             sect = Sect.SUNNI,
             prayerFrequency = PrayerFrequency.USUALLY,
             modestyPreference = ModestyPreference.HIJAB,
-            relocationWillingness = RelocationWillingness.NO,
-            polygamyAcceptance = false
+            relocationWillingness = RelocationWillingness.OPEN,
+            verificationStatus = "PENDING"
         )
         else -> UserProfile(
             uid = uid,
-            name = if (uid == "mock_user_123" || uid == "mock_user") "Mock User" else "Partner $uid",
+            name = if (uid.contains("mock")) "Mock User" else "Partner $uid",
             gender = Gender.FEMALE,
             age = 25,
             city = "Cairo",

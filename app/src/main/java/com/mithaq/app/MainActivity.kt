@@ -238,6 +238,7 @@ fun MithaqAppNavigation(
     }
 
     // ViewModels initialized safely
+    val coroutineScope = rememberCoroutineScope()
     val authViewModel = remember { AuthViewModel(context = context) }
     val searchViewModel = remember { SearchViewModel(context = context) }
     val guardianViewModel = remember { GuardianViewModel() }
@@ -265,6 +266,30 @@ fun MithaqAppNavigation(
             authViewModel.fetchCurrentUserProfile(currentUserId)
             searchViewModel.fetchUsers()
             authViewModel.updateOnlineStatus()
+        }
+    }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotEmpty()) {
+            coroutineScope.launch {
+                while (true) {
+                    val queuePrefs = context.getSharedPreferences("mithaq_notification_queue", android.content.Context.MODE_PRIVATE)
+                    val queueStr = queuePrefs.getString("queue_$currentUserId", "[]") ?: "[]"
+                    val array = org.json.JSONArray(queueStr)
+                    if (array.length() > 0) {
+                        for (i in 0 until array.length()) {
+                            val notif = array.getJSONObject(i)
+                            com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                context,
+                                notif.getString("title"),
+                                notif.getString("body")
+                            )
+                        }
+                        queuePrefs.edit().putString("queue_$currentUserId", "[]").apply()
+                    }
+                    kotlinx.coroutines.delay(5000) // Poll every 5 seconds
+                }
+            }
         }
     }
 
