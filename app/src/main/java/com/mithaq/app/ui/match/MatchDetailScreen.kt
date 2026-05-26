@@ -37,6 +37,7 @@ import com.mithaq.app.ui.theme.GlassBorderDark
 import com.mithaq.app.ui.theme.GlassBorderLight
 import com.mithaq.app.ui.theme.GlassSurfaceDark
 import com.mithaq.app.ui.theme.GlassSurfaceLight
+import com.mithaq.app.ui.match.IstikharaGuideDialog
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.isSystemInDarkTheme
 
@@ -62,6 +63,7 @@ fun MatchDetailScreen(
     var isFavorite by remember { mutableStateOf(false) }
     var isLiked by remember { mutableStateOf(false) }
     var showMoreDetails by remember { mutableStateOf(false) }
+    var showIstikharaGuide by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     // Register profile view automatically on open
@@ -208,6 +210,16 @@ fun MatchDetailScreen(
                         }
                     }
 
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Default.TrendingUp, contentDescription = null, tint = com.mithaq.app.ui.theme.AccentGold, modifier = Modifier.size(16.dp))
+                        Text(
+                            text = if (isArabic) "مؤشر الجدية: ${partner.seriousnessScore}%" else "Seriousness: ${partner.seriousnessScore}%",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
@@ -238,13 +250,32 @@ fun MatchDetailScreen(
                     }
                 }
 
-                // Inline quick interaction overlays on the bottom right of photo
+                    // Inline quick interaction overlays on the bottom right of photo
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Istikhara Button
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.tertiary)
+                            .clickable {
+                                showIstikharaGuide = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MenuBook,
+                            contentDescription = "Istikhara",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
                     // Quick Like
                     Box(
                         modifier = Modifier
@@ -882,6 +913,13 @@ fun MatchDetailScreen(
                 }
             }
         }
+    }
+
+    if (showIstikharaGuide) {
+        IstikharaGuideDialog(
+            isArabic = isArabic,
+            onDismiss = { showIstikharaGuide = false }
+        )
     }
 }
 

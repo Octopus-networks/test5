@@ -73,6 +73,7 @@ import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
 import com.mithaq.app.ui.chat.IceBreakerGenerator
+import com.mithaq.app.ui.chat.SevenQuestionsChallengeScreen
 import com.mithaq.app.security.SecureScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -85,6 +86,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.HelpCenter
 import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
 
@@ -582,6 +584,16 @@ fun ChatTabContent(
 
     var messageText by remember { mutableStateOf("") }
     var showWaliDialog by remember { mutableStateOf(false) }
+    var showChallenge by remember { mutableStateOf(false) }
+
+    if (showChallenge) {
+        SevenQuestionsChallengeScreen(
+            partner = targetUser,
+            isArabic = strings.appName == "ميثاق",
+            onBack = { showChallenge = false }
+        )
+        return
+    }
 
     if (warningState != null) {
         AlertDialog(
@@ -674,6 +686,14 @@ fun ChatTabContent(
                             imageVector = Icons.Default.Phone,
                             contentDescription = "Voice Call",
                             tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    IconButton(onClick = { showChallenge = true }) {
+                        Icon(
+                            imageVector = Icons.Default.HelpCenter,
+                            contentDescription = "7 Questions Challenge",
+                            tint = MaterialTheme.colorScheme.secondary
                         )
                     }
                 }

@@ -107,7 +107,11 @@ data class UserProfile(
     val partnerPreferences: String = "",
     val profileHeading: String = "",
     val idealPartner: String = "",
-    val lastSeen: Long = 0L
+    val lastSeen: Long = 0L,
+    
+    // Phase 2: Islamic Identity & Trust
+    val seriousnessScore: Int = 0,
+    val istikharaCount: Int = 0
 )
 
 enum class Gender(val displayNameEn: String, val displayNameAr: String) {

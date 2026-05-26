@@ -481,6 +481,46 @@ class AuthViewModel(
         }
     }
 
+    private fun calculateSeriousnessScore(profile: UserProfile): Int {
+        var score = 0
+        
+        // 1. Profile Completion (up to 30 pts)
+        var completionPoints = 0
+        if (profile.aboutYourself.length > 20) completionPoints += 10
+        if (profile.idealPartner.length > 20) completionPoints += 10
+        if (profile.educationLevel.isNotEmpty()) completionPoints += 5
+        if (profile.jobTitle.isNotEmpty()) completionPoints += 5
+        score += completionPoints
+
+        // 2. Identity Verification (30 pts)
+        if (profile.verificationStatus == "VERIFIED") {
+            score += 30
+        } else if (profile.verificationStatus == "PENDING") {
+            score += 15
+        }
+
+        // 3. Wali Link (20 pts)
+        if (profile.guardianStatus == "VERIFIED") {
+            score += 20
+        } else if (profile.guardianStatus == "PENDING") {
+            score += 10
+        }
+
+        // 4. Premium Status (10 pts)
+        if (profile.isPremium) {
+            score += 10
+        }
+
+        // 5. Activity (up to 10 pts)
+        if (profile.lastSeen > 0) {
+            val daysSinceLastSeen = (System.currentTimeMillis() - profile.lastSeen) / (1000 * 60 * 60 * 24)
+            if (daysSinceLastSeen < 3) score += 10
+            else if (daysSinceLastSeen < 7) score += 5
+        }
+
+        return score.coerceIn(0, 100)
+    }
+
     fun fetchCurrentUserProfile(uid: String) {
         viewModelScope.launch {
             val isOfflineSimulated = context?.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
@@ -665,8 +705,9 @@ class AuthViewModel(
                         languagesSpoken = languagesSpoken,
                         lastSeen = lastSeen
                     )
-                    _currentUserProfile.value = profile
-                    userDao?.insertUser(profile.toCached())
+                    val finalProfile = profile.copy(seriousnessScore = calculateSeriousnessScore(profile))
+                    _currentUserProfile.value = finalProfile
+                    userDao?.insertUser(finalProfile.toCached())
                 } else {
                     val fallback = UserProfile(
                         uid = uid,
@@ -844,8 +885,9 @@ class AuthViewModel(
                         haveChildren = haveChildren,
                         languagesSpoken = languagesSpoken
                     )
-                    _currentUserProfile.value = profile
-                    userDao?.insertUser(profile.toCached())
+                    val finalProfile = profile.copy(seriousnessScore = calculateSeriousnessScore(profile))
+                    _currentUserProfile.value = finalProfile
+                    userDao?.insertUser(finalProfile.toCached())
 
                     try {
                         val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()

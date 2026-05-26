@@ -85,6 +85,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.TrendingUp
 import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
 
@@ -228,6 +229,8 @@ fun SearchTabContent(
                                      (if (isVerified) 25 else 0) + 
                                      (if (hasQuiz) 25 else 0) + 
                                      (if (hasWali) 25 else 0)
+                
+                val seriousnessScore = currentUser.seriousnessScore
 
                 Card(
                     modifier = Modifier
@@ -268,6 +271,29 @@ fun SearchTabContent(
                             trackColor = MaterialTheme.colorScheme.outlineVariant
                         )
                         
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Default.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
+                                Text(
+                                    text = if (isArabic) "مؤشر الجدية" else "Seriousness Score",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(
+                                text = "$seriousnessScore%",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (seriousnessScore > 70) SuccessGreen else if (seriousnessScore > 40) AccentAmber else ErrorRed
+                            )
+                        }
+
                         if (completeness < 100) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
