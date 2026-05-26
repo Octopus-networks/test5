@@ -179,7 +179,36 @@ fun MithaqAppNavigation(
 ) {
     var currentScreen by remember { mutableStateOf("splash") }
     var currentUserId by remember { mutableStateOf("") }
-    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? android.app.Activity
+
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    if (showExitDialog) {
+        val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text(if (isArabic) "خروج" else "Exit") },
+            text = { Text(if (isArabic) "هل تود الخروج من البرنامج؟" else "Are you sure you want to exit the app?") },
+            confirmButton = {
+                Button(
+                    onClick = { activity?.finish() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(if (isArabic) "نعم" else "Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text(if (isArabic) "لا" else "No")
+                }
+            }
+        )
+    }
+
+    androidx.activity.compose.BackHandler(enabled = currentScreen == "home" || currentScreen == "login") {
+        showExitDialog = true
+    }
 
     var selectedMatchProfile by remember { mutableStateOf<UserProfile?>(null) }
     var initialTab by remember { mutableStateOf(0) }

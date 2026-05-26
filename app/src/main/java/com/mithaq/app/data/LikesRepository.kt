@@ -30,6 +30,11 @@ class LikesRepository(private val context: Context) {
             if (!exists) {
                 array.put(toUid)
                 prefs.edit().putString("likes_$fromUid", array.toString()).apply()
+
+                // Register that fromUid liked toUid for toUid's "Who Liked Me" list
+                val likedByStr = prefs.getString("who_liked_me_$toUid", "[]") ?: "[]"
+                val likedByArray = JSONArray(likedByStr).apply { put(fromUid) }
+                prefs.edit().putString("who_liked_me_$toUid", likedByArray.toString()).apply()
             }
 
             // Check if toUid liked fromUid (Mutual)
@@ -113,18 +118,13 @@ class LikesRepository(private val context: Context) {
 
     suspend fun getWhoLikedMe(userUid: String): List<String> {
         if (isMock) {
-            val result = mutableListOf<String>()
-            val mockUserIds = listOf("mock_user_1", "mock_user_2", "mock_user_3", "mock_user_4")
-            for (id in mockUserIds) {
-                val likesStr = prefs.getString("likes_$id", "[]") ?: "[]"
-                val array = JSONArray(likesStr)
-                for (i in 0 until array.length()) {
-                    if (array.getString(i) == userUid) {
-                        result.add(id)
-                    }
-                }
+            val likedByStr = prefs.getString("who_liked_me_$userUid", "[]") ?: "[]"
+            val array = JSONArray(likedByStr)
+            val list = mutableListOf<String>()
+            for (i in 0 until array.length()) {
+                list.add(array.getString(i))
             }
-            return result
+            return list.distinct()
         } else {
             try {
                 val snapshot = db.collection("likes")
