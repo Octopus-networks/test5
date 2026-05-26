@@ -95,9 +95,9 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Resilient Firebase Init: Initialize dummy options if no google-services.json exists
+        // Debug-only Firebase fallback for local demo builds.
         try {
-            if (FirebaseApp.getApps(this).isEmpty()) {
+            if (!BuildConfig.IS_PRODUCTION && FirebaseApp.getApps(this).isEmpty()) {
                 FirebaseApp.initializeApp(
                     this,
                     FirebaseOptions.Builder()
@@ -124,7 +124,7 @@ class MainActivity : FragmentActivity() {
                         title = if (isArabic) "المصادقة البيومترية" else "Biometric Authentication",
                         subtitle = if (isArabic) "يرجى تأكيد هويتك للمتابعة" else "Please authenticate to continue",
                         onSuccess = { isBiometricAuthenticated = true },
-                        onError = { /* Handle error or allow fallback */ isBiometricAuthenticated = true } // For demo/simplicity
+                        onError = { if (!BuildConfig.IS_PRODUCTION) isBiometricAuthenticated = true }
                     )
                 } else {
                     isBiometricAuthenticated = true

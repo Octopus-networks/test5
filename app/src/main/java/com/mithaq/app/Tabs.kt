@@ -451,7 +451,7 @@ fun rememberUserProfileResolver(
                     }
                 }
             }
-            profileCache[uid] ?: getMockUserProfile(uid)
+            profileCache[uid] ?: if (isMock) getMockUserProfile(uid) else UserProfile(uid = uid)
         }
     }
 }
@@ -466,7 +466,7 @@ fun LikesTabContent(
     onNavigateToUpgrade: () -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true, currentUser = currentUser)
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = com.mithaq.app.Config.isMock(), currentUser = currentUser)
     val context = androidx.compose.ui.platform.LocalContext.current
     
     var activeSubTab by remember { mutableStateOf(0) } // 0: Who Liked Me, 1: My Likes, 2: Mutual Matches
@@ -858,7 +858,7 @@ fun ViewsTabContent(
     onSelectMatch: (UserProfile) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true, currentUser = currentUser)
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = com.mithaq.app.Config.isMock(), currentUser = currentUser)
     
     var activeSubTab by remember { mutableStateOf(0) } // 0: Viewed My Profile, 1: Profiles I Viewed
     
@@ -1067,7 +1067,7 @@ fun FavoritesTabContent(
     onSelectMatch: (UserProfile) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true, currentUser = currentUser)
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = com.mithaq.app.Config.isMock(), currentUser = currentUser)
     val context = androidx.compose.ui.platform.LocalContext.current
     
     var activeSubTab by remember { mutableStateOf(0) } // 0: Who Favorited Me, 1: My Favorites, 2: Mutual Favorites

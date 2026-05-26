@@ -41,9 +41,16 @@ fun AdminConsoleScreen(
     val totalUsers = allUsers.size
     val verifiedUsers = allUsers.count { it.verificationStatus == "VERIFIED" }
     val totalWali = allUsers.count { it.isWaliAccount }
+    val showDebugTab = !com.mithaq.app.BuildConfig.IS_PRODUCTION
 
     LaunchedEffect(Unit) {
         viewModel.adminFetchAllUsers()
+    }
+
+    LaunchedEffect(showDebugTab, selectedTab) {
+        if (!showDebugTab && selectedTab == 3) {
+            selectedTab = 0
+        }
     }
 
     Scaffold(
@@ -92,7 +99,8 @@ fun AdminConsoleScreen(
                 )
                 Tab(
                     selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
+                    enabled = showDebugTab,
+                    onClick = { if (showDebugTab) selectedTab = 3 },
                     text = { Text(text = if (isArabic) "الاختبار" else "Debug") }
                 )
             }
@@ -247,7 +255,7 @@ fun AdminConsoleScreen(
                         viewModel = viewModel
                     )
                 }
-                3 -> {
+                3 -> if (showDebugTab) {
                     // Debug & Test Tab
                     Column(
                         modifier = Modifier

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   id("org.jetbrains.kotlin.android")
@@ -7,6 +9,24 @@ plugins {
   id("kotlin-kapt")
 }
 
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun buildConfigString(value: String): String {
+    val escaped = value
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+    return "\"$escaped\""
+}
+
+val debugGeminiApiKey = localProperties.getProperty("GEMINI_API_KEY")
+    ?: System.getenv("GEMINI_API_KEY")
+    ?: ""
+
 android {
     namespace = "com.mithaq.app"
     compileSdk = 36
@@ -14,14 +34,21 @@ android {
         applicationId = "com.mithaq.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 20
+        versionName = "2.0"
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "IS_PRODUCTION", "false")
+            buildConfigField("String", "GEMINI_API_KEY", buildConfigString(debugGeminiApiKey))
+        }
         release {
             isMinifyEnabled = true   // Shrinks & obfuscates code — required for production
             isShrinkResources = true // Removes unused resources from the APK
+            isDebuggable = false
+            buildConfigField("boolean", "IS_PRODUCTION", "true")
+            buildConfigField("String", "GEMINI_API_KEY", buildConfigString(""))
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -32,7 +59,7 @@ android {
     buildFeatures {
       compose = true
       aidl = false
-      buildConfig = false
+      buildConfig = true
       shaders = false
     }
 

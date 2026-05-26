@@ -67,6 +67,7 @@ class AuthViewModel(
     }
 
     private fun prepopulateMockUsersIfEmpty() {
+        if (com.mithaq.app.Config.IS_PRODUCTION) return
         viewModelScope.launch {
             try {
                 if (userDao != null) {

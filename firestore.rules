@@ -138,7 +138,17 @@ service cloud.firestore {
 
     // ── Notifications ─────────────────────────────────────────────────────────
     match /notifications/{notificationId} {
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasOnly(["senderUid", "recipientUid", "title", "body", "status", "timestamp"]) &&
+        request.resource.data.senderUid == request.auth.uid &&
+        request.resource.data.recipientUid is string &&
+        request.resource.data.title is string &&
+        request.resource.data.body is string &&
+        request.resource.data.recipientUid.size() > 0 &&
+        request.resource.data.title.size() <= 120 &&
+        request.resource.data.body.size() <= 500 &&
+        request.resource.data.status == "PENDING" &&
+        request.resource.data.timestamp is number;
       allow read, update, delete: if isAuthenticated() && resource.data.recipientUid == request.auth.uid;
     }
 

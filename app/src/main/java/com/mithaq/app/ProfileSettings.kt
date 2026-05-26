@@ -1425,7 +1425,7 @@ fun ModestyTabContent(
 
         Spacer(modifier = Modifier.height(32.dp))
         Text(
-            text = if (isArabic) "ميثاق v1.1" else "Mithaq v1.1",
+            text = if (isArabic) "ميثاق v2.0" else "Mithaq v2.0",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier

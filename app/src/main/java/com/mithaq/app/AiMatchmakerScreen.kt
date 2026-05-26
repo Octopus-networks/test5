@@ -50,7 +50,7 @@ fun AiMatchmakerScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val searchResults by searchViewModel.searchResults.collectAsState()
-    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = true, currentUser = currentUser)
+    val resolveProfile = rememberUserProfileResolver(searchViewModel, isMock = com.mithaq.app.Config.isMock(), currentUser = currentUser)
 
     val welcomeMessage = if (isArabic) {
         "السلام عليكم ورحمة الله وبركاته. أنا الخاطبة الإلكترونية لميثاق. يسعدني مساعدتك في استكشاف شريك الحياة المناسب شرعياً وفكرياً. أخبرني، ما هي الصفات الأساسية التي تبحث عنها؟ (مثال: العمر، المدينة، الالتزام بالصلوات، إلخ)"

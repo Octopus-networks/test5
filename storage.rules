@@ -22,7 +22,10 @@ service firebase.storage {
       // Any authenticated user can view other members' profiles
       allow read: if isAuthenticated();
       // Only the profile owner can upload or change their photo
-      allow write: if isAuthenticated() && imageId == request.auth.uid + '.jpg';
+      allow write: if isAuthenticated() &&
+        imageId.matches(request.auth.uid + '(_additional_[0-9]+)?\\.jpg') &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
     }
 
     // Voice Introductions storage rules
@@ -30,7 +33,10 @@ service firebase.storage {
       // Any authenticated user can listen to voice introductions
       allow read: if isAuthenticated();
       // Only the profile owner can upload or update their voice introduction
-      allow write: if isAuthenticated() && voiceId == request.auth.uid + '.mp4';
+      allow write: if isAuthenticated() &&
+        voiceId == request.auth.uid + '.mp4' &&
+        request.resource.size < 15 * 1024 * 1024 &&
+        request.resource.contentType.matches('audio/.*|video/.*');
     }
 
     // Identity Verification Document rules (Sensitive IDs and Live Selfies)
@@ -38,7 +44,10 @@ service firebase.storage {
       // Only Admins can download and review identity verification documents
       allow read: if isAdmin();
       // Only the user themselves can upload their verification documents
-      allow write: if isOwner(userId);
+      allow write: if isOwner(userId) &&
+        request.resource.size < 20 * 1024 * 1024 &&
+        (request.resource.contentType.matches('image/.*') ||
+         request.resource.contentType.matches('video/.*'));
     }
   }
 }

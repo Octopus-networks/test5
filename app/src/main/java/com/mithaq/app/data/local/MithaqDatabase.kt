@@ -102,9 +102,11 @@ data class CachedUserProfile(
     val lastSeen: Long
 )
 
-@Entity(tableName = "cached_messages")
+@Entity(
+    tableName = "cached_messages",
+    primaryKeys = ["roomId", "senderId", "timestamp"]
+)
 data class CachedMessage(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val roomId: String,
     val senderId: String,
     val content: String,
@@ -238,7 +240,7 @@ interface ChatDao {
 
 @Database(
     entities = [CachedUserProfile::class, CachedMessage::class, CachedChatRoom::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(MithaqConverters::class)

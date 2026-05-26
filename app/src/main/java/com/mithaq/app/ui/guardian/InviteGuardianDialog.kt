@@ -325,9 +325,9 @@ private fun sendWaliEmailInvitation(
             putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(guardianEmail.trim().lowercase()))
             putExtra(android.content.Intent.EXTRA_SUBJECT, if (isArabic) "دعوة إشراك ولي أمر - تطبيق ميثاق" else "Guardian Invitation - Mithaq App")
             putExtra(android.content.Intent.EXTRA_TEXT, if (isArabic) {
-                "السلام عليكم يا $guardianName،\n\nلقد قمت بإضافتك كولي أمر لي في تطبيق ميثاق للزواج الإسلامي المحافظ.\n\nيرجى تحميل التطبيق والتسجيل فيه بحساب ولي أمر (Guardian) باستخدام بريدك الإلكتروني هذا ($guardianEmail) لمتابعة المحادثات والطلبات بشكل مباشر وآمن لضمان بيئة شرعية ومحافظة.\n\nرابط تحميل التطبيق: https://github.com/ahmedbebars/test5/raw/main/Mithaq-Matchmaking-v1.0-debug.apk\n\nشكراً لك."
+                "السلام عليكم يا $guardianName،\n\nلقد قمت بإضافتك كولي أمر لي في تطبيق ميثاق للزواج الإسلامي المحافظ.\n\nيرجى تحميل التطبيق والتسجيل فيه بحساب ولي أمر (Guardian) باستخدام بريدك الإلكتروني هذا ($guardianEmail) لمتابعة المحادثات والطلبات بشكل مباشر وآمن لضمان بيئة شرعية ومحافظة.\n\nرابط تحميل التطبيق: https://github.com/ahmedbebars/test5/raw/main/Mithaq-v2.0-Release.apk\n\nشكراً لك."
             } else {
-                "Assalamu Alaikum $guardianName,\n\nI have invited you to be my Guardian (Wali) on the Mithaq matchmaking application.\n\nPlease download the app and register a Guardian account using this email address ($guardianEmail) to oversee my chats and requests securely.\n\nApp Download Link: https://github.com/ahmedbebars/test5/raw/main/Mithaq-Matchmaking-v1.0-debug.apk\n\nThank you."
+                "Assalamu Alaikum $guardianName,\n\nI have invited you to be my Guardian (Wali) on the Mithaq matchmaking application.\n\nPlease download the app and register a Guardian account using this email address ($guardianEmail) to oversee my chats and requests securely.\n\nApp Download Link: https://github.com/ahmedbebars/test5/raw/main/Mithaq-v2.0-Release.apk\n\nThank you."
             })
         }
         val chooser = android.content.Intent.createChooser(intent, if (isArabic) "اختر تطبيق البريد الإلكتروني" else "Choose Email Client")
@@ -340,4 +340,3 @@ private fun sendWaliEmailInvitation(
         ).show()
     }
 }
-

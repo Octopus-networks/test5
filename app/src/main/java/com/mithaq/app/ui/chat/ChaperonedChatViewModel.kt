@@ -370,7 +370,8 @@ class ChaperonedChatViewModel(
             val translationHelper = MockTranslationHelper()
             val targetLang = if (messageText.any { it in '\u0600'..'\u06FF' }) "en" else "ar"
             val translation = try { translationHelper.translateText(messageText, targetLang) } catch(e: Exception) { null }
-            val newMsg = ChatMessage(senderId, messageText.trim(), System.currentTimeMillis(), translation)
+            val msgTimestamp = System.currentTimeMillis()
+            val newMsg = ChatMessage(senderId, messageText.trim(), msgTimestamp, translation)
              
             // Cache locally in Room DB immediately
             chatDao?.insertMessage(newMsg.toCached(roomId))
@@ -417,7 +418,7 @@ class ChaperonedChatViewModel(
             }
 
             try {
-                val timestamp = System.currentTimeMillis()
+                val timestamp = msgTimestamp
                 val messagePayload = mutableMapOf<String, Any>(
                     "senderId" to senderId,
                     "content" to messageText.trim(),
@@ -478,6 +479,7 @@ class ChaperonedChatViewModel(
                         val senderDoc = firestore.collection("users").document(senderId).get().await()
                         val senderName = senderDoc.getString("name") ?: "عضو"
                         val notifData = hashMapOf(
+                            "senderUid" to senderId,
                             "recipientUid" to recipientUid,
                             "title" to "ميثاق - رسالة جديدة 💬",
                             "body" to "$senderName: ${messageText.trim().take(80)}",

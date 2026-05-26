@@ -34,9 +34,10 @@ class LikesRepository(private val context: Context) {
      * Writes a PENDING notification document to the Firestore /notifications collection.
      * The MainActivity real-time listener picks this up and shows a local alert on the recipient's device.
      */
-    private suspend fun sendFirestoreNotification(recipientUid: String, title: String, body: String) {
+    private suspend fun sendFirestoreNotification(senderUid: String, recipientUid: String, title: String, body: String) {
         try {
             val notif = hashMapOf(
+                "senderUid" to senderUid,
                 "recipientUid" to recipientUid,
                 "title" to title,
                 "body" to body,
@@ -134,11 +135,12 @@ class LikesRepository(private val context: Context) {
                     val mutualTitle = "ميثاق - تطابق متبادل! 🎉"
                     val mutualBodyToUid = "لقد تطابقت مع $fromName! يمكنك الآن بدء المحادثة."
                     val mutualBodyFromUid = "لقد تطابقت معك يمكنكما الآن التحدث!"
-                    sendFirestoreNotification(toUid, mutualTitle, mutualBodyToUid)
-                    sendFirestoreNotification(fromUid, mutualTitle, mutualBodyFromUid)
+                    sendFirestoreNotification(fromUid, toUid, mutualTitle, mutualBodyToUid)
+                    sendFirestoreNotification(fromUid, fromUid, mutualTitle, mutualBodyFromUid)
                 } else {
                     // Notify recipient that someone liked their profile
                     sendFirestoreNotification(
+                        senderUid = fromUid,
                         recipientUid = toUid,
                         title = "ميثاق - إعجاب جديد ❤️",
                         body = "أعجب $fromName بملفك الشخصي!"
