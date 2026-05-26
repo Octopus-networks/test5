@@ -17,6 +17,38 @@ class LikesRepository(private val context: Context) {
         context.getSharedPreferences("mithaq_interactions_prefs", Context.MODE_PRIVATE)
     }
 
+    /**
+     * Fetches the display name of a user from Firestore.
+     * Returns "عضو" as a safe fallback if the document does not exist.
+     */
+    private suspend fun getUserDisplayName(uid: String): String {
+        return try {
+            val doc = db.collection("users").document(uid).get().await()
+            doc.getString("name") ?: "عضو"
+        } catch (e: Exception) {
+            "عضو"
+        }
+    }
+
+    /**
+     * Writes a PENDING notification document to the Firestore /notifications collection.
+     * The MainActivity real-time listener picks this up and shows a local alert on the recipient's device.
+     */
+    private suspend fun sendFirestoreNotification(recipientUid: String, title: String, body: String) {
+        try {
+            val notif = hashMapOf(
+                "recipientUid" to recipientUid,
+                "title" to title,
+                "body" to body,
+                "status" to "PENDING",
+                "timestamp" to System.currentTimeMillis()
+            )
+            db.collection("notifications").add(notif).await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     // ================= LIKES & MUTUAL MATCHES =================
 
     suspend fun addLike(fromUid: String, toUid: String): Boolean {
@@ -93,9 +125,26 @@ class LikesRepository(private val context: Context) {
                     exists
                 }.await()
 
+                // Fetch the liker's display name for the notification message
+                val fromName = getUserDisplayName(fromUid)
+
                 if (isMutual) {
                     createLiveChatRoom(fromUid, toUid)
+                    // Notify BOTH parties of the mutual match
+                    val mutualTitle = "ميثاق - تطابق متبادل! 🎉"
+                    val mutualBodyToUid = "لقد تطابقت مع $fromName! يمكنك الآن بدء المحادثة."
+                    val mutualBodyFromUid = "لقد تطابقت معك يمكنكما الآن التحدث!"
+                    sendFirestoreNotification(toUid, mutualTitle, mutualBodyToUid)
+                    sendFirestoreNotification(fromUid, mutualTitle, mutualBodyFromUid)
+                } else {
+                    // Notify recipient that someone liked their profile
+                    sendFirestoreNotification(
+                        recipientUid = toUid,
+                        title = "ميثاق - إعجاب جديد ❤️",
+                        body = "أعجب $fromName بملفك الشخصي!"
+                    )
                 }
+
                 return isMutual
             } catch (e: Exception) {
                 e.printStackTrace()

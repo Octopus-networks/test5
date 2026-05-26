@@ -256,13 +256,23 @@ fun GridMatchCard(
                 if (isCompatible) {
                     val sectLabel = profile.sect.getDisplayName(isArabic)
                     val ageSuffix = if (isArabic) "سنة" else "yrs"
-                    Text(
-                        text = "${profile.age} $ageSuffix • $sectLabel",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Default.Star, contentDescription = null, tint = AccentGold, modifier = Modifier.size(10.dp))
+                        Text(
+                            text = "${profile.seriousnessScore}%",
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "• $sectLabel",
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                     Text(
                         text = "${profile.city}, ${profile.country}",
                         color = Color.White.copy(alpha = 0.7f),
@@ -370,11 +380,17 @@ fun rememberUserProfileResolver(
     currentUser: UserProfile
 ): (String) -> UserProfile {
     val searchResults by searchViewModel.searchResults.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    // Cache for profiles fetched asynchronously from Firestore (production mode)
+    val profileCache = remember { mutableStateMapOf<String, UserProfile>() }
+
     return { uid ->
-        val found = searchResults.find { it.uid == uid }
+        // 1. Check local search results first (fast, synchronous)
+        val found = searchResults.find { it.uid == uid } ?: profileCache[uid]
         if (found != null) {
             found
-        } else {
+        } else if (isMock) {
+            // 2. In mock mode use generated placeholder
             val mock = getMockUserProfile(uid)
             val oppositeGender = if (currentUser.gender == Gender.MALE) Gender.FEMALE else Gender.MALE
             if (mock.gender != oppositeGender) {
@@ -386,6 +402,56 @@ fun rememberUserProfileResolver(
             } else {
                 mock
             }
+        } else {
+            // 3. In production mode, fetch profile from Firestore asynchronously
+            //    Return a temporary placeholder while the real data loads
+            if (!profileCache.containsKey(uid)) {
+                // Mark as "loading" with placeholder to prevent duplicate fetches
+                val oppositeGender = if (currentUser.gender == Gender.MALE) Gender.FEMALE else Gender.MALE
+                profileCache[uid] = UserProfile(
+                    uid = uid,
+                    name = "...",
+                    gender = oppositeGender
+                )
+                coroutineScope.launch {
+                    try {
+                        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                        val doc = db.collection("users").document(uid).get().await()
+                        if (doc.exists()) {
+                            val genderStr = doc.getString("gender") ?: "FEMALE"
+                            val gender = if (genderStr.equals("MALE", ignoreCase = true)) Gender.MALE else Gender.FEMALE
+                            val sectStr = doc.getString("sect") ?: "SUNNI"
+                            val sect = try { com.mithaq.app.model.Sect.valueOf(sectStr.uppercase()) } catch (e: Exception) { com.mithaq.app.model.Sect.SUNNI }
+                            val prayerStr = doc.getString("prayerFrequency") ?: "ALWAYS"
+                            val prayer = try { com.mithaq.app.model.PrayerFrequency.valueOf(prayerStr.uppercase()) } catch (e: Exception) { com.mithaq.app.model.PrayerFrequency.ALWAYS }
+                            val modestyStr = doc.getString("modestyPreference") ?: "HIJAB"
+                            val modesty = try { com.mithaq.app.model.ModestyPreference.valueOf(modestyStr.uppercase()) } catch (e: Exception) { com.mithaq.app.model.ModestyPreference.HIJAB }
+                            val relocationStr = doc.getString("relocationWillingness") ?: "OPEN"
+                            val relocation = try { com.mithaq.app.model.RelocationWillingness.valueOf(relocationStr.uppercase()) } catch (e: Exception) { com.mithaq.app.model.RelocationWillingness.OPEN }
+                            profileCache[uid] = UserProfile(
+                                uid = uid,
+                                name = doc.getString("name") ?: "",
+                                gender = gender,
+                                age = doc.getLong("age")?.toInt() ?: 18,
+                                city = doc.getString("city") ?: "",
+                                country = doc.getString("country") ?: "",
+                                imageUrl = doc.getString("imageUrl") ?: "",
+                                sect = sect,
+                                prayerFrequency = prayer,
+                                modestyPreference = modesty,
+                                relocationWillingness = relocation,
+                                verificationStatus = doc.getString("verificationStatus") ?: "NONE",
+                                isPremium = doc.getBoolean("isPremium") ?: false,
+                                lastSeen = doc.getLong("lastSeen") ?: 0L,
+                                photoAccessApprovedUsers = doc.get("photoAccessApprovedUsers") as? List<String> ?: emptyList()
+                            )
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+            profileCache[uid] ?: getMockUserProfile(uid)
         }
     }
 }

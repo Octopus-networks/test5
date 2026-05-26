@@ -271,23 +271,58 @@ fun MithaqAppNavigation(
 
     LaunchedEffect(currentUserId) {
         if (currentUserId.isNotEmpty()) {
-            coroutineScope.launch {
-                while (true) {
-                    val queuePrefs = context.getSharedPreferences("mithaq_notification_queue", android.content.Context.MODE_PRIVATE)
-                    val queueStr = queuePrefs.getString("queue_$currentUserId", "[]") ?: "[]"
-                    val array = org.json.JSONArray(queueStr)
-                    if (array.length() > 0) {
-                        for (i in 0 until array.length()) {
-                            val notif = array.getJSONObject(i)
-                            com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
-                                context,
-                                notif.getString("title"),
-                                notif.getString("body")
-                            )
+            val isMock = com.mithaq.app.Config.isMock()
+            if (isMock) {
+                // In mock mode, poll the local SharedPreferences queue every 5 seconds
+                coroutineScope.launch {
+                    while (true) {
+                        val queuePrefs = context.getSharedPreferences("mithaq_notification_queue", android.content.Context.MODE_PRIVATE)
+                        val queueStr = queuePrefs.getString("queue_$currentUserId", "[]") ?: "[]"
+                        val array = org.json.JSONArray(queueStr)
+                        if (array.length() > 0) {
+                            for (i in 0 until array.length()) {
+                                val notif = array.getJSONObject(i)
+                                com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                    context,
+                                    notif.getString("title"),
+                                    notif.getString("body")
+                                )
+                            }
+                            queuePrefs.edit().putString("queue_$currentUserId", "[]").apply()
                         }
-                        queuePrefs.edit().putString("queue_$currentUserId", "[]").apply()
+                        kotlinx.coroutines.delay(5000)
                     }
-                    kotlinx.coroutines.delay(5000) // Poll every 5 seconds
+                }
+            } else {
+                // In production mode, listen to /notifications in real-time via Firestore
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                var listenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
+                try {
+                    listenerRegistration = db.collection("notifications")
+                        .whereEqualTo("recipientUid", currentUserId)
+                        .whereEqualTo("status", "PENDING")
+                        .addSnapshotListener { snapshot, error ->
+                            if (error != null || snapshot == null) return@addSnapshotListener
+                            for (doc in snapshot.documentChanges) {
+                                if (doc.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
+                                    val title = doc.document.getString("title") ?: "ميثاق"
+                                    val body = doc.document.getString("body") ?: ""
+                                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
+                                        context, title, body
+                                    )
+                                    // Mark as DELIVERED so it won't fire again
+                                    doc.document.reference.update("status", "DELIVERED")
+                                }
+                            }
+                        }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                // Wait until this effect is cancelled (user logs out or uid changes) then clean up
+                try {
+                    kotlinx.coroutines.awaitCancellation()
+                } finally {
+                    listenerRegistration?.remove()
                 }
             }
         }

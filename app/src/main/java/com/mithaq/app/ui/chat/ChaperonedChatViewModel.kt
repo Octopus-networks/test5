@@ -470,6 +470,26 @@ class ChaperonedChatViewModel(
                         .await()
                 }
 
+                // 4. Send real-time Firestore notification to the other room participant
+                val recipientUid = roomId.split("_").firstOrNull { it != senderId }
+                if (!recipientUid.isNullOrBlank()) {
+                    try {
+                        // Fetch sender's name for the notification body
+                        val senderDoc = firestore.collection("users").document(senderId).get().await()
+                        val senderName = senderDoc.getString("name") ?: "عضو"
+                        val notifData = hashMapOf(
+                            "recipientUid" to recipientUid,
+                            "title" to "ميثاق - رسالة جديدة 💬",
+                            "body" to "$senderName: ${messageText.trim().take(80)}",
+                            "status" to "PENDING",
+                            "timestamp" to timestamp
+                        )
+                        firestore.collection("notifications").add(notifData).await()
+                    } catch (notifEx: Exception) {
+                        // Notification failure is non-critical; message was already delivered
+                    }
+                }
+
             } catch (e: Exception) {
                 // If network/firestore write fails, it is already cached locally in Room DB
             }
