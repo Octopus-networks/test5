@@ -1,54 +1,43 @@
-# Mithaq (ميثاق) - Premium Upgrade Release
+# Mithaq (ميثاق) - Premium Islamic Matchmaking Platform
 
-This repository contains the core clean-architecture MVVM & Jetpack Compose updates for **Mithaq (ميثاق)**, a highly secure, privacy-first matchmaking platform designed for serious marriage in the Islamic world.
+**Mithaq (ميثاق)** is a highly secure, privacy-first matchmaking platform designed for serious marriage in the Islamic world. It employs a clean-architecture MVVM approach with Jetpack Compose to deliver a premium, culturally-sensitive experience.
 
 ---
 
-## 🚀 Added Features & Architectural Overview
+## 🚀 Core Features & Architectural Overview
 
-### 1. Advanced Islamic Search Filters (`com.mithaq.app.ui.filter`)
-- **`FilterCriteria`**: A structured data model encapsulating complex search queries (Age Range, Sect, Prayer frequency, Modesty/Hijab preferences, Relocation willingness, and Polygamy acceptance).
-- **`SearchFilterBottomSheet`**: A Material Design 3 Composable sheet using custom `FlowRow` layouts, sliders, and filter chips for dynamic adjustments.
-- **`SearchViewModel`**: Implements local filtering on loaded profile pools to allow complex logical evaluation not natively indexable by Firestore alone.
+### 1. Smart Compatibility Match Score (`com.mithaq.app.ui.match`)
+- **Islamic Compatibility Algorithm**: Scores profiles on a `0 - 100%` scale based on crucial values (Sect: 20%, Prayer: 15%, Religious Values: 15%, etc.).
+- **Dynamic Match Badges**: Visual circular compatibility progress with color grading (Emerald for high, Amber for moderate, Red/Gray for low matches).
 
-### 2. Smart Compatibility Match Score (`com.mithaq.app.ui.match`)
-- **`MatchScoreCalculator`**: An Islamic compatibility algorithm that scores profiles on a scale of `0 - 100%`. It weighs crucial values (Sect matching: 30%, Prayer consistency: 30%, Modesty alignment: 20%, Relocation: 10%, Age: 10%).
-- **`MatchScoreBadge`**: A dynamic Compose badge showing circular compatibility progress with dynamic color grading (Emerald Green for high, Amber for moderate, Red/Gray for low matches) and animated sweeps.
+### 2. The Guardian (Wali) Ecosystem (`com.mithaq.app.ui.guardian`)
+- **Guardian Invitation**: Seamless invitation flow with email validation and "Pending/Verified" status tracking.
+- **Enhanced Wali Dashboard**: A dedicated interface for guardians to monitor active conversations, approve photo access, and review identity verification requests.
+- **Wali Safety Alerts**: (NEW) Automatic detection and flagging of contact information exchange to ensure chaperoned safety.
 
-### 3. The Guardian (Wali) Integration (`com.mithaq.app.ui.guardian`)
-- **`InviteGuardianDialog`**: Material Design 3 dialog prompting validation for the Guardian's name and email with interactive loading states.
-- **`GuardianViewModel`**: Persists name and email details, establishing standard status markers (`guardianStatus = "Pending"`) on the user's root document.
+### 3. Secure Chaperoned Chat (`com.mithaq.app.ui.chat`)
+- **Chaperonage Flags**: Chat rooms are marked `isChaperoned` with direct transcript mirroring to `waliLogs` in Firestore.
+- **In-Chat Translation**: Instant Arabic <-> English translation preloaded with matchmaking phrases.
+- **Ice Breakers**: (NEW) Pre-defined, respectful questions to facilitate serious and purposeful conversations.
+- **Voice Calls**: Lifecycle-aware chaperoned voice calls with integrated Wali oversight.
 
-### 4. In-Chat Instant Translation (`com.mithaq.app.ui.chat`)
-- **`TranslationHelper`**: High-performance interface and mock translator preloaded with standard cross-cultural matchmaking phrases (Arabic <-> English).
-- **`ChatBubble`**: UI messaging bubble displaying a translate icon, handling loading spinner feedback, and toggling translation text in-place.
+### 4. Advanced Privacy & Security Layer (`com.mithaq.app.security`)
+- **Biometric Lock**: (NEW) Fingerprint and Face ID authentication using `BiometricPrompt` to protect sensitive data on app launch.
+- **SecureScreen**: Blocks screenshots and screen recordings on chat and profile views using `FLAG_SECURE`.
+- **Modesty Blur Overlay**: Applies hardware-accelerated `RenderEffect` blur on profile images, unlockable via multi-stage requests or premium access.
+- **Contact Info Protection**: Real-time warning system preventing the exchange of phone numbers or social media handles.
 
-### 5. Smart Daily Chat Limits (`com.mithaq.app.ui.limit`)
-- **`ChatLimitManager`**: Limits free users to initiating 3 new chats per day by keeping calendar-based transaction counters in Firestore.
-- **`PremiumUpgradeDialog`**: Gold-branded premium subscription modal displaying the full tier value proposition (unlimited chats, search filters, modesty blur control).
+### 5. Advanced Search & Filtering (`com.mithaq.app.ui.filter`)
+- **Logical Filtering**: Combines Firestore queries with local logical evaluation for complex criteria (Age, Sect, Prayer, Modesty, Relocation, Polygamy).
+- **Material 3 Bottom Sheets**: Intuitive UI using custom FlowRow layouts, sliders, and filter chips.
 
-### 6. Privacy & Security Layer (`com.mithaq.app.security`)
-- **`SecureScreen`**: A lifecycle-aware Composable wrapper that applies `FLAG_SECURE` to the active window, blocking screenshotting or screen recording on sensitive views (e.g. Chat logs, profiles).
-- **`modestyBlur`**: Compose modifier applying modesty blur overlay on images utilizing hardware-accelerated `RenderEffect` (Android 12+) and standard backward-compatible blur fallbacks.
+### 6. Verification & Trust (`com.mithaq.app.ui.auth`)
+- **AI-Powered Selfie Verification**: Uses Google ML Kit Face Detection to ensure identity authenticity via selfie videos and ID card uploads.
+- **Trust Badges**: Visual verification markers across the app for verified users.
 
-### 7. Wali Chaperoned Chat (`com.mithaq.app.ui.chat`)
-- **`ChatRoom`**: Extended room metadata representing membership and active chaperonage flags (`isChaperoned`, `waliEmail`).
-- **`ChaperonedChatBanner`**: Top-anchored warning header notifying both participants that a guardian has direct transcript permissions.
-- **`ChaperonedChatViewModel`**: Seamlessly duplicates chat history writes to a dedicated `waliLogs` Firestore path for Wali reviews.
-
-### 8. Multi-Stage Modesty Photo Unlock (`com.mithaq.app.ui.photo`)
-- **`PhotoAccessManager`**: High-level permission broker coordinating photo-viewing requests and atomic approvals in Firestore.
-- **`PhotoAccessRequestCard`**: Smart dialog controls. Prompts viewers to request photo unblur access, and notifies profile owners of incoming requests with single-tap Approve/Decline actions.
-
-### 9. Core Design System & Mithaq Theme (`com.mithaq.app.ui.theme`)
-- **`Color.kt`**: Color scheme constants. Employs a luxurious HSL theme pairing Deep Emerald greens, warm gold accents, soft eggshell backgrounds, and midnight charcoal backdrops.
-- **`Type.kt`**: Material 3 typography mappings using Cairo (Arabic UI), Amiri (Arabic titles), and Outfit (Latin symbols) with fallbacks.
-- **`Theme.kt`**: Main application Composable theme `MithaqTheme` managing system status bars and Light/Dark Material Design 3 color schemes.
-
-### 10. Authentication & Onboarding (Phase 4 Additions) 🔐
-- **`AuthViewModel`**: Manages sign-in and sign-up flows. On sign-up, securely registers account credentials on Firebase Auth and stores custom Islamic/modesty preferences on Firestore.
-- **`LoginScreen`**: Curated, responsive Material 3 layout for email/password login, equipped with loading indicators, input validation, and visibility toggles.
-- **`RegisterScreen`**: A multi-step onboarding wizard. Phase 1 captures account credentials and location, while Phase 2 guides the user in selecting their religious, modesty, and relocation preferences.
+### 7. User Limits & Premium Experience (`com.mithaq.app.ui.limit`)
+- **Smart Daily Limits**: Restricts free users to 3 new chat initiations per day using calendar-based Firestore counters.
+- **Premium Store**: A gold-branded store for platinum/gold subscriptions, offering unlimited chats and enhanced modesty controls.
 
 ---
 
@@ -58,54 +47,45 @@ This repository contains the core clean-architecture MVVM & Jetpack Compose upda
 src/main/java/com/mithaq/app/
 │
 ├── model/
-│   ├── UserProfile.kt           # Contains User profile attributes & modesty lists
-│   ├── FilterCriteria.kt        # Search preference model
-│   └── ChatRoom.kt              # Chat room metadata model
+│   ├── UserProfile.kt           # Demographic, religious & lifestyle attributes
+│   ├── FilterCriteria.kt        # Advanced search preference model
+│   └── ChatRoom.kt              # Chaperoned chat room metadata
 │
 ├── security/
-│   ├── SecurityExtensions.kt    # SecureScreen screenshot prevention wrapper
+│   ├── BiometricAuthManager.kt  # (NEW) Biometric authentication logic
+│   ├── SafetyUtils.kt           # (NEW) Shared safety & contact detection logic
+│   ├── SecurityExtensions.kt    # Screenshot prevention wrapper
 │   └── BlurModifier.kt          # Modesty image blur utility
 │
 ├── ui/
-│   ├── theme/
-│   │   ├── Color.kt             # Brand emerald and gold colors
-│   │   ├── Type.kt              # Typography settings (Cairo, Amiri, Outfit)
-│   │   └── Theme.kt             # MithaqTheme and Status Bar customization
-│   │
 │   ├── auth/
-│   │   ├── AuthViewModel.kt     # Firebase Sign In / Sign Up logic
-│   │   ├── LoginScreen.kt       # Login Composable screen
-│   │   └── RegisterScreen.kt    # Two-step onboarding registration screen
-│   │
-│   ├── filter/
-│   │   ├── SearchFilterBottomSheet.kt
-│   │   └── SearchViewModel.kt
-│   │
-│   ├── match/
-│   │   ├── MatchScoreBadge.kt
-│   │   └── MatchScoreCalculator.kt
-│   │
-│   ├── guardian/
-│   │   ├── InviteGuardianDialog.kt
-│   │   └── GuardianViewModel.kt
+│   │   ├── AuthViewModel.kt     # Firebase Sign In / Sign Up & Online status
+│   │   └── RegisterScreen.kt    # Multi-step religious onboarding
 │   │
 │   ├── chat/
-│   │   ├── ChatBubble.kt
-│   │   ├── ChaperonedChatBanner.kt
-│   │   ├── ChaperonedChatViewModel.kt
-│   │   └── TranslationHelper.kt
+│   │   ├── IceBreakerGenerator.kt # (NEW) Purposeful chat suggestions
+│   │   ├── ChaperonedChatViewModel.kt # Wali mirroring & secure messaging
+│   │   └── TranslationHelper.kt # Instant Arabic/English bridge
 │   │
-│   ├── photo/
-│   │   ├── PhotoAccessManager.kt
-│   │   └── PhotoAccessRequestCard.kt
+│   ├── guardian/
+│   │   └── WaliDashboard.kt     # Guardian monitoring & safety alerts
 │   │
-│   └── limit/
-│       ├── PremiumUpgradeDialog.kt
-│       └── ChatLimitManager.kt
+│   ├── match/
+│   │   ├── MatchScoreCalculator.kt # Compatibility scoring algorithm
+│   │   └── MatchScoreBadge.kt   # Dynamic UI scoring components
+│   │
+│   └── theme/
+│       ├── Color.kt             # Emerald & Gold HSL branding
+│       └── Theme.kt             # Status bar & Light/Dark M3 coordination
 ```
 
 ---
 
-## 🛠️ Integration Instructions
-
-For deep integration guides and step-by-step code samples on how to link these Composables and ViewModels to your pre-existing layouts, please refer directly to the **[Walkthrough Guide](file:///C:/Users/ahmed/.gemini/antigravity/brain/e664f4e8-70a4-428c-b16f-1d9849e90f5e/walkthrough.md)**.
+## 🛠️ Technical Stack
+- **Language**: Kotlin (100%)
+- **UI**: Jetpack Compose (Material 3)
+- **Architecture**: MVVM + Clean Architecture
+- **Backend**: Firebase (Auth, Firestore, Storage, Cloud Messaging)
+- **Local Cache**: Room Database (Offline-first readiness)
+- **AI/ML**: Google ML Kit (Face Detection) + Gemini SDK (AI Icebreakers)
+- **Security**: Biometric API + Android Window Manager Flags

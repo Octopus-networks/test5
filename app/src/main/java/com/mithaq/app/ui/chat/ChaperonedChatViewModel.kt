@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.mithaq.app.model.ChatRoom
+import com.mithaq.app.security.SafetyUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -324,36 +325,6 @@ class ChaperonedChatViewModel(
         _warningState.value = null
     }
 
-    private fun containsContactInfo(text: String): Boolean {
-        val lowercase = text.lowercase()
-        
-        // Email pattern
-        val emailPattern = Regex("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}")
-        if (emailPattern.containsMatchIn(lowercase)) return true
-        
-        // Phone number pattern: requires 10+ consecutive digits OR a shorter digit sequence preceded by
-        // international prefix indicators (+, 00, or a leading 0). This avoids false positives on
-        // normal text like verse numbers or years.
-        val phoneLongPattern = Regex("\\d{10,}")
-        val phoneWithPrefixPattern = Regex("(?:\\+|00|\\b0)\\d{8,}")
-        if (phoneLongPattern.containsMatchIn(lowercase) || phoneWithPrefixPattern.containsMatchIn(lowercase)) return true
-        
-        // Check for common social media platforms and keywords
-        val forbiddenKeywords = listOf(
-            "insta", "انستا", "إنستا", "سناب", "snap", "telegram", "تليجرام", "تليغرام",
-            "whatsapp", "واتساب", "واتس", "رقمي", "phone", "email", "إيميل", "ايميل", "بريد", "فيسبوك",
-            "facebook", "twitter", "تويتر", "لينكد", "linkedin", "رقم الهاتف", "رقم الجوال"
-        )
-        for (keyword in forbiddenKeywords) {
-            if (lowercase.contains(keyword)) return true
-        }
-        
-        // Check for @ symbol
-        if (lowercase.contains("@")) return true
-        
-        return false
-    }
-
     /**
      * Sends a chat message. If chaperonage is enabled, mirrors logs to a dedicated
      * waliLogs subcollection for the guardian's review.
@@ -369,7 +340,7 @@ class ChaperonedChatViewModel(
 
         if (messageText.trim().isEmpty()) return
  
-        if (containsContactInfo(messageText)) {
+        if (SafetyUtils.containsContactInfo(messageText)) {
             _warningState.value = "تنبيه أمان: يُمنع تبادل أرقام الهواتف أو حسابات التواصل الاجتماعي لحمايتك ولضمان بقاء المحادثة تحت إشراف ولي الأمر."
             return
         }

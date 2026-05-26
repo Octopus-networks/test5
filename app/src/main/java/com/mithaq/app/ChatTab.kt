@@ -72,6 +72,7 @@ import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
 import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
+import com.mithaq.app.ui.chat.IceBreakerGenerator
 import com.mithaq.app.security.SecureScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -851,7 +852,40 @@ fun ChatTabContent(
                     }
                 }
 
-                // AI Icebreakers suggestions row
+                // Icebreakers suggestions row
+                val staticIcebreakers = remember(strings.appName) { IceBreakerGenerator.getRecommended(strings.appName == "ميثاق") }
+                
+                if (icebreakers.isEmpty() && !loadingIcebreakers) {
+                    // Show static icebreakers as default or fallback
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        staticIcebreakers.forEach { msg ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)),
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier
+                                    .widthIn(max = 280.dp)
+                                    .clickable {
+                                        messageText = msg
+                                    }
+                            ) {
+                                Text(
+                                    text = msg,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(10.dp),
+                                    maxLines = 2,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
                 if (targetUser != null && com.mithaq.app.Config.GEMINI_API_KEY.isNotEmpty() && com.mithaq.app.Config.GEMINI_API_KEY != "YOUR_GEMINI_API_KEY") {
                     if (icebreakers.isNotEmpty()) {
                         Row(

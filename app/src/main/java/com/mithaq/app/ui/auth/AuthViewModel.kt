@@ -1476,6 +1476,73 @@ class AuthViewModel(
         }
     }
 
+    fun completeCoreProfile(
+        name: String,
+        username: String,
+        age: Int,
+        gender: Gender,
+        country: String,
+        city: String,
+        oathChecked: Boolean,
+        context: android.content.Context,
+        onResult: (Boolean, String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val current = _currentUserProfile.value ?: UserProfile()
+                val updated = current.copy(
+                    name = name.trim(),
+                    username = username.trim(),
+                    age = age,
+                    gender = gender,
+                    country = country.trim(),
+                    city = city.trim(),
+                    oathChecked = oathChecked
+                )
+                _currentUserProfile.value = updated
+                userDao?.insertUser(updated.toCached())
+
+                val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+                prefs.edit().apply {
+                    putString("name", name.trim())
+                    putString("username", username.trim())
+                    putInt("age", age)
+                    putString("gender", gender.name)
+                    putString("country", country.trim())
+                    putString("city", city.trim())
+                    putBoolean("oathChecked", oathChecked)
+                    apply()
+                }
+
+                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                    auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                } catch (e: Exception) {
+                    true
+                }
+
+                if (!isMock && updated.uid.isNotEmpty()) {
+                    firestore.collection("users").document(updated.uid)
+                        .update(
+                            mapOf(
+                                "name" to name.trim(),
+                                "username" to username.trim(),
+                                "age" to age,
+                                "gender" to gender.name,
+                                "country" to country.trim(),
+                                "city" to city.trim(),
+                                "oathChecked" to oathChecked,
+                                "profileComplete" to true
+                            )
+                        ).await()
+                }
+                onResult(true, null)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false, e.localizedMessage ?: "Failed to save profile.")
+            }
+        }
+    }
+
     fun updateAdditionalImages(images: List<String>, context: android.content.Context) {
         viewModelScope.launch {
             val current = _currentUserProfile.value ?: return@launch

@@ -109,6 +109,9 @@ dependencies {
   implementation(libs.androidx.room.ktx)
   add("kapt", libs.androidx.room.compiler)
 
+  // Biometric
+  implementation(libs.androidx.biometric)
+
   // Google Generative AI (Gemini) SDK
   implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 }

@@ -72,7 +72,9 @@ import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
 import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
+import com.mithaq.app.ui.chat.ChatMessage
 import com.mithaq.app.security.SecureScreen
+import com.mithaq.app.security.SafetyUtils
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.filled.ArrowBack
@@ -531,6 +533,64 @@ fun WaliDashboardScreen(
                     CircularProgressIndicator()
                 }
             } else {
+                // Safety Alerts Section
+                Text(
+                    text = if (isArabic) "تنبيهات الأمان (تبادل معلومات اتصال)" else "Safety Alerts (Contact Info Detected)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                
+                var alertsFound by remember { mutableStateOf(false) }
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        activeRooms.forEach { room ->
+                            val partner = roomPartners[room.roomId] ?: getMockUserProfile(room.memberIds.firstOrNull { it != wardUid } ?: "")
+                            // In a real app, we'd fetch all messages. For demo, we check the last message.
+                            if (room.lastMessage != null && SafetyUtils.containsContactInfo(room.lastMessage)) {
+                                alertsFound = true
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isArabic) "تنبيه في محادثة ${partner.name}" else "Alert in chat with ${partner.name}",
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                        Text(
+                                            text = room.lastMessage,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 1,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    IconButton(onClick = { selectedMonitoringChat = partner }) {
+                                        Icon(Icons.Default.Visibility, contentDescription = "View", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (!alertsFound) {
+                            Text(
+                                text = if (isArabic) "لا توجد تنبيهات أمان حالياً." else "No safety alerts at this time.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
                     text = if (isArabic) "طلبات وأذونات الصور الشخصية" else "Photo Access & Approvals",
                     style = MaterialTheme.typography.titleMedium,

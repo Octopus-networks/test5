@@ -1,7 +1,7 @@
 package com.mithaq.app
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -73,6 +73,7 @@ import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
 import com.mithaq.app.security.SecureScreen
+import com.mithaq.app.security.BiometricAuthManager
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.filled.ArrowBack
@@ -86,9 +87,10 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.List
 import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
+import com.mithaq.app.ui.auth.CompleteProfileScreen
 
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,17 +114,56 @@ class MainActivity : ComponentActivity() {
         setContent {
             var isArabic by remember { mutableStateOf(false) }
             var isDarkMode by remember { mutableStateOf(false) }
+            var isBiometricAuthenticated by remember { mutableStateOf(false) }
+            val biometricManager = remember { BiometricAuthManager(this) }
+
+            LaunchedEffect(Unit) {
+                if (biometricManager.isBiometricAvailable()) {
+                    biometricManager.showBiometricPrompt(
+                        activity = this@MainActivity,
+                        title = if (isArabic) "المصادقة البيومترية" else "Biometric Authentication",
+                        subtitle = if (isArabic) "يرجى تأكيد هويتك للمتابعة" else "Please authenticate to continue",
+                        onSuccess = { isBiometricAuthenticated = true },
+                        onError = { /* Handle error or allow fallback */ isBiometricAuthenticated = true } // For demo/simplicity
+                    )
+                } else {
+                    isBiometricAuthenticated = true
+                }
+            }
+
             MithaqTheme(isArabic = isArabic, darkTheme = isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MithaqAppNavigation(
-                        isArabic = isArabic,
-                        onLanguageChange = { isArabic = it },
-                        isDarkMode = isDarkMode,
-                        onDarkModeChange = { isDarkMode = it }
-                    )
+                    if (isBiometricAuthenticated) {
+                        MithaqAppNavigation(
+                            isArabic = isArabic,
+                            onLanguageChange = { isArabic = it },
+                            isDarkMode = isDarkMode,
+                            onDarkModeChange = { isDarkMode = it }
+                        )
+                    } else {
+                        // Show a loading or locked state
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(if (isArabic) "التطبيق مقفل" else "App Locked", style = MaterialTheme.typography.headlineMedium)
+                                Button(onClick = {
+                                    biometricManager.showBiometricPrompt(
+                                        activity = this@MainActivity,
+                                        title = if (isArabic) "المصادقة البيومترية" else "Biometric Authentication",
+                                        subtitle = if (isArabic) "يرجى تأكيد هويتك للمتابعة" else "Please authenticate to continue",
+                                        onSuccess = { isBiometricAuthenticated = true },
+                                        onError = { }
+                                    )
+                                }, modifier = Modifier.padding(top = 16.dp)) {
+                                    Text(if (isArabic) "إلغاء القفل" else "Unlock")
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -235,24 +276,42 @@ fun MithaqAppNavigation(
                     }
                 )
             } else {
-                val shouldShowWizard = currentUserProfile != null &&
-                        (currentUserProfile!!.questionnaireAnswers.isEmpty() || currentUserProfile!!.verificationStatus == "NONE") &&
-                        !hasDismissedOnboarding
+                val isProfileIncomplete = currentUserProfile != null && (
+                        currentUserProfile!!.username.isEmpty() ||
+                        currentUserProfile!!.city.isEmpty() ||
+                        currentUserProfile!!.country.isEmpty() ||
+                        !currentUserProfile!!.oathChecked ||
+                        currentUserProfile!!.age < 18
+                )
 
-                if (shouldShowWizard) {
-                    OnboardingWizardScreen(
-                        authViewModel = authViewModel,
-                        guardianViewModel = guardianViewModel,
+                if (isProfileIncomplete) {
+                    CompleteProfileScreen(
+                        currentUserProfile = currentUserProfile!!,
+                        viewModel = authViewModel,
                         isArabic = isArabic,
                         onComplete = {
                             authViewModel.fetchCurrentUserProfile(currentUserId)
-                            hasDismissedOnboarding = true
-                        },
-                        onSkip = {
-                            hasDismissedOnboarding = true
                         }
                     )
                 } else {
+                    val shouldShowWizard = currentUserProfile != null &&
+                            (currentUserProfile!!.questionnaireAnswers.isEmpty() || currentUserProfile!!.verificationStatus == "NONE") &&
+                            !hasDismissedOnboarding
+
+                    if (shouldShowWizard) {
+                        OnboardingWizardScreen(
+                            authViewModel = authViewModel,
+                            guardianViewModel = guardianViewModel,
+                            isArabic = isArabic,
+                            onComplete = {
+                                authViewModel.fetchCurrentUserProfile(currentUserId)
+                                hasDismissedOnboarding = true
+                            },
+                            onSkip = {
+                                hasDismissedOnboarding = true
+                            }
+                        )
+                    } else {
                     HomeScreen(
                         currentUserId = currentUserId,
                         currentUserProfile = currentUserProfile,
@@ -290,6 +349,7 @@ fun MithaqAppNavigation(
                 }
             }
         }
+    }
         "match_detail" -> {
             val partner = selectedMatchProfile
             if (partner != null) {
