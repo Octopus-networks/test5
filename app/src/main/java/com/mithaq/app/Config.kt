@@ -13,7 +13,7 @@ object Config {
      * When true: disables all mock/demo bypasses, developer menus, and fake data helpers.
      * When false: allows role-switching and admin access via version tap — DANGEROUS in production!
      */
-    const val IS_PRODUCTION = true
+    const val IS_PRODUCTION = false
 
     /**
      * WARNING: Do NOT commit real API keys to source control.
