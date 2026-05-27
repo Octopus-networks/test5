@@ -19,8 +19,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mithaq.app.model.*
 import com.mithaq.app.ui.theme.LocalMithaqStrings
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.location.LocationServices
+import android.Manifest
+import android.annotation.SuppressLint
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
+import android.content.pm.PackageManager
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun SearchFilterBottomSheet(
     onDismissRequest: () -> Unit,
@@ -33,6 +41,21 @@ fun SearchFilterBottomSheet(
     val scrollState = rememberScrollState()
     val strings = LocalMithaqStrings.current
     val isArabic = strings.appName == "ميثاق"
+    val context = LocalContext.current
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    // Location state
+    var maxDistance by remember { mutableStateOf(filterCriteria.maxDistanceKm?.toFloat() ?: 50f) }
+    var isLocationSearchEnabled by remember { mutableStateOf(filterCriteria.maxDistanceKm != null) }
+    var currentLat by remember { mutableStateOf(filterCriteria.currentLat) }
+    var currentLng by remember { mutableStateOf(filterCriteria.currentLng) }
+
+    val locationPermissionsState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
 
     // Temporary local state for modifications inside bottom sheet
     var ageRange by remember { mutableStateOf(filterCriteria.minAge.toFloat()..filterCriteria.maxAge.toFloat()) }
@@ -113,6 +136,85 @@ fun SearchFilterBottomSheet(
                         thumbColor = MaterialTheme.colorScheme.primary
                     )
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 1.5 Location-Based Search
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isArabic) "البحث بالجوار" else "Search Nearby",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = if (isArabic) "البحث باستخدام الموقع الحالي" else "Search using your current location",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = isLocationSearchEnabled,
+                                onCheckedChange = { checked ->
+                                    if (checked) {
+                                        if (locationPermissionsState.allPermissionsGranted) {
+                                            isLocationSearchEnabled = true
+                                            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                                fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                                                    if (loc != null) {
+                                                        currentLat = loc.latitude
+                                                        currentLng = loc.longitude
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            locationPermissionsState.launchMultiplePermissionRequest()
+                                        }
+                                    } else {
+                                        isLocationSearchEnabled = false
+                                        currentLat = null
+                                        currentLng = null
+                                    }
+                                }
+                            )
+                        }
+
+                        if (isLocationSearchEnabled && locationPermissionsState.allPermissionsGranted) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val distLabel = if (isArabic) "المسافة: أقل من ${maxDistance.toInt()} كم" else "Distance: up to ${maxDistance.toInt()} km"
+                            Text(text = distLabel, style = MaterialTheme.typography.bodyMedium)
+                            Slider(
+                                value = maxDistance,
+                                onValueChange = { maxDistance = it },
+                                valueRange = 5f..500f,
+                                steps = 98,
+                                colors = SliderDefaults.colors(
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    thumbColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        } else if (isLocationSearchEnabled && !locationPermissionsState.allPermissionsGranted) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = if (isArabic) "نحتاج صلاحية الموقع للبحث بالقرب منك." else "Location permission is required for nearby search.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            TextButton(onClick = { locationPermissionsState.launchMultiplePermissionRequest() }) {
+                                Text(if (isArabic) "منح الصلاحية" else "Grant Permission")
+                            }
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Country & City Filters
@@ -538,6 +640,10 @@ fun SearchFilterBottomSheet(
                         countryText = ""
                         cityText = ""
                         heightRange = 140f..220f
+                        isLocationSearchEnabled = false
+                        maxDistance = 50f
+                        currentLat = null
+                        currentLng = null
                         selectedMaritalStatuses.clear()
                         selectedHaveChildren.clear()
                         selectedReligiousValues.clear()
@@ -566,7 +672,10 @@ fun SearchFilterBottomSheet(
                             minHeight = heightRange.start.toInt(),
                             maxHeight = heightRange.endInclusive.toInt(),
                             haveChildren = selectedHaveChildren.toSet(),
-                            religiousValues = selectedReligiousValues.toSet()
+                            religiousValues = selectedReligiousValues.toSet(),
+                            maxDistanceKm = if (isLocationSearchEnabled && currentLat != null) maxDistance.toInt() else null,
+                            currentLat = currentLat,
+                            currentLng = currentLng
                         )
                         viewModel.updateFilters(newCriteria)
                         onDismissRequest()

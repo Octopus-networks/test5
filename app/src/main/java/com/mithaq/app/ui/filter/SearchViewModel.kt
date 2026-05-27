@@ -468,7 +468,25 @@ class SearchViewModel(
         // 12. Religious Values Check
         if (criteria.religiousValues.isNotEmpty() && user.religiousValues !in criteria.religiousValues) return false
 
+        // 13. Distance Check
+        if (criteria.maxDistanceKm != null && criteria.currentLat != null && criteria.currentLng != null) {
+            val dist = calculateDistanceKm(criteria.currentLat, criteria.currentLng, user.adhanLocationLat, user.adhanLocationLng)
+            if (dist > criteria.maxDistanceKm) return false
+        }
+
         return true
+    }
+
+
+    private fun calculateDistanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val R = 6371.0 // Radius of the earth in km
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return R * c
     }
 
     private fun applyLocalFilters() {

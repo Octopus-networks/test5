@@ -1496,11 +1496,7 @@ fun ProfileSettingsScreen(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(8.dp))
 
-            AdhanSettingsSection(currentUser, authViewModel, isArabic, onRefreshProfile)
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(8.dp))
+
             
             GuardianTabContent(
                 currentUser = currentUser,
@@ -1513,67 +1509,23 @@ fun ProfileSettingsScreen(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-            val context = androidx.compose.ui.platform.LocalContext.current
-
-            if (showDeleteConfirmDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDeleteConfirmDialog = false },
-                    title = {
-                        Text(
-                            text = if (isArabic) "حذف الحساب نهائياً" else "Delete Account Permanently",
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    text = {
-                        Text(
-                            text = if (isArabic) 
-                                "هل أنت متأكد من رغبتك في حذف حسابك؟ سيؤدي ذلك إلى مسح جميع بيانات ملفك الشخصي ومحادثاتك بالكامل ولن تتمكن من استعادتها." 
-                                else "Are you sure you want to delete your account? This will permanently delete all your profile data and chats and cannot be undone."
-                        )
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showDeleteConfirmDialog = false
-                                authViewModel.deleteCurrentUserAccount(context) {
-                                    onNavigateToScreen("login")
-                                }
-                            }
-                        ) {
-                            Text(
-                                text = if (isArabic) "نعم، احذف حسابي" else "Yes, Delete Account",
-                                color = MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                            Text(text = if (isArabic) "إلغاء" else "Cancel")
-                        }
-                    }
-                )
-            }
-
             Button(
-                onClick = { showDeleteConfirmDialog = true },
+                onClick = { onNavigateToScreen("app_settings") },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = Icons.Default.Settings,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isArabic) "حذف الحساب نهائياً" else "Delete Account Permanently",
+                    text = if (isArabic) "إعدادات التطبيق" else "App Settings",
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -1582,156 +1534,3 @@ fun ProfileSettingsScreen(
 }
 
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-@Composable
-fun AdhanSettingsSection(
-    currentUser: UserProfile,
-    authViewModel: AuthViewModel,
-    isArabic: Boolean,
-    onRefreshProfile: () -> Unit
-) {
-    var isEnabled by remember(currentUser.isAdhanEnabled) { mutableStateOf(currentUser.isAdhanEnabled) }
-    var calcMethod by remember(currentUser.adhanCalculationMethod) { mutableStateOf(currentUser.adhanCalculationMethod.ifEmpty { "MUSLIM_WORLD_LEAGUE" }) }
-    var soundPattern by remember(currentUser.adhanSoundPattern) { mutableStateOf(currentUser.adhanSoundPattern.ifEmpty { "TAKBEER" }) }
-    var isSaving by remember { mutableStateOf(false) }
-
-    var expandedCalc by remember { mutableStateOf(false) }
-    var expandedSound by remember { mutableStateOf(false) }
-
-    val calcOptions = mapOf(
-        "MUSLIM_WORLD_LEAGUE" to if (isArabic) "رابطة العالم الإسلامي" else "Muslim World League",
-        "EGYPTIAN" to if (isArabic) "الهيئة العامة المصرية للمساحة" else "Egyptian General Authority",
-        "KARACHI" to if (isArabic) "جامعة العلوم الإسلامية بكراتشي" else "University of Islamic Sciences, Karachi",
-        "UMM_AL_QURA" to if (isArabic) "جامعة أم القرى (مكة)" else "Umm al-Qura University, Makkah",
-        "GULF" to if (isArabic) "منطقة الخليج" else "Gulf Region",
-        "MOON_SIGHTING_COMMITTEE" to if (isArabic) "لجنة رؤية الهلال" else "Moon Sighting Committee",
-        "ISNA" to if (isArabic) "الجمعية الإسلامية لأمريكا الشمالية" else "ISNA (North America)"
-    )
-
-    val soundOptions = mapOf(
-        "TAKBEER" to if (isArabic) "تكبيرة صغيرة" else "Short Takbeer",
-        "FULL_ADHAN_MECCA" to if (isArabic) "أذان الحرم المكي" else "Mecca Adhan",
-        "FULL_ADHAN_MEDINA" to if (isArabic) "أذان الحرم المدني" else "Medina Adhan",
-        "BIRD_CHIRP" to if (isArabic) "تغريد طيور" else "Bird Chirp",
-        "SILENT" to if (isArabic) "صامت (إشعار فقط)" else "Silent (Notification only)"
-    )
-
-    androidx.compose.material3.Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = if (isArabic) "إعدادات الأذان والصلاة" else "Adhan & Prayer Settings",
-                style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(if (isArabic) "تفعيل تنبيهات الأذان" else "Enable Adhan Alerts")
-                androidx.compose.material3.Switch(
-                    checked = isEnabled,
-                    onCheckedChange = { isEnabled = it }
-                )
-            }
-
-            if (isEnabled) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Calculation Method Dropdown
-                androidx.compose.material3.ExposedDropdownMenuBox(
-                    expanded = expandedCalc,
-                    onExpandedChange = { expandedCalc = !expandedCalc }
-                ) {
-                    androidx.compose.material3.OutlinedTextField(
-                        readOnly = true,
-                        value = calcOptions[calcMethod] ?: calcMethod,
-                        onValueChange = { },
-                        label = { Text(if (isArabic) "طريقة الحساب" else "Calculation Method") },
-                        trailingIcon = {
-                            androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCalc)
-                        },
-                        colors = androidx.compose.material3.ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedCalc,
-                        onDismissRequest = { expandedCalc = false }
-                    ) {
-                        calcOptions.forEach { (key, label) ->
-                            androidx.compose.material3.DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = {
-                                    calcMethod = key
-                                    expandedCalc = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Sound Dropdown
-                androidx.compose.material3.ExposedDropdownMenuBox(
-                    expanded = expandedSound,
-                    onExpandedChange = { expandedSound = !expandedSound }
-                ) {
-                    androidx.compose.material3.OutlinedTextField(
-                        readOnly = true,
-                        value = soundOptions[soundPattern] ?: soundPattern,
-                        onValueChange = { },
-                        label = { Text(if (isArabic) "صوت المؤذن / التنبيه" else "Adhan Sound / Alert") },
-                        trailingIcon = {
-                            androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSound)
-                        },
-                        colors = androidx.compose.material3.ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedSound,
-                        onDismissRequest = { expandedSound = false }
-                    ) {
-                        soundOptions.forEach { (key, label) ->
-                            androidx.compose.material3.DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = {
-                                    soundPattern = key
-                                    expandedSound = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            androidx.compose.material3.Button(
-                onClick = {
-                    isSaving = true
-                    // Launch coroutine to save
-                    val updatedProfile = currentUser.copy(
-                        isAdhanEnabled = isEnabled,
-                        adhanCalculationMethod = calcMethod,
-                        adhanSoundPattern = soundPattern
-                    )
-                    authViewModel.updatePrayerStats(updatedProfile)
-                    isSaving = false
-                    onRefreshProfile()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isSaving
-            ) {
-                Text(if (isArabic) "حفظ إعدادات الأذان" else "Save Adhan Settings")
-            }
-        }
-    }
-}

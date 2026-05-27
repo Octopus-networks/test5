@@ -19,7 +19,12 @@ data class FilterCriteria(
     val minHeight: Int = 140,
     val maxHeight: Int = 220,
     val haveChildren: Set<String> = emptySet(),
-    val religiousValues: Set<String> = emptySet()
+    val religiousValues: Set<String> = emptySet(),
+    
+    // Location Search
+    val maxDistanceKm: Int? = null,
+    val currentLat: Double? = null,
+    val currentLng: Double? = null
 )
 
 

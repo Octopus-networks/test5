@@ -88,6 +88,7 @@ import androidx.compose.material.icons.filled.List
 import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
 import com.mithaq.app.ui.auth.CompleteProfileScreen
+import com.mithaq.app.ui.settings.AppSettingsScreen
 
 
 class MainActivity : FragmentActivity() {
@@ -544,6 +545,28 @@ fun MithaqAppNavigation(
                 onSelectMatch = { partner ->
                     selectedMatchProfile = partner
                     currentScreen = "match_detail"
+                }
+            )
+        }
+        "app_settings" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "profile_settings" }
+            AppSettingsScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                authViewModel = authViewModel,
+                isArabic = isArabic,
+                onLanguageChange = onLanguageChange,
+                isDarkMode = isDarkMode,
+                onDarkModeChange = onDarkModeChange,
+                onBack = { currentScreen = "profile_settings" },
+                onLogout = {
+                    authViewModel.signOut()
+                    com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
+                    currentScreen = "login"
+                },
+                onDeleteAccount = {
+                    authViewModel.deleteCurrentUserAccount(context) {
+                        currentScreen = "login"
+                    }
                 }
             )
         }

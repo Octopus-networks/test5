@@ -440,6 +440,33 @@ fun MatchDetailScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Detailed breakdown
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val prayers = listOf(
+                                (if(isArabic) "الفجر" else "Fajr") to partner.fajrMonthlyCount,
+                                (if(isArabic) "الظهر" else "Dhuhr") to partner.dhuhrMonthlyCount,
+                                (if(isArabic) "العصر" else "Asr") to partner.asrMonthlyCount,
+                                (if(isArabic) "المغرب" else "Maghrib") to partner.maghribMonthlyCount,
+                                (if(isArabic) "العشاء" else "Isha") to partner.ishaMonthlyCount
+                            )
+                            prayers.forEach { (name, count) ->
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "$name: $count",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
