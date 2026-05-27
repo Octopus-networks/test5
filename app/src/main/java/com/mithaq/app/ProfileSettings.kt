@@ -182,8 +182,9 @@ fun ModestyTabContent(
     authViewModel: AuthViewModel,
     onNavigateToScreen: (String) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager() }
+    val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager(context) }
     var photoState by remember { mutableStateOf(com.mithaq.app.ui.photo.PhotoAccessState.NONE) }
 
     var aboutYourselfText by remember { mutableStateOf(currentUser.aboutYourself) }
@@ -196,7 +197,6 @@ fun ModestyTabContent(
         idealPartnerText = currentUser.idealPartner
     }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
     var isUploadingImage by remember { mutableStateOf(false) }
 
     var tempCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -1459,6 +1459,9 @@ fun ProfileSettingsScreen(
     onNavigateToScreen: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    LaunchedEffect(Unit) {
+        onRefreshProfile()
+    }
     Scaffold(
         topBar = {
             TopAppBar(

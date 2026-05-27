@@ -112,7 +112,7 @@ fun ChatTabContent(
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     val coroutineScope = rememberCoroutineScope()
-    val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager() }
+    val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager(context) }
     var partnerPhotoState by remember { mutableStateOf(PhotoAccessState.NONE) }
     var userPhotoStateForPartner by remember { mutableStateOf(PhotoAccessState.NONE) }
 

@@ -564,6 +564,80 @@ class AuthViewModel(
             }
 
             if (isMock) {
+                val cached = userDao?.getUser(uid)
+                if (cached != null) {
+                    _currentUserProfile.value = cached.toDomain()
+                    context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
+                        putString("uid", cached.uid)
+                        putString("name", cached.name)
+                        putString("gender", cached.gender)
+                        putInt("age", cached.age)
+                        putString("city", cached.city)
+                        putString("country", cached.country)
+                        putString("imageUrl", cached.imageUrl)
+                        putString("sect", cached.sect)
+                        putString("prayerFrequency", cached.prayerFrequency)
+                        putString("modestyPreference", cached.modestyPreference)
+                        putString("relocationWillingness", cached.relocationWillingness)
+                        putBoolean("isWaliAccount", cached.isWaliAccount)
+                        putString("wardUid", cached.wardUid)
+                        putString("verificationStatus", cached.verificationStatus)
+                        putString("voiceIntroUrl", cached.voiceIntroUrl)
+                        putString("fcmToken", cached.fcmToken)
+                        putBoolean("isAdmin", cached.isAdmin)
+                        putBoolean("isPremium", cached.isPremium)
+                        putString("subscriptionPlan", cached.subscriptionPlan)
+                        
+                        val qAnswersObj = org.json.JSONObject()
+                        cached.questionnaireAnswers.forEach { (k, v) -> qAnswersObj.put(k, v) }
+                        putString("questionnaireAnswers", qAnswersObj.toString())
+                        
+                        val addImagesArr = org.json.JSONArray(cached.additionalImages)
+                        putString("additionalImages", addImagesArr.toString())
+                        
+                        val approvedArr = org.json.JSONArray(cached.photoAccessApprovedUsers)
+                        putString("photoAccessApprovedUsers", approvedArr.toString())
+                        
+                        val requestsArr = org.json.JSONArray(cached.photoAccessRequests)
+                        putString("photoAccessRequests", requestsArr.toString())
+                        
+                        putString("aboutYourself", cached.aboutYourself)
+                        putString("idealPartner", cached.idealPartner)
+                        putString("username", cached.username)
+                        putBoolean("oathChecked", cached.oathChecked)
+                        putString("skinColor", cached.skinColor)
+                        
+                        val healthArr = org.json.JSONArray(cached.healthStatus)
+                        putString("healthStatus", healthArr.toString())
+                        
+                        putString("nationality", cached.nationality)
+                        putString("educationLevel", cached.educationLevel)
+                        putString("jobTitle", cached.jobTitle)
+                        putString("incomeLevel", cached.incomeLevel)
+                        putString("fastingHabit", cached.fastingHabit)
+                        putString("weddingTimeline", cached.weddingTimeline)
+                        putString("wifeWorking", cached.wifeWorking)
+                        putString("householdExpenses", cached.householdExpenses)
+                        putString("aymaView", cached.aymaView)
+                        putString("shabkaView", cached.shabkaView)
+                        putBoolean("gpsLocationEnabled", cached.gpsLocationEnabled)
+                        putBoolean("blurPictures", cached.blurPictures)
+                        putInt("height", cached.height)
+                        putInt("weight", cached.weight)
+                        putString("bodyType", cached.bodyType)
+                        putString("hairColor", cached.hairColor)
+                        putString("eyeColor", cached.eyeColor)
+                        putString("ethnicity", cached.ethnicity)
+                        putString("maritalStatus", cached.maritalStatus)
+                        putString("haveChildren", cached.haveChildren)
+                        
+                        val langsArr = org.json.JSONArray(cached.languagesSpoken)
+                        putString("languagesSpoken", langsArr.toString())
+                        
+                        apply()
+                    }
+                    return@launch
+                }
                 val prefs = context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
                 val savedUid = prefs?.getString("uid", null)
                 if (savedUid != null) {
@@ -655,6 +729,20 @@ class AuthViewModel(
                         list
                     } catch (e: Exception) { emptyList<String>() }
 
+                    val approvedStr = prefs.getString("photoAccessApprovedUsers", "[]") ?: "[]"
+                    val approvedList = mutableListOf<String>()
+                    try {
+                        val arr = org.json.JSONArray(approvedStr)
+                        for (i in 0 until arr.length()) { approvedList.add(arr.getString(i)) }
+                    } catch(e: Exception) {}
+
+                    val requestsStr = prefs.getString("photoAccessRequests", "[]") ?: "[]"
+                    val requestsList = mutableListOf<String>()
+                    try {
+                        val arr = org.json.JSONArray(requestsStr)
+                        for (i in 0 until arr.length()) { requestsList.add(arr.getString(i)) }
+                    } catch(e: Exception) {}
+
                     val profile = UserProfile(
                         uid = savedUid,
                         name = name,
@@ -677,6 +765,8 @@ class AuthViewModel(
                         isPremium = isPremium,
                         subscriptionPlan = subscriptionPlan,
                         questionnaireAnswers = questionnaireAnswers,
+                        photoAccessApprovedUsers = approvedList,
+                        photoAccessRequests = requestsList,
                         aboutYourself = prefs.getString("aboutYourself", "") ?: "",
                         idealPartner = prefs.getString("idealPartner", "") ?: "",
                         username = username,
