@@ -197,7 +197,7 @@ fun CompleteProfileScreen(
 
                 // Country Selector Dropdown
                 var countryExpanded by remember { mutableStateOf(false) }
-                val countryOptions = listOf("Saudi Arabia", "Egypt", "United Arab Emirates", "Jordan", "Syria", "Yemen", "Morocco", "Other")
+                val countryOptions = com.mithaq.app.util.CountryUtils.countries
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = country,
@@ -215,13 +215,14 @@ fun CompleteProfileScreen(
                     DropdownMenu(
                         expanded = countryExpanded,
                         onDismissRequest = { countryExpanded = false },
-                        modifier = Modifier.fillMaxWidth(0.8f)
+                        modifier = Modifier.fillMaxWidth(0.8f).heightIn(max = 300.dp)
                     ) {
                         countryOptions.forEach { option ->
+                            val displayName = com.mithaq.app.util.CountryUtils.getDisplayName(option, isArabic)
                             DropdownMenuItem(
-                                text = { Text(option) },
+                                text = { Text(displayName) },
                                 onClick = {
-                                    country = option
+                                    country = option.nameEn // Always store the English name internally
                                     countryExpanded = false
                                     localError = null
                                 }

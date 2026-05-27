@@ -111,7 +111,11 @@ data class UserProfile(
     
     // Phase 2: Islamic Identity & Trust
     val seriousnessScore: Int = 0,
-    val istikharaCount: Int = 0
+    val istikharaCount: Int = 0,
+
+    // Phase 3: Prayer Tracking
+    val timezone: String = "Asia/Riyadh",
+    val currentStreakDays: Int = 0
 )
 
 enum class Gender(val displayNameEn: String, val displayNameAr: String) {

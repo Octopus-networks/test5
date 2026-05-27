@@ -341,6 +341,8 @@ class AuthViewModel(
                         val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
                         val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
                         val lastSeen = doc.getLong("lastSeen") ?: 0L
+                        val timezone = doc.getString("timezone") ?: "Asia/Riyadh"
+                        val currentStreakDays = doc.getLong("currentStreakDays")?.toInt() ?: 0
 
                         UserProfile(
                             uid = uid,
@@ -367,7 +369,9 @@ class AuthViewModel(
                             isPremium = isPremium,
                             subscriptionPlan = subscriptionPlan,
                             questionnaireAnswers = questionnaireAnswers,
-                            lastSeen = lastSeen
+                            lastSeen = lastSeen,
+                            timezone = timezone,
+                            currentStreakDays = currentStreakDays
                         )
                     } catch (e: Exception) {
                         null
@@ -667,6 +671,8 @@ class AuthViewModel(
                     val subscriptionPlan = prefs.getString("subscriptionPlan", "FREE") ?: "FREE"
                     val questionnaireAnswersStr = prefs.getString("questionnaireAnswers", "{}") ?: "{}"
                     val lastSeen = prefs.getLong("lastSeen", 0L)
+                    val timezone = prefs.getString("timezone", "Asia/Riyadh") ?: "Asia/Riyadh"
+                    val currentStreakDays = prefs.getInt("currentStreakDays", 0)
                     val questionnaireAnswers = try {
                         val obj = org.json.JSONObject(questionnaireAnswersStr)
                         val map = mutableMapOf<String, String>()
@@ -794,7 +800,9 @@ class AuthViewModel(
                         maritalStatus = maritalStatus,
                         haveChildren = haveChildren,
                         languagesSpoken = languagesSpoken,
-                        lastSeen = lastSeen
+                        lastSeen = lastSeen,
+                        timezone = timezone,
+                        currentStreakDays = currentStreakDays
                     )
                     val finalProfile = profile.copy(seriousnessScore = calculateSeriousnessScore(profile))
                     _currentUserProfile.value = finalProfile
@@ -919,6 +927,8 @@ class AuthViewModel(
                     val haveChildren = doc.getString("haveChildren") ?: "no"
                     val languagesSpoken = doc.get("languagesSpoken") as? List<String> ?: emptyList()
                     val lastSeen = doc.getLong("lastSeen") ?: 0L
+                    val timezone = doc.getString("timezone") ?: "Asia/Riyadh"
+                    val currentStreakDays = doc.getLong("currentStreakDays")?.toInt() ?: 0
 
                     val profile = UserProfile(
                         uid = uid,
@@ -974,7 +984,9 @@ class AuthViewModel(
                         ethnicity = ethnicity,
                         maritalStatus = maritalStatus,
                         haveChildren = haveChildren,
-                        languagesSpoken = languagesSpoken
+                        languagesSpoken = languagesSpoken,
+                        timezone = timezone,
+                        currentStreakDays = currentStreakDays
                     )
                     val finalProfile = profile.copy(seriousnessScore = calculateSeriousnessScore(profile))
                     _currentUserProfile.value = finalProfile
@@ -1633,6 +1645,7 @@ class AuthViewModel(
         viewModelScope.launch {
             try {
                 val current = _currentUserProfile.value ?: UserProfile()
+                val derivedTimezone = com.mithaq.app.util.CountryUtils.getTimezoneForCountry(country.trim())
                 val updated = current.copy(
                     name = name.trim(),
                     username = username.trim(),
@@ -1640,7 +1653,8 @@ class AuthViewModel(
                     gender = gender,
                     country = country.trim(),
                     city = city.trim(),
-                    oathChecked = oathChecked
+                    oathChecked = oathChecked,
+                    timezone = derivedTimezone
                 )
                 _currentUserProfile.value = updated
                 userDao?.insertUser(updated.toCached())
@@ -1654,6 +1668,7 @@ class AuthViewModel(
                     putString("country", country.trim())
                     putString("city", city.trim())
                     putBoolean("oathChecked", oathChecked)
+                    putString("timezone", derivedTimezone)
                     apply()
                 }
 
@@ -1674,6 +1689,7 @@ class AuthViewModel(
                                 "country" to country.trim(),
                                 "city" to city.trim(),
                                 "oathChecked" to oathChecked,
+                                "timezone" to derivedTimezone,
                                 "profileComplete" to true
                             )
                         ).await()

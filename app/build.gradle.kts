@@ -139,8 +139,11 @@ dependencies {
   // Biometric
   implementation(libs.androidx.biometric)
 
-  // WorkManager – background notification sync
-  implementation("androidx.work:work-runtime-ktx:2.9.1")
+  // WorkManager – background  // Background Sync
+  implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+  // Prayer Times (Offline)
+  implementation("com.batoulapps.adhan:adhan-java:1.2.2")
 
   // Google Generative AI (Gemini) SDK
   implementation("com.google.ai.client.generativeai:generativeai:0.9.0")

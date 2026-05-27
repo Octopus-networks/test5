@@ -651,13 +651,31 @@ fun ChatTabContent(
                             Text(text = targetUser.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                             VerificationBadge(status = targetUser.verificationStatus)
                         }
+                        
+                        var currentTime by remember { mutableStateOf(com.mithaq.app.util.CountryUtils.formatLocalTime(targetUser.timezone, strings.appName == "ميثاق")) }
+                        LaunchedEffect(Unit) {
+                            while(true) {
+                                kotlinx.coroutines.delay(60000)
+                                currentTime = com.mithaq.app.util.CountryUtils.formatLocalTime(targetUser.timezone, strings.appName == "ميثاق")
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(Icons.Default.AccessTime, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
+                            Text(
+                                text = currentTime,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
                         val isPartnerPhotoApproved = targetUser.photoAccessApprovedUsers.contains(currentUser.uid) || partnerPhotoState == PhotoAccessState.APPROVED
                         Text(
                             text = if (isPartnerPhotoApproved) 
                                 (if (strings.appName == "ميثاق") "الصورة واضحة" else "Photo Visible")
                             else 
                                 (if (strings.appName == "ميثاق") "الصورة مغطاة للحشمة" else "Photo Blurred"), 
-                            style = MaterialTheme.typography.bodySmall, 
+                            style = MaterialTheme.typography.labelSmall, 
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

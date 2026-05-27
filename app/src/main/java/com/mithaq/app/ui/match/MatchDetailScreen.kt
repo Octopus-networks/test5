@@ -248,6 +248,30 @@ fun MatchDetailScreen(
                             color = Color.White.copy(alpha = 0.9f)
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Local Time Indicator
+                    if (isCompatible) {
+                        var currentTime by remember { mutableStateOf(com.mithaq.app.util.CountryUtils.formatLocalTime(partner.timezone, isArabic)) }
+                        LaunchedEffect(Unit) {
+                            while(true) {
+                                kotlinx.coroutines.delay(60000)
+                                currentTime = com.mithaq.app.util.CountryUtils.formatLocalTime(partner.timezone, isArabic)
+                            }
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.AccessTime, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
+                            Text(
+                                text = if (isArabic) "الوقت عنده الآن: $currentTime" else "Local time: $currentTime",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
                 }
 
                     // Inline quick interaction overlays on the bottom right of photo

@@ -121,7 +121,10 @@ data class CachedChatRoom(
     val isChaperoned: Boolean,
     val waliEmail: String?,
     val lastMessage: String?,
-    val lastMessageTimestamp: Long
+    val lastMessageTimestamp: Long,
+    val dailyPrayers: Map<String, List<String>> = emptyMap(),
+    val prayerStreaks: Map<String, Int> = emptyMap(),
+    val goldRewardUnlocked: Boolean = false
 )
 
 class MithaqConverters {
@@ -131,6 +134,57 @@ class MithaqConverters {
         val arr = org.json.JSONArray()
         value.forEach { arr.put(it) }
         return arr.toString()
+    }
+
+    @TypeConverter
+    fun fromDailyPrayersMap(value: Map<String, List<String>>?): String {
+        if (value == null) return "{}"
+        val obj = org.json.JSONObject()
+        value.forEach { (k, v) ->
+            val arr = org.json.JSONArray()
+            v.forEach { arr.put(it) }
+            obj.put(k, arr)
+        }
+        return obj.toString()
+    }
+
+    @TypeConverter
+    fun toDailyPrayersMap(value: String): Map<String, List<String>> {
+        val map = mutableMapOf<String, List<String>>()
+        try {
+            val obj = org.json.JSONObject(value)
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val arr = obj.getJSONArray(key)
+                val list = mutableListOf<String>()
+                for (i in 0 until arr.length()) list.add(arr.getString(i))
+                map[key] = list
+            }
+        } catch (e: Exception) {}
+        return map
+    }
+
+    @TypeConverter
+    fun fromPrayerStreaksMap(value: Map<String, Int>?): String {
+        if (value == null) return "{}"
+        val obj = org.json.JSONObject()
+        value.forEach { (k, v) -> obj.put(k, v) }
+        return obj.toString()
+    }
+
+    @TypeConverter
+    fun toPrayerStreaksMap(value: String): Map<String, Int> {
+        val map = mutableMapOf<String, Int>()
+        try {
+            val obj = org.json.JSONObject(value)
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                map[key] = obj.getInt(key)
+            }
+        } catch (e: Exception) {}
+        return map
     }
 
     @TypeConverter
@@ -240,7 +294,7 @@ interface ChatDao {
 
 @Database(
     entities = [CachedUserProfile::class, CachedMessage::class, CachedChatRoom::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(MithaqConverters::class)

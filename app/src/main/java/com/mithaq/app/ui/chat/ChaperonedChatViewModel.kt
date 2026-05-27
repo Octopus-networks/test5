@@ -155,8 +155,6 @@ class ChaperonedChatViewModel(
                     chatDao?.insertMessage(msg.toCached(roomId))
                 }
             }
-            
-            _messages.value = list
             return
         }
 
@@ -184,8 +182,6 @@ class ChaperonedChatViewModel(
                             chatDao?.insertMessage(msg.toCached(roomId))
                         }
                     }
-                    
-                    _messages.value = list
                 }
             }
     }
@@ -213,7 +209,10 @@ class ChaperonedChatViewModel(
                         isChaperoned = cachedRoom.isChaperoned,
                         waliEmail = cachedRoom.waliEmail,
                         lastMessage = cachedRoom.lastMessage,
-                        lastMessageTimestamp = cachedRoom.lastMessageTimestamp
+                        lastMessageTimestamp = cachedRoom.lastMessageTimestamp,
+                        dailyPrayers = cachedRoom.dailyPrayers,
+                        prayerStreaks = cachedRoom.prayerStreaks,
+                        goldRewardUnlocked = cachedRoom.goldRewardUnlocked
                     )
                 } else {
                     val mockRoom = ChatRoom(
@@ -232,7 +231,10 @@ class ChaperonedChatViewModel(
                             isChaperoned = mockRoom.isChaperoned,
                             waliEmail = mockRoom.waliEmail,
                             lastMessage = mockRoom.lastMessage,
-                            lastMessageTimestamp = mockRoom.lastMessageTimestamp
+                            lastMessageTimestamp = mockRoom.lastMessageTimestamp,
+                            dailyPrayers = mockRoom.dailyPrayers,
+                            prayerStreaks = mockRoom.prayerStreaks,
+                            goldRewardUnlocked = mockRoom.goldRewardUnlocked
                         )
                     )
                 }
@@ -295,6 +297,14 @@ class ChaperonedChatViewModel(
                     val waliEmail = doc.getString("waliEmail")
                     val lastMessage = doc.getString("lastMessage")
                     val lastMessageTimestamp = doc.getLong("lastMessageTimestamp") ?: 0L
+                    
+                    val dailyPrayersRaw = doc.get("dailyPrayers") as? Map<String, Any> ?: emptyMap()
+                    val dailyPrayers = dailyPrayersRaw.mapValues { (_, v) -> (v as? List<String>) ?: emptyList() }
+                    
+                    val prayerStreaksRaw = doc.get("prayerStreaks") as? Map<String, Any> ?: emptyMap()
+                    val prayerStreaks = prayerStreaksRaw.mapValues { (_, v) -> (v as? Number)?.toInt() ?: 0 }
+                    
+                    val goldRewardUnlocked = doc.getBoolean("goldRewardUnlocked") ?: false
 
                     val roomObj = ChatRoom(
                         roomId = roomId,
@@ -302,7 +312,10 @@ class ChaperonedChatViewModel(
                         isChaperoned = isChaperoned,
                         waliEmail = waliEmail,
                         lastMessage = lastMessage,
-                        lastMessageTimestamp = lastMessageTimestamp
+                        lastMessageTimestamp = lastMessageTimestamp,
+                        dailyPrayers = dailyPrayers,
+                        prayerStreaks = prayerStreaks,
+                        goldRewardUnlocked = goldRewardUnlocked
                     )
                     _chatRoom.value = roomObj
                     viewModelScope.launch {
@@ -313,7 +326,10 @@ class ChaperonedChatViewModel(
                                 isChaperoned = isChaperoned,
                                 waliEmail = waliEmail,
                                 lastMessage = lastMessage,
-                                lastMessageTimestamp = lastMessageTimestamp
+                                lastMessageTimestamp = lastMessageTimestamp,
+                                dailyPrayers = dailyPrayers,
+                                prayerStreaks = prayerStreaks,
+                                goldRewardUnlocked = goldRewardUnlocked
                             )
                         )
                     }
@@ -358,10 +374,6 @@ class ChaperonedChatViewModel(
                 // Cache locally in Room DB immediately
                 chatDao?.insertMessage(newMsg.toCached(roomId))
                  
-                // Update local list manually so user sees it instantly
-                val list = _messages.value.toMutableList()
-                list.add(newMsg)
-                _messages.value = list
             }
             return
         }
@@ -377,10 +389,8 @@ class ChaperonedChatViewModel(
             chatDao?.insertMessage(newMsg.toCached(roomId))
              
             if (isMock) {
-                val list = _messages.value.toMutableList()
-                list.add(newMsg)
-                _messages.value = list
-                saveMessagesMock(list)
+                val currentList = chatDao?.getMessagesForRoom(roomId)?.map { it.toDomain() } ?: emptyList()
+                saveMessagesMock(currentList)
 
                 // QUEUE NOTIFICATION for the recipient
                 queueMockNotification(
@@ -399,11 +409,8 @@ class ChaperonedChatViewModel(
                     // Insert into DB
                     chatDao?.insertMessage(replyMsg.toCached(roomId))
 
-                    // Update state
-                    val updatedList = _messages.value.toMutableList()
-                    updatedList.add(replyMsg)
-                    _messages.value = updatedList
-                    saveMessagesMock(updatedList)
+                    val currentList2 = chatDao?.getMessagesForRoom(roomId)?.map { it.toDomain() } ?: emptyList()
+                    saveMessagesMock(currentList2)
 
                     // Trigger local notification
                     context?.let { ctx ->
