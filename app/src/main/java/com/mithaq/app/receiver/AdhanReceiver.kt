@@ -40,9 +40,8 @@ class AdhanReceiver : BroadcastReceiver() {
     private fun showNotification(context: Context, prayerName: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Fallback to default notification sound if custom is not found
         // Place a short "Allahu Akbar" sound in res/raw/takbeer.mp3
-        var soundUri: Uri = Uri.parse("android.resource://" + context.packageName + "/" + R.raw.takbeer)
+        var soundUri: Uri = Uri.parse("android.resource://" + context.packageName + "/raw/takbeer")
         
         // If raw resource doesn't exist, this might fail, so we just try to use it.
         // Android will fallback to default if not found in most cases.
