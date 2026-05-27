@@ -54,6 +54,7 @@ data class CachedUserProfile(
     val isAdmin: Boolean,
     val isPremium: Boolean,
     val subscriptionPlan: String,
+    val premiumExpiry: Long,
     val questionnaireAnswers: Map<String, String>,
 
     // --- Extended Upgrades ---
@@ -368,6 +369,7 @@ fun UserProfile.toCached(): CachedUserProfile = CachedUserProfile(
     isAdmin = isAdmin,
     isPremium = isPremium,
     subscriptionPlan = subscriptionPlan,
+    premiumExpiry = premiumExpiry,
     questionnaireAnswers = questionnaireAnswers,
 
     // Extended Upgrades
@@ -456,6 +458,7 @@ fun CachedUserProfile.toDomain(): UserProfile = UserProfile(
     isAdmin = isAdmin,
     isPremium = isPremium,
     subscriptionPlan = subscriptionPlan,
+    premiumExpiry = premiumExpiry,
     questionnaireAnswers = questionnaireAnswers,
 
     // Extended Upgrades

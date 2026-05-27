@@ -57,6 +57,7 @@ data class UserProfile(
     val isAdmin: Boolean = false,
     val isPremium: Boolean = false,
     val subscriptionPlan: String = "FREE",
+    val premiumExpiry: Long = 0L,
     val questionnaireAnswers: Map<String, String> = emptyMap(),
 
     // --- Muslima Extended Upgrades ---

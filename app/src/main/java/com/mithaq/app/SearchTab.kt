@@ -442,6 +442,7 @@ fun SearchTabContent(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val context3 = androidx.compose.ui.platform.LocalContext.current
                 com.mithaq.app.ui.home.DailyPrayerTracker(
                     currentUser = currentUser,
                     isArabic = isArabic,
@@ -449,7 +450,6 @@ fun SearchTabContent(
                         // Simulate sending a notification to matched users
                         if (isChecked) {
                             coroutineScope.launch {
-                                val context3 = androidx.compose.ui.platform.LocalContext.current
                                 android.widget.Toast.makeText(
                                     context3,
                                     if (isArabic) "تم إشعار أطراف التطابق بصلاة $prayerName!" else "Matches notified about $prayerName prayer!",

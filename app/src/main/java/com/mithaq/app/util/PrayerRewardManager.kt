@@ -70,7 +70,7 @@ object PrayerRewardManager {
         cal.add(Calendar.DAY_OF_YEAR, 10) // 10 days free
         return userProfile.copy(
             isPremium = true,
-            subscriptionTier = "Gold (Prayer Reward)",
+            subscriptionPlan = "Gold (Prayer Reward)",
             premiumExpiry = cal.timeInMillis
         )
     }
