@@ -142,8 +142,8 @@ dependencies {
   // WorkManager – background  // Background Sync
   implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-  // Prayer Times (Offline)
-  implementation("com.batoulapps.adhan:adhan-java:1.2.2")
+    // Prayer Time calculation
+    implementation("com.batoulapps.adhan:adhan:1.2.1")
 
   // Google Generative AI (Gemini) SDK
   implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
