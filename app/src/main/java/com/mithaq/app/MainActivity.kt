@@ -582,6 +582,109 @@ fun HomeScreen(
 
     val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
 
+    // ── Badge Counts for Bottom Navigation ─────────────────────────────────
+    val coroutineScopeHome = rememberCoroutineScope()
+    var likesBadgeCount by remember { mutableStateOf(0) }
+    var chatBadgeCount by remember { mutableStateOf(0) }
+    var viewsBadgeCount by remember { mutableStateOf(0) }
+
+    // SharedPrefs key for "last seen" counts so badge resets when tab is opened
+    val badgePrefs = remember { context.getSharedPreferences("mithaq_badge_prefs", android.content.Context.MODE_PRIVATE) }
+
+    // Refresh badge counts every 10 seconds while on home screen
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isEmpty()) return@LaunchedEffect
+        while (true) {
+            coroutineScopeHome.launch {
+                try {
+                    // Likes badge: new admirers since last viewed
+                    val totalLikers = likesRepository.getWhoLikedMe(currentUserId).size
+                    val seenLikers = badgePrefs.getInt("seen_likers_$currentUserId", 0)
+                    if (selectedTab != 1) likesBadgeCount = maxOf(0, totalLikers - seenLikers)
+
+                    // Views badge: new visitors since last viewed
+                    val totalViews = likesRepository.getProfileVisitors(currentUserId).size
+                    val seenViews = badgePrefs.getInt("seen_views_$currentUserId", 0)
+                    if (selectedTab != 3) viewsBadgeCount = maxOf(0, totalViews - seenViews)
+
+                    // Chat badge: count rooms with unread messages
+                    if (selectedTab != 2) {
+                        val isMockMode = com.mithaq.app.Config.isMock()
+                        if (isMockMode) {
+                            val chatPrefs = context.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
+                            val roomsStr = chatPrefs.getString("mithaq_mock_rooms", "[]") ?: "[]"
+                            val roomsArr = org.json.JSONArray(roomsStr)
+                            var unreadRooms = 0
+                            for (i in 0 until roomsArr.length()) {
+                                val room = roomsArr.getJSONObject(i)
+                                val roomId = room.getString("roomId")
+                                val lastMsgTs = room.optLong("lastMessageTimestamp", 0L)
+                                val lastSeenTs = badgePrefs.getLong("chat_seen_$roomId", 0L)
+                                if (lastMsgTs > lastSeenTs) unreadRooms++
+                            }
+                            chatBadgeCount = unreadRooms
+                        } else {
+                            // Production: count rooms with newer lastMessageTimestamp
+                            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                            try {
+                                val snap = db.collection("chatRooms")
+                                    .whereArrayContains("memberIds", currentUserId)
+                                    .get()
+                                    .await()
+                                var unreadRooms = 0
+                                for (doc in snap.documents) {
+                                    val roomId = doc.id
+                                    val lastMsgTs = doc.getLong("lastMessageTimestamp") ?: 0L
+                                    val lastSeenTs = badgePrefs.getLong("chat_seen_$roomId", 0L)
+                                    if (lastMsgTs > lastSeenTs) unreadRooms++
+                                }
+                                chatBadgeCount = unreadRooms
+                            } catch (_: Exception) {}
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+            kotlinx.coroutines.delay(10_000)
+        }
+    }
+
+    // When a tab is selected, clear its badge and save "seen" count
+    LaunchedEffect(selectedTab) {
+        when (selectedTab) {
+            1 -> {
+                likesBadgeCount = 0
+                coroutineScopeHome.launch {
+                    val total = likesRepository.getWhoLikedMe(currentUserId).size
+                    badgePrefs.edit().putInt("seen_likers_$currentUserId", total).apply()
+                }
+            }
+            2 -> {
+                chatBadgeCount = 0
+                val isMockMode = com.mithaq.app.Config.isMock()
+                if (isMockMode) {
+                    val chatPrefs = context.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
+                    val roomsStr = chatPrefs.getString("mithaq_mock_rooms", "[]") ?: "[]"
+                    val roomsArr = org.json.JSONArray(roomsStr)
+                    val nowTs = System.currentTimeMillis()
+                    val editor = badgePrefs.edit()
+                    for (i in 0 until roomsArr.length()) {
+                        val roomId = roomsArr.getJSONObject(i).getString("roomId")
+                        editor.putLong("chat_seen_$roomId", nowTs)
+                    }
+                    editor.apply()
+                }
+            }
+            3 -> {
+                viewsBadgeCount = 0
+                coroutineScopeHome.launch {
+                    val total = likesRepository.getProfileVisitors(currentUserId).size
+                    badgePrefs.edit().putInt("seen_views_$currentUserId", total).apply()
+                }
+            }
+        }
+    }
+    // ───────────────────────────────────────────────────────────────────────
+
     DisposableEffect(context) {
         val prefs = context.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
         isOfflineSimulated = prefs.getBoolean("is_offline_simulated", false)
@@ -637,11 +740,34 @@ fun HomeScreen(
                         3 -> Icons.Default.Visibility
                         else -> Icons.Default.Star
                     }
+                    val badgeCount = when (index) {
+                        1 -> likesBadgeCount
+                        2 -> chatBadgeCount
+                        3 -> viewsBadgeCount
+                        else -> 0
+                    }
                     NavigationBarItem(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
                         label = { Text(label) },
-                        icon = { Icon(imageVector = icon, contentDescription = label) }
+                        icon = {
+                            if (badgeCount > 0) {
+                                BadgedBox(
+                                    badge = {
+                                        Badge {
+                                            Text(
+                                                text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                    }
+                                ) {
+                                    Icon(imageVector = icon, contentDescription = label)
+                                }
+                            } else {
+                                Icon(imageVector = icon, contentDescription = label)
+                            }
+                        }
                     )
                 }
             }
