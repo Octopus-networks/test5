@@ -341,9 +341,23 @@ class AuthViewModel(
                         val isAdhanEnabled = doc.getBoolean("isAdhanEnabled") ?: false
                         val adhanLocationLat = doc.getDouble("adhanLocationLat") ?: 0.0
                         val adhanLocationLng = doc.getDouble("adhanLocationLng") ?: 0.0
-                        val dailyPrayerCount = doc.getLong("dailyPrayerCount")?.toInt() ?: 0
-                        val weeklyPrayerCount = doc.getLong("weeklyPrayerCount")?.toInt() ?: 0
-                        val monthlyPrayerCount = doc.getLong("monthlyPrayerCount")?.toInt() ?: 0
+                        val adhanCalculationMethod = doc.getString("adhanCalculationMethod") ?: "MUSLIM_WORLD_LEAGUE"
+                        val adhanSoundPattern = doc.getString("adhanSoundPattern") ?: "TAKBEER"
+                        val fajrPrayedToday = doc.getBoolean("fajrPrayedToday") ?: false
+                        val fajrWeeklyCount = doc.getLong("fajrWeeklyCount")?.toInt() ?: 0
+                        val fajrMonthlyCount = doc.getLong("fajrMonthlyCount")?.toInt() ?: 0
+                        val dhuhrPrayedToday = doc.getBoolean("dhuhrPrayedToday") ?: false
+                        val dhuhrWeeklyCount = doc.getLong("dhuhrWeeklyCount")?.toInt() ?: 0
+                        val dhuhrMonthlyCount = doc.getLong("dhuhrMonthlyCount")?.toInt() ?: 0
+                        val asrPrayedToday = doc.getBoolean("asrPrayedToday") ?: false
+                        val asrWeeklyCount = doc.getLong("asrWeeklyCount")?.toInt() ?: 0
+                        val asrMonthlyCount = doc.getLong("asrMonthlyCount")?.toInt() ?: 0
+                        val maghribPrayedToday = doc.getBoolean("maghribPrayedToday") ?: false
+                        val maghribWeeklyCount = doc.getLong("maghribWeeklyCount")?.toInt() ?: 0
+                        val maghribMonthlyCount = doc.getLong("maghribMonthlyCount")?.toInt() ?: 0
+                        val ishaPrayedToday = doc.getBoolean("ishaPrayedToday") ?: false
+                        val ishaWeeklyCount = doc.getLong("ishaWeeklyCount")?.toInt() ?: 0
+                        val ishaMonthlyCount = doc.getLong("ishaMonthlyCount")?.toInt() ?: 0
                         val lastPrayerDate = doc.getLong("lastPrayerDate") ?: 0L
                         val lastWeeklyResetDate = doc.getLong("lastWeeklyResetDate") ?: 0L
                         val lastMonthlyResetDate = doc.getLong("lastMonthlyResetDate") ?: 0L
@@ -377,15 +391,19 @@ class AuthViewModel(
                             isAdmin = isAdmin,
                             isPremium = isPremium,
                             subscriptionPlan = subscriptionPlan,
-                            isAdhanEnabled = isAdhanEnabled,
-                            adhanLocationLat = adhanLocationLat,
-                            adhanLocationLng = adhanLocationLng,
-                            dailyPrayerCount = dailyPrayerCount,
-                            weeklyPrayerCount = weeklyPrayerCount,
-                            monthlyPrayerCount = monthlyPrayerCount,
-                            lastPrayerDate = lastPrayerDate,
-                            lastWeeklyResetDate = lastWeeklyResetDate,
-                            lastMonthlyResetDate = lastMonthlyResetDate,
+                            isAdhanEnabled = false,
+                            adhanLocationLat = 0.0,
+                            adhanLocationLng = 0.0,
+                            adhanCalculationMethod = "MUSLIM_WORLD_LEAGUE",
+                            adhanSoundPattern = "TAKBEER",
+                            fajrPrayedToday = false, fajrWeeklyCount = 0, fajrMonthlyCount = 0,
+                            dhuhrPrayedToday = false, dhuhrWeeklyCount = 0, dhuhrMonthlyCount = 0,
+                            asrPrayedToday = false, asrWeeklyCount = 0, asrMonthlyCount = 0,
+                            maghribPrayedToday = false, maghribWeeklyCount = 0, maghribMonthlyCount = 0,
+                            ishaPrayedToday = false, ishaWeeklyCount = 0, ishaMonthlyCount = 0,
+                            lastPrayerDate = 0L,
+                            lastWeeklyResetDate = 0L,
+                            lastMonthlyResetDate = 0L,
                             questionnaireAnswers = questionnaireAnswers,
                             lastSeen = lastSeen,
                             timezone = timezone,
@@ -797,15 +815,19 @@ class AuthViewModel(
                         isAdmin = isAdmin,
                         isPremium = isPremium,
                         subscriptionPlan = subscriptionPlan,
-                            isAdhanEnabled = isAdhanEnabled,
-                            adhanLocationLat = adhanLocationLat,
-                            adhanLocationLng = adhanLocationLng,
-                            dailyPrayerCount = dailyPrayerCount,
-                            weeklyPrayerCount = weeklyPrayerCount,
-                            monthlyPrayerCount = monthlyPrayerCount,
-                            lastPrayerDate = lastPrayerDate,
-                            lastWeeklyResetDate = lastWeeklyResetDate,
-                            lastMonthlyResetDate = lastMonthlyResetDate,
+                            isAdhanEnabled = false,
+                            adhanLocationLat = 0.0,
+                            adhanLocationLng = 0.0,
+                            adhanCalculationMethod = "MUSLIM_WORLD_LEAGUE",
+                            adhanSoundPattern = "TAKBEER",
+                            fajrPrayedToday = false, fajrWeeklyCount = 0, fajrMonthlyCount = 0,
+                            dhuhrPrayedToday = false, dhuhrWeeklyCount = 0, dhuhrMonthlyCount = 0,
+                            asrPrayedToday = false, asrWeeklyCount = 0, asrMonthlyCount = 0,
+                            maghribPrayedToday = false, maghribWeeklyCount = 0, maghribMonthlyCount = 0,
+                            ishaPrayedToday = false, ishaWeeklyCount = 0, ishaMonthlyCount = 0,
+                            lastPrayerDate = 0L,
+                            lastWeeklyResetDate = 0L,
+                            lastMonthlyResetDate = 0L,
                         questionnaireAnswers = questionnaireAnswers,
                         photoAccessApprovedUsers = approvedList,
                         photoAccessRequests = requestsList,
@@ -937,9 +959,23 @@ class AuthViewModel(
                         val isAdhanEnabled = doc.getBoolean("isAdhanEnabled") ?: false
                         val adhanLocationLat = doc.getDouble("adhanLocationLat") ?: 0.0
                         val adhanLocationLng = doc.getDouble("adhanLocationLng") ?: 0.0
-                        val dailyPrayerCount = doc.getLong("dailyPrayerCount")?.toInt() ?: 0
-                        val weeklyPrayerCount = doc.getLong("weeklyPrayerCount")?.toInt() ?: 0
-                        val monthlyPrayerCount = doc.getLong("monthlyPrayerCount")?.toInt() ?: 0
+                        val adhanCalculationMethod = doc.getString("adhanCalculationMethod") ?: "MUSLIM_WORLD_LEAGUE"
+                        val adhanSoundPattern = doc.getString("adhanSoundPattern") ?: "TAKBEER"
+                        val fajrPrayedToday = doc.getBoolean("fajrPrayedToday") ?: false
+                        val fajrWeeklyCount = doc.getLong("fajrWeeklyCount")?.toInt() ?: 0
+                        val fajrMonthlyCount = doc.getLong("fajrMonthlyCount")?.toInt() ?: 0
+                        val dhuhrPrayedToday = doc.getBoolean("dhuhrPrayedToday") ?: false
+                        val dhuhrWeeklyCount = doc.getLong("dhuhrWeeklyCount")?.toInt() ?: 0
+                        val dhuhrMonthlyCount = doc.getLong("dhuhrMonthlyCount")?.toInt() ?: 0
+                        val asrPrayedToday = doc.getBoolean("asrPrayedToday") ?: false
+                        val asrWeeklyCount = doc.getLong("asrWeeklyCount")?.toInt() ?: 0
+                        val asrMonthlyCount = doc.getLong("asrMonthlyCount")?.toInt() ?: 0
+                        val maghribPrayedToday = doc.getBoolean("maghribPrayedToday") ?: false
+                        val maghribWeeklyCount = doc.getLong("maghribWeeklyCount")?.toInt() ?: 0
+                        val maghribMonthlyCount = doc.getLong("maghribMonthlyCount")?.toInt() ?: 0
+                        val ishaPrayedToday = doc.getBoolean("ishaPrayedToday") ?: false
+                        val ishaWeeklyCount = doc.getLong("ishaWeeklyCount")?.toInt() ?: 0
+                        val ishaMonthlyCount = doc.getLong("ishaMonthlyCount")?.toInt() ?: 0
                         val lastPrayerDate = doc.getLong("lastPrayerDate") ?: 0L
                         val lastWeeklyResetDate = doc.getLong("lastWeeklyResetDate") ?: 0L
                         val lastMonthlyResetDate = doc.getLong("lastMonthlyResetDate") ?: 0L
@@ -1001,15 +1037,19 @@ class AuthViewModel(
                         isAdmin = isAdmin,
                         isPremium = isPremium,
                         subscriptionPlan = subscriptionPlan,
-                            isAdhanEnabled = isAdhanEnabled,
-                            adhanLocationLat = adhanLocationLat,
-                            adhanLocationLng = adhanLocationLng,
-                            dailyPrayerCount = dailyPrayerCount,
-                            weeklyPrayerCount = weeklyPrayerCount,
-                            monthlyPrayerCount = monthlyPrayerCount,
-                            lastPrayerDate = lastPrayerDate,
-                            lastWeeklyResetDate = lastWeeklyResetDate,
-                            lastMonthlyResetDate = lastMonthlyResetDate,
+                            isAdhanEnabled = false,
+                            adhanLocationLat = 0.0,
+                            adhanLocationLng = 0.0,
+                            adhanCalculationMethod = "MUSLIM_WORLD_LEAGUE",
+                            adhanSoundPattern = "TAKBEER",
+                            fajrPrayedToday = false, fajrWeeklyCount = 0, fajrMonthlyCount = 0,
+                            dhuhrPrayedToday = false, dhuhrWeeklyCount = 0, dhuhrMonthlyCount = 0,
+                            asrPrayedToday = false, asrWeeklyCount = 0, asrMonthlyCount = 0,
+                            maghribPrayedToday = false, maghribWeeklyCount = 0, maghribMonthlyCount = 0,
+                            ishaPrayedToday = false, ishaWeeklyCount = 0, ishaMonthlyCount = 0,
+                            lastPrayerDate = 0L,
+                            lastWeeklyResetDate = 0L,
+                            lastMonthlyResetDate = 0L,
                         questionnaireAnswers = questionnaireAnswers,
                         aboutYourself = doc.getString("aboutYourself") ?: "",
                         idealPartner = doc.getString("idealPartner") ?: "",
@@ -1850,29 +1890,33 @@ class AuthViewModel(
         }
     }
 
-    fun updatePrayerStats(
-        isAdhanEnabled: Boolean,
-        adhanLocationLat: Double,
-        adhanLocationLng: Double,
-        dailyPrayerCount: Int,
-        weeklyPrayerCount: Int,
-        monthlyPrayerCount: Int,
-        lastPrayerDate: Long,
-        lastWeeklyResetDate: Long,
-        lastMonthlyResetDate: Long
-    ) {
+    fun updatePrayerStats(profile: com.mithaq.app.model.UserProfile) {
         viewModelScope.launch {
             val current = _currentUserProfile.value ?: return@launch
             val updated = current.copy(
-                isAdhanEnabled = isAdhanEnabled,
-                adhanLocationLat = adhanLocationLat,
-                adhanLocationLng = adhanLocationLng,
-                dailyPrayerCount = dailyPrayerCount,
-                weeklyPrayerCount = weeklyPrayerCount,
-                monthlyPrayerCount = monthlyPrayerCount,
-                lastPrayerDate = lastPrayerDate,
-                lastWeeklyResetDate = lastWeeklyResetDate,
-                lastMonthlyResetDate = lastMonthlyResetDate
+                isAdhanEnabled = profile.isAdhanEnabled,
+                adhanLocationLat = profile.adhanLocationLat,
+                adhanLocationLng = profile.adhanLocationLng,
+                fajrPrayedToday = profile.fajrPrayedToday,
+                dhuhrPrayedToday = profile.dhuhrPrayedToday,
+                asrPrayedToday = profile.asrPrayedToday,
+                maghribPrayedToday = profile.maghribPrayedToday,
+                ishaPrayedToday = profile.ishaPrayedToday,
+                fajrWeeklyCount = profile.fajrWeeklyCount,
+                dhuhrWeeklyCount = profile.dhuhrWeeklyCount,
+                asrWeeklyCount = profile.asrWeeklyCount,
+                maghribWeeklyCount = profile.maghribWeeklyCount,
+                ishaWeeklyCount = profile.ishaWeeklyCount,
+                fajrMonthlyCount = profile.fajrMonthlyCount,
+                dhuhrMonthlyCount = profile.dhuhrMonthlyCount,
+                asrMonthlyCount = profile.asrMonthlyCount,
+                maghribMonthlyCount = profile.maghribMonthlyCount,
+                ishaMonthlyCount = profile.ishaMonthlyCount,
+                lastPrayerDate = profile.lastPrayerDate,
+                lastWeeklyResetDate = profile.lastWeeklyResetDate,
+                lastMonthlyResetDate = profile.lastMonthlyResetDate,
+                adhanCalculationMethod = profile.adhanCalculationMethod,
+                adhanSoundPattern = profile.adhanSoundPattern
             )
             _currentUserProfile.value = updated
             userDao?.insertUser(updated.toCached())
@@ -1883,35 +1927,62 @@ class AuthViewModel(
 
             if (isMock) {
                 context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
-                    putBoolean("isAdhanEnabled", isAdhanEnabled)
-                    putFloat("adhanLocationLat", adhanLocationLat.toFloat())
-                    putFloat("adhanLocationLng", adhanLocationLng.toFloat())
-                    putInt("dailyPrayerCount", dailyPrayerCount)
-                    putInt("weeklyPrayerCount", weeklyPrayerCount)
-                    putInt("monthlyPrayerCount", monthlyPrayerCount)
-                    putLong("lastPrayerDate", lastPrayerDate)
-                    putLong("lastWeeklyResetDate", lastWeeklyResetDate)
-                    putLong("lastMonthlyResetDate", lastMonthlyResetDate)
+                    putBoolean("isAdhanEnabled", profile.isAdhanEnabled)
+                    putFloat("adhanLocationLat", profile.adhanLocationLat.toFloat())
+                    putFloat("adhanLocationLng", profile.adhanLocationLng.toFloat())
+                    putBoolean("fajrPrayedToday", profile.fajrPrayedToday)
+                    putBoolean("dhuhrPrayedToday", profile.dhuhrPrayedToday)
+                    putBoolean("asrPrayedToday", profile.asrPrayedToday)
+                    putBoolean("maghribPrayedToday", profile.maghribPrayedToday)
+                    putBoolean("ishaPrayedToday", profile.ishaPrayedToday)
+                    putInt("fajrWeeklyCount", profile.fajrWeeklyCount)
+                    putInt("dhuhrWeeklyCount", profile.dhuhrWeeklyCount)
+                    putInt("asrWeeklyCount", profile.asrWeeklyCount)
+                    putInt("maghribWeeklyCount", profile.maghribWeeklyCount)
+                    putInt("ishaWeeklyCount", profile.ishaWeeklyCount)
+                    putInt("fajrMonthlyCount", profile.fajrMonthlyCount)
+                    putInt("dhuhrMonthlyCount", profile.dhuhrMonthlyCount)
+                    putInt("asrMonthlyCount", profile.asrMonthlyCount)
+                    putInt("maghribMonthlyCount", profile.maghribMonthlyCount)
+                    putInt("ishaMonthlyCount", profile.ishaMonthlyCount)
+                    putLong("lastPrayerDate", profile.lastPrayerDate)
+                    putLong("lastWeeklyResetDate", profile.lastWeeklyResetDate)
+                    putLong("lastMonthlyResetDate", profile.lastMonthlyResetDate)
+                    putString("adhanCalculationMethod", profile.adhanCalculationMethod)
+                    putString("adhanSoundPattern", profile.adhanSoundPattern)
                     apply()
                 }
             } else {
                 try {
                     firestore.collection("users").document(current.uid).update(
                         mapOf(
-                            "isAdhanEnabled" to isAdhanEnabled,
-                            "adhanLocationLat" to adhanLocationLat,
-                            "adhanLocationLng" to adhanLocationLng,
-                            "dailyPrayerCount" to dailyPrayerCount,
-                            "weeklyPrayerCount" to weeklyPrayerCount,
-                            "monthlyPrayerCount" to monthlyPrayerCount,
-                            "lastPrayerDate" to lastPrayerDate,
-                            "lastWeeklyResetDate" to lastWeeklyResetDate,
-                            "lastMonthlyResetDate" to lastMonthlyResetDate
+                            "isAdhanEnabled" to profile.isAdhanEnabled,
+                            "adhanLocationLat" to profile.adhanLocationLat,
+                            "adhanLocationLng" to profile.adhanLocationLng,
+                            "fajrPrayedToday" to profile.fajrPrayedToday,
+                            "dhuhrPrayedToday" to profile.dhuhrPrayedToday,
+                            "asrPrayedToday" to profile.asrPrayedToday,
+                            "maghribPrayedToday" to profile.maghribPrayedToday,
+                            "ishaPrayedToday" to profile.ishaPrayedToday,
+                            "fajrWeeklyCount" to profile.fajrWeeklyCount,
+                            "dhuhrWeeklyCount" to profile.dhuhrWeeklyCount,
+                            "asrWeeklyCount" to profile.asrWeeklyCount,
+                            "maghribWeeklyCount" to profile.maghribWeeklyCount,
+                            "ishaWeeklyCount" to profile.ishaWeeklyCount,
+                            "fajrMonthlyCount" to profile.fajrMonthlyCount,
+                            "dhuhrMonthlyCount" to profile.dhuhrMonthlyCount,
+                            "asrMonthlyCount" to profile.asrMonthlyCount,
+                            "maghribMonthlyCount" to profile.maghribMonthlyCount,
+                            "ishaMonthlyCount" to profile.ishaMonthlyCount,
+                            "lastPrayerDate" to profile.lastPrayerDate,
+                            "lastWeeklyResetDate" to profile.lastWeeklyResetDate,
+                            "lastMonthlyResetDate" to profile.lastMonthlyResetDate,
+                            "adhanCalculationMethod" to profile.adhanCalculationMethod,
+                            "adhanSoundPattern" to profile.adhanSoundPattern
                         )
                     ).await()
                 } catch (e: Exception) {}
             }
         }
     }
-
 }

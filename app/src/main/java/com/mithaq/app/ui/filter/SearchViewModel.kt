@@ -275,9 +275,23 @@ class SearchViewModel(
                         val isAdhanEnabled = doc.getBoolean("isAdhanEnabled") ?: false
                         val adhanLocationLat = doc.getDouble("adhanLocationLat") ?: 0.0
                         val adhanLocationLng = doc.getDouble("adhanLocationLng") ?: 0.0
-                        val dailyPrayerCount = doc.getLong("dailyPrayerCount")?.toInt() ?: 0
-                        val weeklyPrayerCount = doc.getLong("weeklyPrayerCount")?.toInt() ?: 0
-                        val monthlyPrayerCount = doc.getLong("monthlyPrayerCount")?.toInt() ?: 0
+                        val adhanCalculationMethod = doc.getString("adhanCalculationMethod") ?: "MUSLIM_WORLD_LEAGUE"
+                        val adhanSoundPattern = doc.getString("adhanSoundPattern") ?: "TAKBEER"
+                        val fajrPrayedToday = doc.getBoolean("fajrPrayedToday") ?: false
+                        val fajrWeeklyCount = doc.getLong("fajrWeeklyCount")?.toInt() ?: 0
+                        val fajrMonthlyCount = doc.getLong("fajrMonthlyCount")?.toInt() ?: 0
+                        val dhuhrPrayedToday = doc.getBoolean("dhuhrPrayedToday") ?: false
+                        val dhuhrWeeklyCount = doc.getLong("dhuhrWeeklyCount")?.toInt() ?: 0
+                        val dhuhrMonthlyCount = doc.getLong("dhuhrMonthlyCount")?.toInt() ?: 0
+                        val asrPrayedToday = doc.getBoolean("asrPrayedToday") ?: false
+                        val asrWeeklyCount = doc.getLong("asrWeeklyCount")?.toInt() ?: 0
+                        val asrMonthlyCount = doc.getLong("asrMonthlyCount")?.toInt() ?: 0
+                        val maghribPrayedToday = doc.getBoolean("maghribPrayedToday") ?: false
+                        val maghribWeeklyCount = doc.getLong("maghribWeeklyCount")?.toInt() ?: 0
+                        val maghribMonthlyCount = doc.getLong("maghribMonthlyCount")?.toInt() ?: 0
+                        val ishaPrayedToday = doc.getBoolean("ishaPrayedToday") ?: false
+                        val ishaWeeklyCount = doc.getLong("ishaWeeklyCount")?.toInt() ?: 0
+                        val ishaMonthlyCount = doc.getLong("ishaMonthlyCount")?.toInt() ?: 0
                         val lastPrayerDate = doc.getLong("lastPrayerDate") ?: 0L
                         val lastWeeklyResetDate = doc.getLong("lastWeeklyResetDate") ?: 0L
                         val lastMonthlyResetDate = doc.getLong("lastMonthlyResetDate") ?: 0L
@@ -337,9 +351,13 @@ class SearchViewModel(
                             isAdhanEnabled = isAdhanEnabled,
                             adhanLocationLat = adhanLocationLat,
                             adhanLocationLng = adhanLocationLng,
-                            dailyPrayerCount = dailyPrayerCount,
-                            weeklyPrayerCount = weeklyPrayerCount,
-                            monthlyPrayerCount = monthlyPrayerCount,
+                            adhanCalculationMethod = adhanCalculationMethod,
+                            adhanSoundPattern = adhanSoundPattern,
+                            fajrPrayedToday = fajrPrayedToday, fajrWeeklyCount = fajrWeeklyCount, fajrMonthlyCount = fajrMonthlyCount,
+                            dhuhrPrayedToday = dhuhrPrayedToday, dhuhrWeeklyCount = dhuhrWeeklyCount, dhuhrMonthlyCount = dhuhrMonthlyCount,
+                            asrPrayedToday = asrPrayedToday, asrWeeklyCount = asrWeeklyCount, asrMonthlyCount = asrMonthlyCount,
+                            maghribPrayedToday = maghribPrayedToday, maghribWeeklyCount = maghribWeeklyCount, maghribMonthlyCount = maghribMonthlyCount,
+                            ishaPrayedToday = ishaPrayedToday, ishaWeeklyCount = ishaWeeklyCount, ishaMonthlyCount = ishaMonthlyCount,
                             lastPrayerDate = lastPrayerDate,
                             lastWeeklyResetDate = lastWeeklyResetDate,
                             lastMonthlyResetDate = lastMonthlyResetDate,

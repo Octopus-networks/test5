@@ -23,9 +23,23 @@ object PrayerRewardManager {
         val cal = Calendar.getInstance()
         val currentMillis = cal.timeInMillis
 
-        var newDaily = profile.dailyPrayerCount
-        var newWeekly = profile.weeklyPrayerCount
-        var newMonthly = profile.monthlyPrayerCount
+        var fD = profile.fajrPrayedToday
+        var dD = profile.dhuhrPrayedToday
+        var aD = profile.asrPrayedToday
+        var mD = profile.maghribPrayedToday
+        var iD = profile.ishaPrayedToday
+        
+        var fW = profile.fajrWeeklyCount
+        var dW = profile.dhuhrWeeklyCount
+        var aW = profile.asrWeeklyCount
+        var mW = profile.maghribWeeklyCount
+        var iW = profile.ishaWeeklyCount
+        
+        var fM = profile.fajrMonthlyCount
+        var dM = profile.dhuhrMonthlyCount
+        var aM = profile.asrMonthlyCount
+        var mM = profile.maghribMonthlyCount
+        var iM = profile.ishaMonthlyCount
 
         // 1. Check for resets
         val lastDateStr = if (profile.lastPrayerDate > 0) sdf.format(Date(profile.lastPrayerDate)) else ""
@@ -33,14 +47,22 @@ object PrayerRewardManager {
 
         if (lastDateStr != todayStr) {
             // New day, reset daily
-            newDaily = 0
+            fD = false
+            dD = false
+            aD = false
+            mD = false
+            iD = false
             
-            // Check for weekly reset (different week of year or different year)
+            // Check for weekly reset
             val lastCal = Calendar.getInstance().apply { timeInMillis = profile.lastWeeklyResetDate }
             if (profile.lastWeeklyResetDate == 0L || 
                 cal.get(Calendar.WEEK_OF_YEAR) != lastCal.get(Calendar.WEEK_OF_YEAR) ||
                 cal.get(Calendar.YEAR) != lastCal.get(Calendar.YEAR)) {
-                newWeekly = 0
+                fW = 0
+                dW = 0
+                aW = 0
+                mW = 0
+                iW = 0
             }
 
             // Check for monthly reset
@@ -48,7 +70,11 @@ object PrayerRewardManager {
             if (profile.lastMonthlyResetDate == 0L ||
                 cal.get(Calendar.MONTH) != lastMonthCal.get(Calendar.MONTH) ||
                 cal.get(Calendar.YEAR) != lastMonthCal.get(Calendar.YEAR)) {
-                newMonthly = 0
+                fM = 0
+                dM = 0
+                aM = 0
+                mM = 0
+                iM = 0
             }
         }
 
@@ -58,29 +84,22 @@ object PrayerRewardManager {
             return profile.copy(isAdhanEnabled = isChecked)
         }
         
-        if (isChecked) {
-            newDaily++
-            newWeekly++
-            newMonthly++
-        } else {
-            if (newDaily > 0) newDaily--
-            if (newWeekly > 0) newWeekly--
-            if (newMonthly > 0) newMonthly--
+        when (prayerName.lowercase(Locale.ROOT)) {
+            "fajr" -> { fD = isChecked; if(isChecked) {fW++; fM++} else { if(fW>0) fW--; if(fM>0) fM-- } }
+            "dhuhr" -> { dD = isChecked; if(isChecked) {dW++; dM++} else { if(dW>0) dW--; if(dM>0) dM-- } }
+            "asr" -> { aD = isChecked; if(isChecked) {aW++; aM++} else { if(aW>0) aW--; if(aM>0) aM-- } }
+            "maghrib" -> { mD = isChecked; if(isChecked) {mW++; mM++} else { if(mW>0) mW--; if(mM>0) mM-- } }
+            "isha" -> { iD = isChecked; if(isChecked) {iW++; iM++} else { if(iW>0) iW--; if(iM>0) iM-- } }
         }
 
-        // Clamp values to max caps
-        newDaily = newDaily.coerceIn(0, 5)
-        newWeekly = newWeekly.coerceIn(0, 35)
-        newMonthly = newMonthly.coerceIn(0, 155) // Approx max
-
         // Determine reset dates to save
-        val newLastWeeklyReset = if (newWeekly == 1 && isChecked) currentMillis else if (profile.lastWeeklyResetDate == 0L) currentMillis else profile.lastWeeklyResetDate
-        val newLastMonthlyReset = if (newMonthly == 1 && isChecked) currentMillis else if (profile.lastMonthlyResetDate == 0L) currentMillis else profile.lastMonthlyResetDate
+        val newLastWeeklyReset = if (profile.lastWeeklyResetDate == 0L) currentMillis else profile.lastWeeklyResetDate
+        val newLastMonthlyReset = if (profile.lastMonthlyResetDate == 0L) currentMillis else profile.lastMonthlyResetDate
 
         return profile.copy(
-            dailyPrayerCount = newDaily,
-            weeklyPrayerCount = newWeekly,
-            monthlyPrayerCount = newMonthly,
+            fajrPrayedToday = fD, dhuhrPrayedToday = dD, asrPrayedToday = aD, maghribPrayedToday = mD, ishaPrayedToday = iD,
+            fajrWeeklyCount = fW, dhuhrWeeklyCount = dW, asrWeeklyCount = aW, maghribWeeklyCount = mW, ishaWeeklyCount = iW,
+            fajrMonthlyCount = fM, dhuhrMonthlyCount = dM, asrMonthlyCount = aM, maghribMonthlyCount = mM, ishaMonthlyCount = iM,
             lastPrayerDate = currentMillis,
             lastWeeklyResetDate = newLastWeeklyReset,
             lastMonthlyResetDate = newLastMonthlyReset

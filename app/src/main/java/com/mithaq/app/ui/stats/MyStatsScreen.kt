@@ -245,6 +245,10 @@ fun MyStatsScreen(
                     }
                 )
 
+                val todayCount = listOf(currentUser.fajrPrayedToday, currentUser.dhuhrPrayedToday, currentUser.asrPrayedToday, currentUser.maghribPrayedToday, currentUser.ishaPrayedToday).count { it }
+                val weekCount = currentUser.fajrWeeklyCount + currentUser.dhuhrWeeklyCount + currentUser.asrWeeklyCount + currentUser.maghribWeeklyCount + currentUser.ishaWeeklyCount
+                val monthCount = currentUser.fajrMonthlyCount + currentUser.dhuhrMonthlyCount + currentUser.asrMonthlyCount + currentUser.maghribMonthlyCount + currentUser.ishaMonthlyCount
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -252,21 +256,21 @@ fun MyStatsScreen(
                     StatCard(
                         icon = Icons.Default.Mosque,
                         label = if (isArabic) "صلوات اليوم" else "Today's Prayers",
-                        count = currentUser.dailyPrayerCount,
+                        count = todayCount,
                         color = Color(0xFF4CAF50),
                         modifier = Modifier.weight(1f)
                     )
                     StatCard(
                         icon = Icons.Default.DateRange,
                         label = if (isArabic) "صلوات الأسبوع" else "Weekly Prayers",
-                        count = currentUser.weeklyPrayerCount,
+                        count = weekCount,
                         color = Color(0xFF03A9F4),
                         modifier = Modifier.weight(1f)
                     )
                     StatCard(
                         icon = Icons.Default.CalendarToday,
                         label = if (isArabic) "صلوات الشهر" else "Monthly Prayers",
-                        count = currentUser.monthlyPrayerCount,
+                        count = monthCount,
                         color = Color(0xFF9C27B0),
                         modifier = Modifier.weight(1f)
                     )

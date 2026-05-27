@@ -60,13 +60,35 @@ data class UserProfile(
     val premiumExpiry: Long = 0L,
     val questionnaireAnswers: Map<String, String> = emptyMap(),
 
-    // Adhan & Prayer Tracking Stats
+    // Adhan Settings
     val isAdhanEnabled: Boolean = false,
     val adhanLocationLat: Double = 0.0,
     val adhanLocationLng: Double = 0.0,
-    val dailyPrayerCount: Int = 0,
-    val weeklyPrayerCount: Int = 0,
-    val monthlyPrayerCount: Int = 0,
+    val adhanCalculationMethod: String = "MUSLIM_WORLD_LEAGUE", // MUSLIM_WORLD_LEAGUE, EGYPTIAN, UMM_AL_QURA, etc.
+    val adhanSoundPattern: String = "TAKBEER", // TAKBEER, FULL_ADHAN_MECCA, etc.
+
+    // Independent Prayer Tracking Stats
+    val fajrPrayedToday: Boolean = false,
+    val fajrWeeklyCount: Int = 0,
+    val fajrMonthlyCount: Int = 0,
+
+    val dhuhrPrayedToday: Boolean = false,
+    val dhuhrWeeklyCount: Int = 0,
+    val dhuhrMonthlyCount: Int = 0,
+
+    val asrPrayedToday: Boolean = false,
+    val asrWeeklyCount: Int = 0,
+    val asrMonthlyCount: Int = 0,
+
+    val maghribPrayedToday: Boolean = false,
+    val maghribWeeklyCount: Int = 0,
+    val maghribMonthlyCount: Int = 0,
+
+    val ishaPrayedToday: Boolean = false,
+    val ishaWeeklyCount: Int = 0,
+    val ishaMonthlyCount: Int = 0,
+
+    // Reset Timestamps for prayers
     val lastPrayerDate: Long = 0L,
     val lastWeeklyResetDate: Long = 0L,
     val lastMonthlyResetDate: Long = 0L,

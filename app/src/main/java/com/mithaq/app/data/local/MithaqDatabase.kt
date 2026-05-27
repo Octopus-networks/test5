@@ -57,13 +57,35 @@ data class CachedUserProfile(
     val premiumExpiry: Long,
     val questionnaireAnswers: Map<String, String>,
 
-    // Adhan & Prayer Tracking Stats
+    // Adhan Settings
     val isAdhanEnabled: Boolean,
     val adhanLocationLat: Double,
     val adhanLocationLng: Double,
-    val dailyPrayerCount: Int,
-    val weeklyPrayerCount: Int,
-    val monthlyPrayerCount: Int,
+    val adhanCalculationMethod: String,
+    val adhanSoundPattern: String,
+
+    // Independent Prayer Tracking Stats
+    val fajrPrayedToday: Boolean,
+    val fajrWeeklyCount: Int,
+    val fajrMonthlyCount: Int,
+
+    val dhuhrPrayedToday: Boolean,
+    val dhuhrWeeklyCount: Int,
+    val dhuhrMonthlyCount: Int,
+
+    val asrPrayedToday: Boolean,
+    val asrWeeklyCount: Int,
+    val asrMonthlyCount: Int,
+
+    val maghribPrayedToday: Boolean,
+    val maghribWeeklyCount: Int,
+    val maghribMonthlyCount: Int,
+
+    val ishaPrayedToday: Boolean,
+    val ishaWeeklyCount: Int,
+    val ishaMonthlyCount: Int,
+
+    // Reset Timestamps for prayers
     val lastPrayerDate: Long,
     val lastWeeklyResetDate: Long,
     val lastMonthlyResetDate: Long,
@@ -306,7 +328,7 @@ interface ChatDao {
 
 @Database(
     entities = [CachedUserProfile::class, CachedMessage::class, CachedChatRoom::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(MithaqConverters::class)
@@ -386,9 +408,29 @@ fun UserProfile.toCached(): CachedUserProfile = CachedUserProfile(
     isAdhanEnabled = isAdhanEnabled,
     adhanLocationLat = adhanLocationLat,
     adhanLocationLng = adhanLocationLng,
-    dailyPrayerCount = dailyPrayerCount,
-    weeklyPrayerCount = weeklyPrayerCount,
-    monthlyPrayerCount = monthlyPrayerCount,
+    adhanCalculationMethod = adhanCalculationMethod,
+    adhanSoundPattern = adhanSoundPattern,
+
+    fajrPrayedToday = fajrPrayedToday,
+    fajrWeeklyCount = fajrWeeklyCount,
+    fajrMonthlyCount = fajrMonthlyCount,
+
+    dhuhrPrayedToday = dhuhrPrayedToday,
+    dhuhrWeeklyCount = dhuhrWeeklyCount,
+    dhuhrMonthlyCount = dhuhrMonthlyCount,
+
+    asrPrayedToday = asrPrayedToday,
+    asrWeeklyCount = asrWeeklyCount,
+    asrMonthlyCount = asrMonthlyCount,
+
+    maghribPrayedToday = maghribPrayedToday,
+    maghribWeeklyCount = maghribWeeklyCount,
+    maghribMonthlyCount = maghribMonthlyCount,
+
+    ishaPrayedToday = ishaPrayedToday,
+    ishaWeeklyCount = ishaWeeklyCount,
+    ishaMonthlyCount = ishaMonthlyCount,
+
     lastPrayerDate = lastPrayerDate,
     lastWeeklyResetDate = lastWeeklyResetDate,
     lastMonthlyResetDate = lastMonthlyResetDate,
@@ -485,9 +527,29 @@ fun CachedUserProfile.toDomain(): UserProfile = UserProfile(
     isAdhanEnabled = isAdhanEnabled,
     adhanLocationLat = adhanLocationLat,
     adhanLocationLng = adhanLocationLng,
-    dailyPrayerCount = dailyPrayerCount,
-    weeklyPrayerCount = weeklyPrayerCount,
-    monthlyPrayerCount = monthlyPrayerCount,
+    adhanCalculationMethod = adhanCalculationMethod,
+    adhanSoundPattern = adhanSoundPattern,
+
+    fajrPrayedToday = fajrPrayedToday,
+    fajrWeeklyCount = fajrWeeklyCount,
+    fajrMonthlyCount = fajrMonthlyCount,
+
+    dhuhrPrayedToday = dhuhrPrayedToday,
+    dhuhrWeeklyCount = dhuhrWeeklyCount,
+    dhuhrMonthlyCount = dhuhrMonthlyCount,
+
+    asrPrayedToday = asrPrayedToday,
+    asrWeeklyCount = asrWeeklyCount,
+    asrMonthlyCount = asrMonthlyCount,
+
+    maghribPrayedToday = maghribPrayedToday,
+    maghribWeeklyCount = maghribWeeklyCount,
+    maghribMonthlyCount = maghribMonthlyCount,
+
+    ishaPrayedToday = ishaPrayedToday,
+    ishaWeeklyCount = ishaWeeklyCount,
+    ishaMonthlyCount = ishaMonthlyCount,
+
     lastPrayerDate = lastPrayerDate,
     lastWeeklyResetDate = lastWeeklyResetDate,
     lastMonthlyResetDate = lastMonthlyResetDate,

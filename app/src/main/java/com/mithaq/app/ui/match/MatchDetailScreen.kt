@@ -391,14 +391,14 @@ fun MatchDetailScreen(
 
             // --- Prayer Commitment Indicator ---
             val prayerCommitmentColor = when {
-                partner.weeklyPrayerCount >= 25 -> Color(0xFF4CAF50) // Green - High commitment
-                partner.weeklyPrayerCount >= 10 -> Color(0xFFFF9800) // Orange - Medium
+                (partner.fajrWeeklyCount + partner.dhuhrWeeklyCount + partner.asrWeeklyCount + partner.maghribWeeklyCount + partner.ishaWeeklyCount) >= 25 -> Color(0xFF4CAF50) // Green - High commitment
+                (partner.fajrWeeklyCount + partner.dhuhrWeeklyCount + partner.asrWeeklyCount + partner.maghribWeeklyCount + partner.ishaWeeklyCount) >= 10 -> Color(0xFFFF9800) // Orange - Medium
                 else -> Color(0xFF9E9E9E) // Gray - Low or unknown
             }
             
             val prayerCommitmentText = when {
-                partner.weeklyPrayerCount >= 25 -> if (isArabic) "التزام عالٍ بالصلاة" else "High Prayer Commitment"
-                partner.weeklyPrayerCount >= 10 -> if (isArabic) "التزام متوسط بالصلاة" else "Medium Prayer Commitment"
+                (partner.fajrWeeklyCount + partner.dhuhrWeeklyCount + partner.asrWeeklyCount + partner.maghribWeeklyCount + partner.ishaWeeklyCount) >= 25 -> if (isArabic) "التزام عالٍ بالصلاة" else "High Prayer Commitment"
+                (partner.fajrWeeklyCount + partner.dhuhrWeeklyCount + partner.asrWeeklyCount + partner.maghribWeeklyCount + partner.ishaWeeklyCount) >= 10 -> if (isArabic) "التزام متوسط بالصلاة" else "Medium Prayer Commitment"
                 else -> if (isArabic) "غير محدد" else "Prayer Commitment Unknown"
             }
 
@@ -434,8 +434,9 @@ fun MatchDetailScreen(
                             fontWeight = FontWeight.Bold,
                             color = prayerCommitmentColor
                         )
+                        val partnerMonthCount = partner.fajrMonthlyCount + partner.dhuhrMonthlyCount + partner.asrMonthlyCount + partner.maghribMonthlyCount + partner.ishaMonthlyCount
                         Text(
-                            text = if (isArabic) "صلى ${partner.monthlyPrayerCount} صلاة هذا الشهر" else "Prayed ${partner.monthlyPrayerCount} times this month",
+                            text = if (isArabic) "صلى ${partnerMonthCount} صلاة هذا الشهر" else "Prayed ${partnerMonthCount} times this month",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

@@ -30,12 +30,12 @@ fun DailyPrayerTracker(
     // Determine today's date string
     val todayStr = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) }
     
-    // Derive checked states from dailyPrayerCount
-    val fajrChecked = currentUser.dailyPrayerCount >= 1
-    val dhuhrChecked = currentUser.dailyPrayerCount >= 2
-    val asrChecked = currentUser.dailyPrayerCount >= 3
-    val maghribChecked = currentUser.dailyPrayerCount >= 4
-    val ishaChecked = currentUser.dailyPrayerCount >= 5
+    // Derive checked states from independent daily prayer booleans
+    val fajrChecked = currentUser.fajrPrayedToday
+    val dhuhrChecked = currentUser.dhuhrPrayedToday
+    val asrChecked = currentUser.asrPrayedToday
+    val maghribChecked = currentUser.maghribPrayedToday
+    val ishaChecked = currentUser.ishaPrayedToday
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -92,75 +92,6 @@ fun DailyPrayerTracker(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Adhan Alerts Toggle
-            val context = androidx.compose.ui.platform.LocalContext.current
-            val locationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
-            ) { permissions ->
-                val granted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true || 
-                              permissions[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
-                if (granted) {
-                    // For now, simulate getting location for simplicity or assume a default location.
-                    // In a real app, use FusedLocationProviderClient here.
-                    // Assuming Mecca coordinates as a fallback demo
-                    val lat = 21.4225
-                    val lng = 39.8262
-                    val updated = currentUser.copy(
-                        isAdhanEnabled = true,
-                        adhanLocationLat = lat,
-                        adhanLocationLng = lng
-                    )
-                    // Trigger fake toggle to save updated profile
-                    onPrayerToggled("AdhanToggle", true) 
-                    com.mithaq.app.util.AdhanScheduler.scheduleNextAdhan(context, lat, lng)
-                    android.widget.Toast.makeText(context, if (isArabic) "تم تفعيل الأذان بنجاح" else "Adhan enabled successfully", android.widget.Toast.LENGTH_SHORT).show()
-                } else {
-                    android.widget.Toast.makeText(context, if (isArabic) "يجب تفعيل إذن الموقع للأذان" else "Location permission is required for Adhan", android.widget.Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = if (isArabic) "تفعيل الأذان (يتطلب GPS)" else "Enable Adhan (Requires GPS)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = if (isArabic) "تنبيه صوتي (تكبيرة صغيرة) لوقت الصلاة" else "Short Takbir audio alert at prayer time",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = currentUser.isAdhanEnabled,
-                    onCheckedChange = { isEnabled ->
-                        if (isEnabled) {
-                            locationPermissionLauncher.launch(
-                                arrayOf(
-                                    android.Manifest.permission.ACCESS_FINE_LOCATION,
-                                    android.Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
-                            )
-                        } else {
-                            // Disable Adhan
-                            com.mithaq.app.util.AdhanScheduler.cancelAdhan(context)
-                            // We use the same toggle callback hack to update DB
-                            onPrayerToggled("AdhanToggle", false)
-                        }
-                    },
-                    colors = SwitchDefaults.colors(checkedThumbColor = SuccessGreen, checkedTrackColor = SuccessGreen.copy(alpha = 0.3f))
-                )
-            }
         }
     }
 }
