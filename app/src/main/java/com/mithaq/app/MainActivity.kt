@@ -337,6 +337,7 @@ fun MithaqAppNavigation(
                 onNavigateToRegister = { currentScreen = "register" },
                 onLoginSuccess = { uid ->
                     currentUserId = uid
+                    com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
                     currentScreen = "home"
                 },
                 viewModel = authViewModel,
@@ -349,6 +350,7 @@ fun MithaqAppNavigation(
                 onNavigateToLogin = { currentScreen = "login" },
                 onRegisterSuccess = { uid ->
                     currentUserId = uid
+                    com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
                     currentScreen = "home"
                 },
                 viewModel = authViewModel,
@@ -366,6 +368,7 @@ fun MithaqAppNavigation(
                     onLanguageChange = onLanguageChange,
                     onLogout = {
                         authViewModel.signOut()
+                        com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
                         currentScreen = "login"
                     }
                 )
@@ -424,6 +427,7 @@ fun MithaqAppNavigation(
                         onLanguageChange = onLanguageChange,
                         onLogout = {
                             authViewModel.signOut()
+                            com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
                             currentScreen = "login"
                         },
                         onNavigateToScreen = { screen ->
