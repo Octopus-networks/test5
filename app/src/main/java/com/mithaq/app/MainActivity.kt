@@ -96,6 +96,16 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                "mithaq_alerts_channel_v4",
+                "Mithaq Alerts",
+                android.app.NotificationManager.IMPORTANCE_HIGH
+            )
+            val manager = getSystemService(android.app.NotificationManager::class.java)
+            manager?.createNotificationChannel(channel)
+        }
+
         // Debug-only Firebase fallback for local demo builds.
         try {
             if (!BuildConfig.IS_PRODUCTION && FirebaseApp.getApps(this).isEmpty()) {

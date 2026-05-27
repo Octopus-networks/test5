@@ -28,6 +28,9 @@ object AdhanScheduler {
         }
 
         val coordinates = Coordinates(lat, lng)
+        val prefs = context.getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putFloat("adhan_lat", lat.toFloat()).putFloat("adhan_lng", lng.toFloat()).apply()
+
         val today = DateComponents.from(Date())
         // Try Muslim World League calculation, since it's a good default
         val parameters = CalculationMethod.MUSLIM_WORLD_LEAGUE.parameters

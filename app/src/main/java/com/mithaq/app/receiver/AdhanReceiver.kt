@@ -23,6 +23,17 @@ class AdhanReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            Log.d(TAG, "Boot completed. Rescheduling Adhan.")
+            val prefs = context.getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
+            val lat = prefs.getFloat("adhan_lat", 0.0f).toDouble()
+            val lng = prefs.getFloat("adhan_lng", 0.0f).toDouble()
+            if (lat != 0.0 && lng != 0.0) {
+                AdhanScheduler.scheduleNextAdhan(context, lat, lng)
+            }
+            return
+        }
+
         val prayerName = intent.getStringExtra("PRAYER_NAME") ?: "Prayer"
         val lat = intent.getDoubleExtra("LAT", 0.0)
         val lng = intent.getDoubleExtra("LNG", 0.0)
