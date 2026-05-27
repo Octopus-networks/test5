@@ -57,6 +57,17 @@ data class CachedUserProfile(
     val premiumExpiry: Long,
     val questionnaireAnswers: Map<String, String>,
 
+    // Adhan & Prayer Tracking Stats
+    val isAdhanEnabled: Boolean,
+    val adhanLocationLat: Double,
+    val adhanLocationLng: Double,
+    val dailyPrayerCount: Int,
+    val weeklyPrayerCount: Int,
+    val monthlyPrayerCount: Int,
+    val lastPrayerDate: Long,
+    val lastWeeklyResetDate: Long,
+    val lastMonthlyResetDate: Long,
+
     // --- Extended Upgrades ---
     val profileCreator: String,
     val regionalCode: String,
@@ -295,7 +306,7 @@ interface ChatDao {
 
 @Database(
     entities = [CachedUserProfile::class, CachedMessage::class, CachedChatRoom::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(MithaqConverters::class)
@@ -371,6 +382,16 @@ fun UserProfile.toCached(): CachedUserProfile = CachedUserProfile(
     subscriptionPlan = subscriptionPlan,
     premiumExpiry = premiumExpiry,
     questionnaireAnswers = questionnaireAnswers,
+
+    isAdhanEnabled = isAdhanEnabled,
+    adhanLocationLat = adhanLocationLat,
+    adhanLocationLng = adhanLocationLng,
+    dailyPrayerCount = dailyPrayerCount,
+    weeklyPrayerCount = weeklyPrayerCount,
+    monthlyPrayerCount = monthlyPrayerCount,
+    lastPrayerDate = lastPrayerDate,
+    lastWeeklyResetDate = lastWeeklyResetDate,
+    lastMonthlyResetDate = lastMonthlyResetDate,
 
     // Extended Upgrades
     profileCreator = profileCreator,
@@ -460,6 +481,16 @@ fun CachedUserProfile.toDomain(): UserProfile = UserProfile(
     subscriptionPlan = subscriptionPlan,
     premiumExpiry = premiumExpiry,
     questionnaireAnswers = questionnaireAnswers,
+
+    isAdhanEnabled = isAdhanEnabled,
+    adhanLocationLat = adhanLocationLat,
+    adhanLocationLng = adhanLocationLng,
+    dailyPrayerCount = dailyPrayerCount,
+    weeklyPrayerCount = weeklyPrayerCount,
+    monthlyPrayerCount = monthlyPrayerCount,
+    lastPrayerDate = lastPrayerDate,
+    lastWeeklyResetDate = lastWeeklyResetDate,
+    lastMonthlyResetDate = lastMonthlyResetDate,
 
     // Extended Upgrades
     profileCreator = profileCreator,

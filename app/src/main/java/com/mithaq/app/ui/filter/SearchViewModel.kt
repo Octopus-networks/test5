@@ -272,6 +272,15 @@ class SearchViewModel(
                         val isAdmin = doc.getBoolean("isAdmin") ?: false
                         val isPremium = doc.getBoolean("isPremium") ?: false
                         val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
+                        val isAdhanEnabled = doc.getBoolean("isAdhanEnabled") ?: false
+                        val adhanLocationLat = doc.getDouble("adhanLocationLat") ?: 0.0
+                        val adhanLocationLng = doc.getDouble("adhanLocationLng") ?: 0.0
+                        val dailyPrayerCount = doc.getLong("dailyPrayerCount")?.toInt() ?: 0
+                        val weeklyPrayerCount = doc.getLong("weeklyPrayerCount")?.toInt() ?: 0
+                        val monthlyPrayerCount = doc.getLong("monthlyPrayerCount")?.toInt() ?: 0
+                        val lastPrayerDate = doc.getLong("lastPrayerDate") ?: 0L
+                        val lastWeeklyResetDate = doc.getLong("lastWeeklyResetDate") ?: 0L
+                        val lastMonthlyResetDate = doc.getLong("lastMonthlyResetDate") ?: 0L
                         val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
                         val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
 
@@ -325,6 +334,15 @@ class SearchViewModel(
                             isAdmin = isAdmin,
                             isPremium = isPremium,
                             subscriptionPlan = subscriptionPlan,
+                            isAdhanEnabled = isAdhanEnabled,
+                            adhanLocationLat = adhanLocationLat,
+                            adhanLocationLng = adhanLocationLng,
+                            dailyPrayerCount = dailyPrayerCount,
+                            weeklyPrayerCount = weeklyPrayerCount,
+                            monthlyPrayerCount = monthlyPrayerCount,
+                            lastPrayerDate = lastPrayerDate,
+                            lastWeeklyResetDate = lastWeeklyResetDate,
+                            lastMonthlyResetDate = lastMonthlyResetDate,
                             questionnaireAnswers = questionnaireAnswers,
                             username = username,
                             oathChecked = oathChecked,

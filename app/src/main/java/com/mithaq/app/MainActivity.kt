@@ -527,6 +527,19 @@ fun MithaqAppNavigation(
                 currentUser = profile,
                 likesRepository = likesRepository,
                 isArabic = isArabic,
+                onPrayerStatsUpdated = { updatedProfile ->
+                    authViewModel.updatePrayerStats(
+                        isAdhanEnabled = updatedProfile.isAdhanEnabled,
+                        adhanLocationLat = updatedProfile.adhanLocationLat,
+                        adhanLocationLng = updatedProfile.adhanLocationLng,
+                        dailyPrayerCount = updatedProfile.dailyPrayerCount,
+                        weeklyPrayerCount = updatedProfile.weeklyPrayerCount,
+                        monthlyPrayerCount = updatedProfile.monthlyPrayerCount,
+                        lastPrayerDate = updatedProfile.lastPrayerDate,
+                        lastWeeklyResetDate = updatedProfile.lastWeeklyResetDate,
+                        lastMonthlyResetDate = updatedProfile.lastMonthlyResetDate
+                    )
+                },
                 onBack = { currentScreen = "home" }
             )
         }

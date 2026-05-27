@@ -338,6 +338,15 @@ class AuthViewModel(
                         val isAdmin = doc.getBoolean("isAdmin") ?: false
                         val isPremium = doc.getBoolean("isPremium") ?: false
                         val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
+                        val isAdhanEnabled = doc.getBoolean("isAdhanEnabled") ?: false
+                        val adhanLocationLat = doc.getDouble("adhanLocationLat") ?: 0.0
+                        val adhanLocationLng = doc.getDouble("adhanLocationLng") ?: 0.0
+                        val dailyPrayerCount = doc.getLong("dailyPrayerCount")?.toInt() ?: 0
+                        val weeklyPrayerCount = doc.getLong("weeklyPrayerCount")?.toInt() ?: 0
+                        val monthlyPrayerCount = doc.getLong("monthlyPrayerCount")?.toInt() ?: 0
+                        val lastPrayerDate = doc.getLong("lastPrayerDate") ?: 0L
+                        val lastWeeklyResetDate = doc.getLong("lastWeeklyResetDate") ?: 0L
+                        val lastMonthlyResetDate = doc.getLong("lastMonthlyResetDate") ?: 0L
                         val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
                         val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
                         val lastSeen = doc.getLong("lastSeen") ?: 0L
@@ -368,6 +377,15 @@ class AuthViewModel(
                             isAdmin = isAdmin,
                             isPremium = isPremium,
                             subscriptionPlan = subscriptionPlan,
+                            isAdhanEnabled = isAdhanEnabled,
+                            adhanLocationLat = adhanLocationLat,
+                            adhanLocationLng = adhanLocationLng,
+                            dailyPrayerCount = dailyPrayerCount,
+                            weeklyPrayerCount = weeklyPrayerCount,
+                            monthlyPrayerCount = monthlyPrayerCount,
+                            lastPrayerDate = lastPrayerDate,
+                            lastWeeklyResetDate = lastWeeklyResetDate,
+                            lastMonthlyResetDate = lastMonthlyResetDate,
                             questionnaireAnswers = questionnaireAnswers,
                             lastSeen = lastSeen,
                             timezone = timezone,
@@ -669,6 +687,15 @@ class AuthViewModel(
                     val isAdmin = prefs.getBoolean("isAdmin", false)
                     val isPremium = prefs.getBoolean("isPremium", false)
                     val subscriptionPlan = prefs.getString("subscriptionPlan", "FREE") ?: "FREE"
+                    val isAdhanEnabled = prefs.getBoolean("isAdhanEnabled", false)
+                    val adhanLocationLat = prefs.getFloat("adhanLocationLat", 0.0f).toDouble()
+                    val adhanLocationLng = prefs.getFloat("adhanLocationLng", 0.0f).toDouble()
+                    val dailyPrayerCount = prefs.getInt("dailyPrayerCount", 0)
+                    val weeklyPrayerCount = prefs.getInt("weeklyPrayerCount", 0)
+                    val monthlyPrayerCount = prefs.getInt("monthlyPrayerCount", 0)
+                    val lastPrayerDate = prefs.getLong("lastPrayerDate", 0L)
+                    val lastWeeklyResetDate = prefs.getLong("lastWeeklyResetDate", 0L)
+                    val lastMonthlyResetDate = prefs.getLong("lastMonthlyResetDate", 0L)
                     val questionnaireAnswersStr = prefs.getString("questionnaireAnswers", "{}") ?: "{}"
                     val lastSeen = prefs.getLong("lastSeen", 0L)
                     val timezone = prefs.getString("timezone", "Asia/Riyadh") ?: "Asia/Riyadh"
@@ -770,6 +797,15 @@ class AuthViewModel(
                         isAdmin = isAdmin,
                         isPremium = isPremium,
                         subscriptionPlan = subscriptionPlan,
+                            isAdhanEnabled = isAdhanEnabled,
+                            adhanLocationLat = adhanLocationLat,
+                            adhanLocationLng = adhanLocationLng,
+                            dailyPrayerCount = dailyPrayerCount,
+                            weeklyPrayerCount = weeklyPrayerCount,
+                            monthlyPrayerCount = monthlyPrayerCount,
+                            lastPrayerDate = lastPrayerDate,
+                            lastWeeklyResetDate = lastWeeklyResetDate,
+                            lastMonthlyResetDate = lastMonthlyResetDate,
                         questionnaireAnswers = questionnaireAnswers,
                         photoAccessApprovedUsers = approvedList,
                         photoAccessRequests = requestsList,
@@ -898,6 +934,15 @@ class AuthViewModel(
                     val isAdmin = doc.getBoolean("isAdmin") ?: false
                     val isPremium = doc.getBoolean("isPremium") ?: false
                     val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
+                        val isAdhanEnabled = doc.getBoolean("isAdhanEnabled") ?: false
+                        val adhanLocationLat = doc.getDouble("adhanLocationLat") ?: 0.0
+                        val adhanLocationLng = doc.getDouble("adhanLocationLng") ?: 0.0
+                        val dailyPrayerCount = doc.getLong("dailyPrayerCount")?.toInt() ?: 0
+                        val weeklyPrayerCount = doc.getLong("weeklyPrayerCount")?.toInt() ?: 0
+                        val monthlyPrayerCount = doc.getLong("monthlyPrayerCount")?.toInt() ?: 0
+                        val lastPrayerDate = doc.getLong("lastPrayerDate") ?: 0L
+                        val lastWeeklyResetDate = doc.getLong("lastWeeklyResetDate") ?: 0L
+                        val lastMonthlyResetDate = doc.getLong("lastMonthlyResetDate") ?: 0L
                     val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
                     val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
 
@@ -956,6 +1001,15 @@ class AuthViewModel(
                         isAdmin = isAdmin,
                         isPremium = isPremium,
                         subscriptionPlan = subscriptionPlan,
+                            isAdhanEnabled = isAdhanEnabled,
+                            adhanLocationLat = adhanLocationLat,
+                            adhanLocationLng = adhanLocationLng,
+                            dailyPrayerCount = dailyPrayerCount,
+                            weeklyPrayerCount = weeklyPrayerCount,
+                            monthlyPrayerCount = monthlyPrayerCount,
+                            lastPrayerDate = lastPrayerDate,
+                            lastWeeklyResetDate = lastWeeklyResetDate,
+                            lastMonthlyResetDate = lastMonthlyResetDate,
                         questionnaireAnswers = questionnaireAnswers,
                         aboutYourself = doc.getString("aboutYourself") ?: "",
                         idealPartner = doc.getString("idealPartner") ?: "",
@@ -1795,4 +1849,69 @@ class AuthViewModel(
             }
         }
     }
+
+    fun updatePrayerStats(
+        isAdhanEnabled: Boolean,
+        adhanLocationLat: Double,
+        adhanLocationLng: Double,
+        dailyPrayerCount: Int,
+        weeklyPrayerCount: Int,
+        monthlyPrayerCount: Int,
+        lastPrayerDate: Long,
+        lastWeeklyResetDate: Long,
+        lastMonthlyResetDate: Long
+    ) {
+        viewModelScope.launch {
+            val current = _currentUserProfile.value ?: return@launch
+            val updated = current.copy(
+                isAdhanEnabled = isAdhanEnabled,
+                adhanLocationLat = adhanLocationLat,
+                adhanLocationLng = adhanLocationLng,
+                dailyPrayerCount = dailyPrayerCount,
+                weeklyPrayerCount = weeklyPrayerCount,
+                monthlyPrayerCount = monthlyPrayerCount,
+                lastPrayerDate = lastPrayerDate,
+                lastWeeklyResetDate = lastWeeklyResetDate,
+                lastMonthlyResetDate = lastMonthlyResetDate
+            )
+            _currentUserProfile.value = updated
+            userDao?.insertUser(updated.toCached())
+
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) { true }
+
+            if (isMock) {
+                context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
+                    putBoolean("isAdhanEnabled", isAdhanEnabled)
+                    putFloat("adhanLocationLat", adhanLocationLat.toFloat())
+                    putFloat("adhanLocationLng", adhanLocationLng.toFloat())
+                    putInt("dailyPrayerCount", dailyPrayerCount)
+                    putInt("weeklyPrayerCount", weeklyPrayerCount)
+                    putInt("monthlyPrayerCount", monthlyPrayerCount)
+                    putLong("lastPrayerDate", lastPrayerDate)
+                    putLong("lastWeeklyResetDate", lastWeeklyResetDate)
+                    putLong("lastMonthlyResetDate", lastMonthlyResetDate)
+                    apply()
+                }
+            } else {
+                try {
+                    firestore.collection("users").document(current.uid).update(
+                        mapOf(
+                            "isAdhanEnabled" to isAdhanEnabled,
+                            "adhanLocationLat" to adhanLocationLat,
+                            "adhanLocationLng" to adhanLocationLng,
+                            "dailyPrayerCount" to dailyPrayerCount,
+                            "weeklyPrayerCount" to weeklyPrayerCount,
+                            "monthlyPrayerCount" to monthlyPrayerCount,
+                            "lastPrayerDate" to lastPrayerDate,
+                            "lastWeeklyResetDate" to lastWeeklyResetDate,
+                            "lastMonthlyResetDate" to lastMonthlyResetDate
+                        )
+                    ).await()
+                } catch (e: Exception) {}
+            }
+        }
+    }
+
 }

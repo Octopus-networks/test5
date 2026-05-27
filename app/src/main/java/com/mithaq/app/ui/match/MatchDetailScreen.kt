@@ -389,6 +389,60 @@ fun MatchDetailScreen(
                 }
             }
 
+            // --- Prayer Commitment Indicator ---
+            val prayerCommitmentColor = when {
+                partner.weeklyPrayerCount >= 25 -> Color(0xFF4CAF50) // Green - High commitment
+                partner.weeklyPrayerCount >= 10 -> Color(0xFFFF9800) // Orange - Medium
+                else -> Color(0xFF9E9E9E) // Gray - Low or unknown
+            }
+            
+            val prayerCommitmentText = when {
+                partner.weeklyPrayerCount >= 25 -> if (isArabic) "التزام عالٍ بالصلاة" else "High Prayer Commitment"
+                partner.weeklyPrayerCount >= 10 -> if (isArabic) "التزام متوسط بالصلاة" else "Medium Prayer Commitment"
+                else -> if (isArabic) "غير محدد" else "Prayer Commitment Unknown"
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = prayerCommitmentColor.copy(alpha = 0.1f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(prayerCommitmentColor.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mosque,
+                            contentDescription = "Prayer",
+                            tint = prayerCommitmentColor
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = prayerCommitmentText,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = prayerCommitmentColor
+                        )
+                        Text(
+                            text = if (isArabic) "صلى ${partner.monthlyPrayerCount} صلاة هذا الشهر" else "Prayed ${partner.monthlyPrayerCount} times this month",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             // 2. PREMIUM TOP PROMO (For free users)
             if (!isPremium) {
                 Card(

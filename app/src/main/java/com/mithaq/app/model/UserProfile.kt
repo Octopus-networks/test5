@@ -60,6 +60,17 @@ data class UserProfile(
     val premiumExpiry: Long = 0L,
     val questionnaireAnswers: Map<String, String> = emptyMap(),
 
+    // Adhan & Prayer Tracking Stats
+    val isAdhanEnabled: Boolean = false,
+    val adhanLocationLat: Double = 0.0,
+    val adhanLocationLng: Double = 0.0,
+    val dailyPrayerCount: Int = 0,
+    val weeklyPrayerCount: Int = 0,
+    val monthlyPrayerCount: Int = 0,
+    val lastPrayerDate: Long = 0L,
+    val lastWeeklyResetDate: Long = 0L,
+    val lastMonthlyResetDate: Long = 0L,
+
     // --- Muslima Extended Upgrades ---
     val profileCreator: String = "self", // "self", "parent", "brother_sister", "relative", "friend"
     val regionalCode: String = "MUS",    // "MUS", "SAC", "IDC", "AFR", "INT", "IRC", "MLS"

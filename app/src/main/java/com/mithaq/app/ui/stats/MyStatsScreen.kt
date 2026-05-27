@@ -35,6 +35,7 @@ fun MyStatsScreen(
     currentUser: UserProfile,
     likesRepository: LikesRepository,
     isArabic: Boolean,
+    onPrayerStatsUpdated: (UserProfile) -> Unit = {},
     onBack: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -219,6 +220,59 @@ fun MyStatsScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // --- PRAYER STATS SECTION ---
+                Text(
+                    text = if (isArabic) "إحصائيات الصلاة والتزامك" else "Your Prayer Commitment",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // The interactive Daily Prayer Tracker is placed here
+                com.mithaq.app.ui.home.DailyPrayerTracker(
+                    currentUser = currentUser,
+                    isArabic = isArabic,
+                    onPrayerToggled = { prayerName, isChecked ->
+                        onPrayerStatsUpdated(
+                            com.mithaq.app.util.PrayerRewardManager.onUserPrayerToggled(
+                                profile = currentUser,
+                                prayerName = prayerName,
+                                isChecked = isChecked
+                            )
+                        )
+                    }
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatCard(
+                        icon = Icons.Default.Mosque,
+                        label = if (isArabic) "صلوات اليوم" else "Today's Prayers",
+                        count = currentUser.dailyPrayerCount,
+                        color = Color(0xFF4CAF50),
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        icon = Icons.Default.DateRange,
+                        label = if (isArabic) "صلوات الأسبوع" else "Weekly Prayers",
+                        count = currentUser.weeklyPrayerCount,
+                        color = Color(0xFF03A9F4),
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        icon = Icons.Default.CalendarToday,
+                        label = if (isArabic) "صلوات الشهر" else "Monthly Prayers",
+                        count = currentUser.monthlyPrayerCount,
+                        color = Color(0xFF9C27B0),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Subscription badge
                 Card(
