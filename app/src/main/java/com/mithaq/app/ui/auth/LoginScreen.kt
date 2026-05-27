@@ -48,8 +48,8 @@ fun LoginScreen(
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     val authState by viewModel.authState.collectAsState()
 
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(if (com.mithaq.app.Config.IS_PRODUCTION) "" else "sarah@mithaq.com") }
+    var password by remember { mutableStateOf(if (com.mithaq.app.Config.IS_PRODUCTION) "" else "123456") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isWali by remember { mutableStateOf(false) }
 
@@ -95,8 +95,8 @@ fun LoginScreen(
                 viewModel.resetState()
             }
             is AuthState.Idle -> {
-                email = ""
-                password = ""
+                email = if (com.mithaq.app.Config.IS_PRODUCTION) "" else "sarah@mithaq.com"
+                password = if (com.mithaq.app.Config.IS_PRODUCTION) "" else "123456"
             }
             else -> Unit
         }
