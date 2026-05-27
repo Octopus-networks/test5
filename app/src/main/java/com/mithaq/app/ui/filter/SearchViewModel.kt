@@ -90,7 +90,12 @@ class SearchViewModel(
                             questionnaireAnswers = mapOf(
                                 "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt4", "q5" to "opt1",
                                 "q6" to "opt1", "q7" to "opt2", "q8" to "opt1", "q9" to "opt2", "q10" to "opt1"
-                            )
+                            ),
+                            fajrPrayedToday = true, fajrWeeklyCount = 5, fajrMonthlyCount = 20,
+                            dhuhrPrayedToday = true, dhuhrWeeklyCount = 6, dhuhrMonthlyCount = 25,
+                            asrPrayedToday = true, asrWeeklyCount = 6, asrMonthlyCount = 22,
+                            maghribPrayedToday = true, maghribWeeklyCount = 7, maghribMonthlyCount = 28,
+                            ishaPrayedToday = true, ishaWeeklyCount = 7, ishaMonthlyCount = 28
                         ),
                         UserProfile(
                             uid = "mock_user_3",
@@ -111,7 +116,12 @@ class SearchViewModel(
                             questionnaireAnswers = mapOf(
                                 "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt1", "q5" to "opt2",
                                 "q6" to "opt2", "q7" to "opt1", "q8" to "opt2", "q9" to "opt1", "q10" to "opt2"
-                            )
+                            ),
+                            fajrPrayedToday = false, fajrWeeklyCount = 1, fajrMonthlyCount = 5,
+                            dhuhrPrayedToday = true, dhuhrWeeklyCount = 2, dhuhrMonthlyCount = 10,
+                            asrPrayedToday = false, asrWeeklyCount = 2, asrMonthlyCount = 9,
+                            maghribPrayedToday = true, maghribWeeklyCount = 3, maghribMonthlyCount = 12,
+                            ishaPrayedToday = false, ishaWeeklyCount = 3, ishaMonthlyCount = 11
                         )
                     )
                     defaultMock.forEach { userDao?.insertUser(it.toCached()) }
@@ -162,7 +172,12 @@ class SearchViewModel(
                             questionnaireAnswers = mapOf(
                                 "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt4", "q5" to "opt1",
                                 "q6" to "opt1", "q7" to "opt2", "q8" to "opt1", "q9" to "opt2", "q10" to "opt1"
-                            )
+                            ),
+                            fajrPrayedToday = true, fajrWeeklyCount = 5, fajrMonthlyCount = 20,
+                            dhuhrPrayedToday = true, dhuhrWeeklyCount = 6, dhuhrMonthlyCount = 25,
+                            asrPrayedToday = true, asrWeeklyCount = 6, asrMonthlyCount = 22,
+                            maghribPrayedToday = true, maghribWeeklyCount = 7, maghribMonthlyCount = 28,
+                            ishaPrayedToday = true, ishaWeeklyCount = 7, ishaMonthlyCount = 28
                         ),
                         UserProfile(
                             uid = "mock_user_3",
@@ -183,7 +198,12 @@ class SearchViewModel(
                             questionnaireAnswers = mapOf(
                                 "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt1", "q5" to "opt2",
                                 "q6" to "opt2", "q7" to "opt1", "q8" to "opt2", "q9" to "opt1", "q10" to "opt2"
-                            )
+                            ),
+                            fajrPrayedToday = false, fajrWeeklyCount = 1, fajrMonthlyCount = 5,
+                            dhuhrPrayedToday = true, dhuhrWeeklyCount = 2, dhuhrMonthlyCount = 10,
+                            asrPrayedToday = false, asrWeeklyCount = 2, asrMonthlyCount = 9,
+                            maghribPrayedToday = true, maghribWeeklyCount = 3, maghribMonthlyCount = 12,
+                            ishaPrayedToday = false, ishaWeeklyCount = 3, ishaMonthlyCount = 11
                         ),
                         UserProfile(
                             uid = "mock_user_4",
@@ -201,7 +221,12 @@ class SearchViewModel(
                             guardianName = "Omar / عمر",
                             guardianEmail = "omar@mithaq.com",
                             guardianStatus = "PENDING",
-                            verificationStatus = "PENDING"
+                            verificationStatus = "PENDING",
+                            fajrPrayedToday = true, fajrWeeklyCount = 4, fajrMonthlyCount = 15,
+                            dhuhrPrayedToday = true, dhuhrWeeklyCount = 5, dhuhrMonthlyCount = 18,
+                            asrPrayedToday = true, asrWeeklyCount = 5, asrMonthlyCount = 17,
+                            maghribPrayedToday = true, maghribWeeklyCount = 6, maghribMonthlyCount = 21,
+                            ishaPrayedToday = true, ishaWeeklyCount = 6, ishaMonthlyCount = 20
                         )
                     )
                     defaultMock.forEach { userDao?.insertUser(it.toCached()) }
