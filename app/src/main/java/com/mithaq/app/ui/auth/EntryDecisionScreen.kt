@@ -96,10 +96,19 @@ fun EntryDecisionScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(44.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 Text(
-                    text = if (isArabic) "هل لديك حساب على ميثاق؟" else "Do you have a Mithaq account?",
+                    text = if (isArabic) "ميثاق" else "Mithaq",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(34.dp))
+
+                Text(
+                    text = if (isArabic) "ابدأ رحلتك بنية واضحة" else "Begin with clear intent",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -110,9 +119,9 @@ fun EntryDecisionScreen(
 
                 Text(
                     text = if (isArabic) {
-                        "ابدأ التسجيل الجاد من البداية أو ادخل لحسابك الحالي."
+                        "طريق هادئ وجاد للتعارف الشرعي، يبدأ بالثقة والخصوصية قبل أي ترشيحات."
                     } else {
-                        "Start the serious registration journey or sign in to your existing account."
+                        "A calm, serious path for halal matchmaking, built on trust and privacy before matches."
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
@@ -139,7 +148,7 @@ fun EntryDecisionScreen(
                         Icon(Icons.Default.Login, contentDescription = null)
                         Spacer(modifier = Modifier.size(10.dp))
                         Text(
-                            text = if (isArabic) "نعم، تسجيل الدخول" else "Yes, sign in",
+                            text = if (isArabic) "دخول لحسابي" else "Sign in",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
@@ -164,7 +173,7 @@ fun EntryDecisionScreen(
                         Icon(Icons.Default.PersonAdd, contentDescription = null)
                         Spacer(modifier = Modifier.size(10.dp))
                         Text(
-                            text = if (isArabic) "لا، إنشاء حساب جديد" else "No, create account",
+                            text = if (isArabic) "إنشاء ميثاق جديد" else "Create new Mithaq",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
