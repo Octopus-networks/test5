@@ -348,9 +348,11 @@ class ChaperonedChatViewModel(
     fun sendChatMessage(messageText: String) {
         val currentUserId = auth.currentUser?.uid
         val isMock = com.mithaq.app.Config.isMock()
-        if (!isMock && currentUserId == null) {
-            android.util.Log.e("ChaperonedChatViewModel", "Cannot send message: unauthenticated user in production.")
-            return
+        if (currentUserId == null) {
+            if (!isMock) {
+                android.util.Log.e("ChaperonedChatViewModel", "Cannot send message: unauthenticated user in production.")
+                return
+            }
         }
         val senderId = currentUserId ?: "mock_user"
 

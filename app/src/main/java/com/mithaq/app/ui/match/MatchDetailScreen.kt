@@ -605,20 +605,22 @@ fun MatchDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        InfoChip(icon = Icons.Default.Palette, label = if (isArabic) "لون الشعر" else "Hair color", value = if (isArabic) "أسود" else "Black")
-                        InfoChip(icon = Icons.Default.Visibility, label = if (isArabic) "لون العين" else "Eye color", value = if (isArabic) "أسود" else "Black")
-                        InfoChip(icon = Icons.Default.Straighten, label = if (isArabic) "الطول" else "Height", value = "159 cm (5'3\")")
-                        InfoChip(icon = Icons.Default.MonitorWeight, label = if (isArabic) "الوزن" else "Weight", value = "65 kg (143 lb)")
-                        InfoChip(icon = Icons.Default.Scale, label = if (isArabic) "بنية الجسم" else "Body style", value = if (isArabic) "رياضي" else "Athletic")
-                        InfoChip(icon = Icons.Default.PersonOutline, label = if (isArabic) "العرق" else "Ethnicity", value = if (isArabic) "عربي" else "Arab")
-                        InfoChip(icon = Icons.Default.Face, label = if (isArabic) "المظهر" else "Appearance", value = if (isArabic) "جذاب جداً" else "Very attractive")
+                        val formatHeight = "${partner.height} cm"
+                        val formatWeight = "${partner.weight} kg"
+                        InfoChip(icon = Icons.Default.Palette, label = if (isArabic) "لون الشعر" else "Hair color", value = partner.hairColor.replaceFirstChar { it.uppercase() })
+                        InfoChip(icon = Icons.Default.Visibility, label = if (isArabic) "لون العين" else "Eye color", value = partner.eyeColor.replaceFirstChar { it.uppercase() })
+                        InfoChip(icon = Icons.Default.Straighten, label = if (isArabic) "الطول" else "Height", value = formatHeight)
+                        InfoChip(icon = Icons.Default.MonitorWeight, label = if (isArabic) "الوزن" else "Weight", value = formatWeight)
+                        InfoChip(icon = Icons.Default.Scale, label = if (isArabic) "بنية الجسم" else "Body style", value = partner.bodyType.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                        InfoChip(icon = Icons.Default.PersonOutline, label = if (isArabic) "العرق" else "Ethnicity", value = partner.ethnicity.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                        InfoChip(icon = Icons.Default.Face, label = if (isArabic) "المظهر" else "Appearance", value = partner.appearanceRating.replaceFirstChar { it.uppercase() }.replace("_", " "))
                     }
                 }
 
                 // C. Bio/Text Cards
                 TextSectionCard(
                     title = if (isArabic) "مقدمتي" else "My Bio",
-                    content = if (isArabic) "روحي الجميلة وتطلعاتي نحو المستقبل" else "Lovely soul looking for a blessed journey."
+                    content = partner.aboutYourself.ifEmpty { if (isArabic) "لا توجد تفاصيل" else "No details provided." }
                 )
 
                 // D. Show More/Less expandable block
@@ -638,14 +640,14 @@ fun MatchDetailScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    InfoChip(icon = Icons.Default.Flight, label = if (isArabic) "الانتقال" else "Relocate", value = if (isArabic) "مستعد للانتقال لبلد آخر" else "Willing to relocate")
-                                    InfoChip(icon = Icons.Default.LocalBar, label = if (isArabic) "المشروبات" else "Drink", value = if (isArabic) "لا أشرب" else "Don't drink")
-                                    InfoChip(icon = Icons.Default.SmokingRooms, label = if (isArabic) "التدخين" else "Smoke", value = if (isArabic) "لا أدخن" else "Don't smoke")
-                                    InfoChip(icon = Icons.Default.Restaurant, label = if (isArabic) "الأكل الحلال" else "Eating habits", value = if (isArabic) "أكل حلال عندما أستطيع" else "Halal food")
-                                    InfoChip(icon = Icons.Default.FavoriteBorder, label = if (isArabic) "الحالة الاجتماعية" else "Marital Status", value = if (isArabic) "أرمل" else "Widowed")
-                                    InfoChip(icon = Icons.Default.ChildCare, label = if (isArabic) "الأطفال" else "Have children", value = if (isArabic) "لا يوجد أطفال" else "No children")
-                                    InfoChip(icon = Icons.Default.Work, label = if (isArabic) "المهنة" else "Occupation", value = if (isArabic) "أخرى" else "Other")
-                                    InfoChip(icon = Icons.Default.MonetizationOn, label = if (isArabic) "الدخل السنوي" else "Annual income", value = if (isArabic) "فضل عدم الإفصاح" else "Prefer not to say")
+                                    InfoChip(icon = Icons.Default.Flight, label = if (isArabic) "الانتقال" else "Relocate", value = partner.relocationWillingness.getDisplayName(isArabic))
+                                    InfoChip(icon = Icons.Default.LocalBar, label = if (isArabic) "المشروبات" else "Drink", value = partner.drinkStatus.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                                    InfoChip(icon = Icons.Default.SmokingRooms, label = if (isArabic) "التدخين" else "Smoke", value = partner.smokeStatus.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                                    InfoChip(icon = Icons.Default.Restaurant, label = if (isArabic) "الأكل الحلال" else "Eating habits", value = partner.eatingHabit.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                                    InfoChip(icon = Icons.Default.FavoriteBorder, label = if (isArabic) "الحالة الاجتماعية" else "Marital Status", value = partner.maritalStatus.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                                    InfoChip(icon = Icons.Default.ChildCare, label = if (isArabic) "الأطفال" else "Have children", value = partner.haveChildren.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                                    InfoChip(icon = Icons.Default.Work, label = if (isArabic) "المهنة" else "Occupation", value = partner.occupation.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                                    InfoChip(icon = Icons.Default.MonetizationOn, label = if (isArabic) "الدخل السنوي" else "Annual income", value = partner.annualIncome.replaceFirstChar { it.uppercase() }.replace("_", " "))
                                 }
                             }
 
@@ -658,14 +660,15 @@ fun MatchDetailScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    InfoChip(icon = Icons.Default.Language, label = if (isArabic) "الجنسية" else "Nationality", value = if (isArabic) "سوري" else "Syrian")
-                                    InfoChip(icon = Icons.Default.School, label = if (isArabic) "التعليم" else "Education", value = if (isArabic) "بكالوريوس" else "Bachelors Degree")
-                                    InfoChip(icon = Icons.Default.Translate, label = if (isArabic) "اللغات" else "Languages spoken", value = "English, Arabic")
+                                    InfoChip(icon = Icons.Default.Language, label = if (isArabic) "الجنسية" else "Nationality", value = partner.nationality.ifEmpty { if (isArabic) "غير محدد" else "Not specified" })
+                                    InfoChip(icon = Icons.Default.School, label = if (isArabic) "التعليم" else "Education", value = partner.educationLevel.ifEmpty { if (isArabic) "غير محدد" else "Not specified" })
+                                    val languagesStr = if (partner.languagesSpoken.isNotEmpty()) partner.languagesSpoken.joinToString(", ") else if (isArabic) "العربية" else "Arabic"
+                                    InfoChip(icon = Icons.Default.Translate, label = if (isArabic) "اللغات" else "Languages spoken", value = languagesStr)
                                     InfoChip(icon = Icons.Default.Book, label = if (isArabic) "الديانة" else "Religion", value = partner.sect.getDisplayName(isArabic))
-                                    InfoChip(icon = Icons.Default.Stars, label = if (isArabic) "الالتزام الديني" else "Religious values", value = if (isArabic) "ملتزم جداً" else "Very Religious")
-                                    InfoChip(icon = Icons.Default.AccessTime, label = if (isArabic) "حضور الصلوات" else "Attend services", value = if (isArabic) "يومياً" else "Daily")
-                                    InfoChip(icon = Icons.AutoMirrored.Filled.MenuBook, label = if (isArabic) "قراءة القرآن" else "Read Qur'an", value = if (isArabic) "يومياً" else "Daily")
-                                    InfoChip(icon = Icons.Default.Accessibility, label = if (isArabic) "منشئ الملف" else "Profile creator", value = if (isArabic) "نفسي" else "Self")
+                                    InfoChip(icon = Icons.Default.Stars, label = if (isArabic) "الالتزام الديني" else "Religious values", value = partner.religiousValues.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                                    InfoChip(icon = Icons.Default.AccessTime, label = if (isArabic) "حضور الصلوات" else "Attend services", value = partner.attendReligiousService.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                                    InfoChip(icon = Icons.AutoMirrored.Filled.MenuBook, label = if (isArabic) "قراءة القرآن" else "Read Qur'an", value = partner.readQuran.replaceFirstChar { it.uppercase() }.replace("_", " "))
+                                    InfoChip(icon = Icons.Default.Accessibility, label = if (isArabic) "منشئ الملف" else "Profile creator", value = partner.profileCreator.replaceFirstChar { it.uppercase() }.replace("_", " "))
                                 }
                             }
                         }
@@ -697,11 +700,7 @@ fun MatchDetailScreen(
                     badgeValue = "1"
                 ) {
                     Text(
-                        text = if (isArabic) {
-                            "يجب أن يكون لطيفاً، مهتماً، محترماً وصادقاً ومقدراً للمسؤولية، وقبل كل شيء يخاف الله."
-                        } else {
-                            "He must be lovely, caring, respectful, honest and understanding, above all he must have the fear of Allah."
-                        },
+                        text = partner.partnerPreferences.ifEmpty { if (isArabic) "لا توجد تفاصيل" else "No details provided." },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 8.dp)

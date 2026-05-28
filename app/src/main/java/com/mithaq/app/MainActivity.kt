@@ -394,12 +394,13 @@ fun MithaqAppNavigation(
 
                 if (isProfileIncomplete) {
                     CompleteProfileScreen(
-                        currentUserProfile = currentUserProfile!!,
+                        userId = currentUserId,
+                        onCompleteSuccess = {
+                            authViewModel.fetchCurrentUserProfile(currentUserId)
+                        },
                         viewModel = authViewModel,
                         isArabic = isArabic,
-                        onComplete = {
-                            authViewModel.fetchCurrentUserProfile(currentUserId)
-                        }
+                        onLanguageChange = onLanguageChange
                     )
                 } else {
                     val shouldShowWizard = currentUserProfile != null &&

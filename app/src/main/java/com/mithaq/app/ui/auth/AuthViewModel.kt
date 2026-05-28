@@ -1467,7 +1467,7 @@ class AuthViewModel(
                             .set(userProfilePayload)
                             .await()
                         // Signal that profile completion (onboarding) is required
-                        _authState.value = AuthState.NeedsProfileCompletion(user.uid)
+                        _authState.value = AuthState.Authenticated(user.uid)
                         return@launch
                     }
                     fetchCurrentUserProfile(user.uid)
@@ -1489,6 +1489,38 @@ class AuthViewModel(
 
     fun resetState() {
         _authState.value = AuthState.Idle
+    }
+
+    fun updateGoogleUserProfile(
+        userId: String,
+        username: String,
+        age: Int,
+        gender: Gender,
+        country: String,
+        city: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                db.collection("users").document(userId).update(
+                    mapOf(
+                        "username" to username,
+                        "age" to age,
+                        "gender" to gender.name,
+                        "country" to country,
+                        "city" to city,
+                        "profileComplete" to true
+                    )
+                ).await()
+                fetchCurrentUserProfile(userId)
+                _authState.value = AuthState.Authenticated(userId)
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "Failed to update profile")
+            }
+        }
     }
 
     fun verifySelfie(imageUri: android.net.Uri, context: android.content.Context, onSuccess: (Boolean) -> Unit) {
@@ -1996,6 +2028,28 @@ class AuthViewModel(
                         )
                     ).await()
                 } catch (e: Exception) {}
+            }
+        }
+    }
+    fun updateFcmToken(token: String) {
+        val currentUserId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) { true }
+
+            if (!isMock) {
+                try {
+                    firestore.collection("users").document(currentUserId)
+                        .update("fcmToken", token)
+                        .await()
+                    val currentProfile = _currentUserProfile.value
+                    if (currentProfile != null) {
+                        _currentUserProfile.value = currentProfile.copy(fcmToken = token)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }
