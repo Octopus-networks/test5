@@ -1518,7 +1518,7 @@ class AuthViewModel(
                 val trimmedCity = city.trim()
                 val trimmedUsername = username.trim()
                 val derivedTimezone = com.mithaq.app.util.CountryUtils.getTimezoneForCountry(trimmedCountry)
-                db.collection("users").document(userId).update(
+                db.collection("users").document(userId).set(
                     mapOf(
                         "username" to trimmedUsername,
                         "age" to age,
@@ -1528,8 +1528,9 @@ class AuthViewModel(
                         "oathChecked" to oathChecked,
                         "timezone" to derivedTimezone,
                         "profileComplete" to true
-                    )
-                ).await()
+                    ),
+                    com.google.firebase.firestore.SetOptions.merge()
+                )
 
                 val updated = (_currentUserProfile.value ?: UserProfile(uid = userId)).copy(
                     uid = userId,
