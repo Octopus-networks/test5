@@ -282,6 +282,7 @@ fun CompleteProfileScreen(
                                                     gender = gender,
                                                     country = country,
                                                     city = city,
+                                                    oathChecked = oathChecked,
                                                     onSuccess = onCompleteSuccess,
                                                     onError = { err ->
                                                         isLoading = false

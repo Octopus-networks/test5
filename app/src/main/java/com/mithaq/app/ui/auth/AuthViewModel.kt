@@ -1507,22 +1507,43 @@ class AuthViewModel(
         gender: Gender,
         country: String,
         city: String,
+        oathChecked: Boolean,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
                 val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                val trimmedCountry = country.trim()
+                val trimmedCity = city.trim()
+                val trimmedUsername = username.trim()
+                val derivedTimezone = com.mithaq.app.util.CountryUtils.getTimezoneForCountry(trimmedCountry)
                 db.collection("users").document(userId).update(
                     mapOf(
-                        "username" to username,
+                        "username" to trimmedUsername,
                         "age" to age,
                         "gender" to gender.name,
-                        "country" to country,
-                        "city" to city,
+                        "country" to trimmedCountry,
+                        "city" to trimmedCity,
+                        "oathChecked" to oathChecked,
+                        "timezone" to derivedTimezone,
                         "profileComplete" to true
                     )
                 ).await()
+
+                val updated = (_currentUserProfile.value ?: UserProfile(uid = userId)).copy(
+                    uid = userId,
+                    username = trimmedUsername,
+                    age = age,
+                    gender = gender,
+                    country = trimmedCountry,
+                    city = trimmedCity,
+                    oathChecked = oathChecked,
+                    timezone = derivedTimezone
+                )
+                _currentUserProfile.value = updated
+                userDao?.insertUser(updated.toCached())
+
                 fetchCurrentUserProfile(userId)
                 _authState.value = AuthState.Authenticated(userId)
                 onSuccess()
