@@ -248,18 +248,40 @@ fun MithaqAppNavigation(
         }
         
         // Check for exact alarm permission on Android 12+
+        var showExactAlarmDialog by remember { mutableStateOf(false) }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
             if (!alarmManager.canScheduleExactAlarms()) {
-                try {
-                    val intent = android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                        data = android.net.Uri.parse("package:${context.packageName}")
-                    }
-                    context.startActivity(intent)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                showExactAlarmDialog = true
             }
+        }
+        
+        if (showExactAlarmDialog) {
+            AlertDialog(
+                onDismissRequest = { showExactAlarmDialog = false },
+                title = { Text(if (isArabic) "صلاحية الأذان" else "Adhan Permission") },
+                text = { Text(if (isArabic) "لضمان عمل الأذان في وقته الدقيق، يرجى منح التطبيق صلاحية المنبهات المجدولة من الإعدادات." else "To ensure the Adhan plays exactly on time, please grant the app Alarms & Reminders permission in Settings.") },
+                confirmButton = {
+                    Button(onClick = {
+                        showExactAlarmDialog = false
+                        try {
+                            val intent = android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                data = android.net.Uri.parse("package:${context.packageName}")
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }) {
+                        Text(if (isArabic) "فتح الإعدادات" else "Open Settings")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExactAlarmDialog = false }) {
+                        Text(if (isArabic) "تخطي" else "Skip")
+                    }
+                }
+            )
         }
     }
 
