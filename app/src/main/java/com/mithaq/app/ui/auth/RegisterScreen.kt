@@ -33,6 +33,7 @@ import com.mithaq.app.ui.photo.UserProfileImage
 import com.mithaq.app.ui.photo.BrotherhoodAvatars
 import com.mithaq.app.ui.photo.SisterhoodAvatars
 import com.mithaq.app.ui.filter.FlowRow
+import com.mithaq.app.ui.common.MithaqQuestionArtwork
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.BorderStroke
 
@@ -270,6 +271,13 @@ fun RegisterScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                MithaqQuestionArtwork(
+                                    variant = "account",
+                                    title = if (isArabic) "بداية موثوقة" else "Trusted beginning",
+                                    subtitle = if (isArabic) "بيانات واضحة وقسم جاد قبل بناء الترشيحات." else "Clear details and serious intent before matching."
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
                                 OutlinedTextField(
                                     value = username,
                                     onValueChange = { username = it },
@@ -445,6 +453,13 @@ fun RegisterScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                MithaqQuestionArtwork(
+                                    variant = "body",
+                                    title = if (isArabic) "ملامح تساعد على التوافق" else "Details that help compatibility",
+                                    subtitle = if (isArabic) "معلومات محترمة تُعرض بخصوصية وبدون مبالغة." else "Respectful profile details, private and balanced."
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
                                 OutlinedTextField(
                                     value = height,
                                     onValueChange = { height = it },
@@ -570,6 +585,13 @@ fun RegisterScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                MithaqQuestionArtwork(
+                                    variant = "demographics",
+                                    title = if (isArabic) "خريطة شخصية أوضح" else "A clearer personal map",
+                                    subtitle = if (isArabic) "الجنسية والتعليم والعمل تساعدنا نرشح بذكاء." else "Nationality, education, and work improve thoughtful matching."
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
                                 SimpleDropdown(
                                     label = if (isArabic) "الجنسية" else "Nationality",
                                     options = listOf("Saudi Arabia", "Egypt", "United Arab Emirates", "Jordan", "Syria", "Yemen", "Morocco", "Other"),
@@ -690,6 +712,13 @@ fun RegisterScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                MithaqQuestionArtwork(
+                                    variant = "faith",
+                                    title = if (isArabic) "قيم تظهر بهدوء" else "Values, shown calmly",
+                                    subtitle = if (isArabic) "أسئلة الالتزام والعادات تُبنى للتفاهم لا للحكم." else "Faith and habits are asked for understanding, not judgment."
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
                                 Text(
                                     text = if (isArabic) "المذهب الديني:" else "Religious Beliefs / Sect:",
                                     fontWeight = FontWeight.Bold,
@@ -788,6 +817,13 @@ fun RegisterScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                MithaqQuestionArtwork(
+                                    variant = "future",
+                                    title = if (isArabic) "اتفاق قبل الطريق" else "Agreement before the path",
+                                    subtitle = if (isArabic) "السكن، الانتقال، والأطفال تُطرح مبكرًا لتقليل المفاجآت." else "Home, relocation, and children are clarified early."
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
                                 SimpleDropdown(
                                     label = if (isArabic) "موعد الزواج المتوقع" else "Wedding Timeline",
                                     options = listOf("Immediate", "Within 6 months", "Within a year", "More than a year"),
@@ -864,6 +900,13 @@ fun RegisterScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                MithaqQuestionArtwork(
+                                    variant = "culture",
+                                    title = if (isArabic) "وضوح يحفظ الاحترام" else "Clarity that protects respect",
+                                    subtitle = if (isArabic) "المال والعادات تُناقش بلطف قبل بداية التواصل." else "Money and customs are handled gently before chatting."
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -950,6 +993,13 @@ fun RegisterScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                MithaqQuestionArtwork(
+                                    variant = "bio",
+                                    title = if (isArabic) "صورتك بكلماتك" else "Your profile, in your words",
+                                    subtitle = if (isArabic) "اكتب بصدق، واختر الخصوصية والصورة المناسبة لك." else "Write honestly, then choose privacy and media settings."
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 

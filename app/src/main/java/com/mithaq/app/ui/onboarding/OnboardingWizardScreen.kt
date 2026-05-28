@@ -33,6 +33,10 @@ import com.mithaq.app.ui.guardian.GuardianUiState
 import com.mithaq.app.ui.match.QuestionnaireData
 import com.mithaq.app.ui.match.QuestionnaireQuestion
 import com.mithaq.app.ui.match.QuestionnaireOption
+import com.mithaq.app.ui.common.MithaqQuestionArtwork
+import com.mithaq.app.ui.common.mithaqQuestionArtworkSubtitle
+import com.mithaq.app.ui.common.mithaqQuestionArtworkTitle
+import com.mithaq.app.ui.common.mithaqQuestionVariant
 import com.mithaq.app.ui.theme.*
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -684,6 +688,14 @@ fun StepQuestionnaireContent(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        MithaqQuestionArtwork(
+            variant = mithaqQuestionVariant(currentQuestion.category),
+            title = mithaqQuestionArtworkTitle(currentQuestion.id, isArabic),
+            subtitle = mithaqQuestionArtworkSubtitle(currentQuestion.id, isArabic)
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = if (isArabic) currentQuestion.textAr else currentQuestion.textEn,

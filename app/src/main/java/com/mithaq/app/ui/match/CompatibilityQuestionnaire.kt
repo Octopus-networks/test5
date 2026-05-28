@@ -32,6 +32,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.mithaq.app.model.UserProfile
+import com.mithaq.app.ui.common.MithaqQuestionArtwork
+import com.mithaq.app.ui.common.mithaqQuestionArtworkSubtitle
+import com.mithaq.app.ui.common.mithaqQuestionArtworkTitle
+import com.mithaq.app.ui.common.mithaqQuestionVariant
 import com.mithaq.app.ui.theme.LocalMithaqStrings
 
 data class QuestionnaireQuestion(
@@ -288,6 +292,14 @@ fun QuestionnaireScreen(
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                 ) {
+                    MithaqQuestionArtwork(
+                        variant = mithaqQuestionVariant(q.category),
+                        title = mithaqQuestionArtworkTitle(q.id, isArabic),
+                        subtitle = mithaqQuestionArtworkSubtitle(q.id, isArabic)
+                    )
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
                     Text(
                         text = if (isArabic) q.textAr else q.textEn,
                         style = MaterialTheme.typography.headlineSmall,

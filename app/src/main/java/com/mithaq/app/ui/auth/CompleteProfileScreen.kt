@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mithaq.app.model.*
 import androidx.compose.foundation.BorderStroke
+import com.mithaq.app.ui.common.MithaqQuestionArtwork
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -154,6 +155,13 @@ fun CompleteProfileScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                MithaqQuestionArtwork(
+                                    variant = "account",
+                                    title = if (isArabic) "استكمال الهوية" else "Complete your identity",
+                                    subtitle = if (isArabic) "هذه البيانات تفتح لك تجربة ميثاق الكاملة." else "These details unlock the full Mithaq experience."
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
                                 OutlinedTextField(
                                     value = name,
                                     onValueChange = { name = it },
@@ -260,6 +268,13 @@ fun CompleteProfileScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                MithaqQuestionArtwork(
+                                    variant = "location",
+                                    title = if (isArabic) "المكان والوقت الصحيح" else "Right place, right time",
+                                    subtitle = if (isArabic) "الدولة والمدينة تضبط الترشيحات والتوقيت المحلي." else "Country and city improve matching and local time."
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
