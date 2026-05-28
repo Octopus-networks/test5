@@ -46,8 +46,8 @@ fun SevenQuestionsChallengeScreen(
     isArabic: Boolean,
     onBack: () -> Unit
 ) {
-    var currentStep by remember { mutableStateOf(0) }
-    var answers by remember { mutableStateOf(mutableMapOf<Int, String>()) }
+    var currentStep by remember { mutableIntStateOf(0) }
+    val answers = remember { mutableStateMapOf<Int, String>() }
 
     Scaffold(
         topBar = {

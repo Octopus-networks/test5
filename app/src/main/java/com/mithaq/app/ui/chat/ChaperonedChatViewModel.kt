@@ -443,9 +443,11 @@ class ChaperonedChatViewModel(
                 if (!roomSnap.exists()) {
                     roomRef.set(
                         mapOf(
-                            "roomId" to roomId,
                             "isChaperoned" to false,
-                            "memberIds" to roomId.split("_")
+                            "memberIds" to roomId.split("_"),
+                            "waliEmail" to null,
+                            "lastMessage" to "",
+                            "lastMessageTimestamp" to 0L
                         )
                     ).await()
                 }

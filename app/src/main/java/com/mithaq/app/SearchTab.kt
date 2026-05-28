@@ -98,10 +98,11 @@ fun SearchTabContent(
     isArabic: Boolean,
     onSelectMatch: (UserProfile) -> Unit,
     onNavigateToUpgrade: () -> Unit,
-    onNavigateToScreen: (String) -> Unit = {}
+    onNavigateToScreen: (String) -> Unit = {},
+    initialSubTab: Int = 0
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var activeSubTab by remember { mutableStateOf(0) }
+    var activeSubTab by remember(initialSubTab) { mutableStateOf(initialSubTab) }
     var showFilters by remember { mutableStateOf(false) }
     var isGridView by remember { mutableStateOf(false) }
     val searchResults by viewModel.searchResults.collectAsState()
@@ -179,19 +180,20 @@ fun SearchTabContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 val guardianStatus = currentUser.guardianStatus ?: "None"
-                val waliBannerColor = when (guardianStatus) {
-                    "Verified" -> SuccessGreen.copy(alpha = 0.15f)
-                    "Pending" -> Color(0xFFFF9800).copy(alpha = 0.15f)
+                val normalizedGuardianStatus = guardianStatus.uppercase()
+                val waliBannerColor = when (normalizedGuardianStatus) {
+                    "VERIFIED" -> SuccessGreen.copy(alpha = 0.15f)
+                    "PENDING" -> Color(0xFFFF9800).copy(alpha = 0.15f)
                     else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
                 }
-                val waliBannerBorder = when (guardianStatus) {
-                    "Verified" -> SuccessGreen.copy(alpha = 0.4f)
-                    "Pending" -> Color(0xFFFF9800).copy(alpha = 0.4f)
+                val waliBannerBorder = when (normalizedGuardianStatus) {
+                    "VERIFIED" -> SuccessGreen.copy(alpha = 0.4f)
+                    "PENDING" -> Color(0xFFFF9800).copy(alpha = 0.4f)
                     else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                 }
-                val waliText = when (guardianStatus) {
-                    "Verified" -> if (isArabic) "تحت الإشراف الشرعي الكامل لولي أمرك" else "Under full Islamic supervision of your Guardian"
-                    "Pending" -> if (isArabic) "دعوة ولي الأمر قيد الانتظار" else "Guardian invitation pending"
+                val waliText = when (normalizedGuardianStatus) {
+                    "VERIFIED" -> if (isArabic) "تحت الإشراف الشرعي الكامل لولي أمرك" else "Under full Islamic supervision of your Guardian"
+                    "PENDING" -> if (isArabic) "دعوة ولي الأمر قيد الانتظار" else "Guardian invitation pending"
                     else -> if (isArabic) "اضغط لإشراك ولي أمرك لضمان الحشمة والجدية" else "Invite a guardian to oversee chats & ensure modesty"
                 }
 
@@ -207,9 +209,9 @@ fun SearchTabContent(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
-                            imageVector = if (guardianStatus == "Verified") Icons.Default.CheckCircle else Icons.Default.Info,
+                            imageVector = if (normalizedGuardianStatus == "VERIFIED") Icons.Default.CheckCircle else Icons.Default.Info,
                             contentDescription = null,
-                            tint = if (guardianStatus == "Verified") SuccessGreen else if (guardianStatus == "Pending") Color(0xFFFF9800) else MaterialTheme.colorScheme.primary
+                            tint = if (normalizedGuardianStatus == "VERIFIED") SuccessGreen else if (normalizedGuardianStatus == "PENDING") Color(0xFFFF9800) else MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = waliText,
@@ -1005,10 +1007,10 @@ fun SearchTabContent(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(300.dp)
+                                        .height(280.dp)
                                         .padding(vertical = 8.dp)
                                         .let { if (!isCompatible) it.alpha(0.55f) else it },
-                                    shape = RoundedCornerShape(24.dp),
+                                    shape = RoundedCornerShape(8.dp),
                                     onClick = { 
                                         if (isCompatible) {
                                             onSelectMatch(profile) 
@@ -1021,7 +1023,7 @@ fun SearchTabContent(
                                             gender = profile.gender,
                                             isBlurred = isBlurred,
                                             modifier = Modifier.fillMaxSize(),
-                                            shape = RoundedCornerShape(24.dp)
+                                            shape = RoundedCornerShape(8.dp)
                                         )
                                         
                                         Box(
@@ -1048,7 +1050,8 @@ fun SearchTabContent(
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(8.dp))
                                                     .background(Color.Black.copy(alpha = 0.5f))
                                                     .clickable {
                                                         if (isCompatible) {

@@ -1,7 +1,14 @@
 package com.mithaq.app.ui.settings
 
+import android.Manifest
+import android.app.AlarmManager
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.MediaPlayer
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,8 +31,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.location.LocationServices
 import com.mithaq.app.model.UserProfile
 import com.mithaq.app.ui.auth.AuthViewModel
+import com.mithaq.app.util.AdhanScheduler
+import com.mithaq.app.util.PrayerManager
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,6 +78,8 @@ fun AppSettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            SettingsHeaderCard(currentUser = currentUser, isArabic = isArabic)
+
             // General Settings
             Text(
                 text = if (isArabic) "الإعدادات العامة" else "General Settings",
@@ -73,6 +89,7 @@ fun AppSettingsScreen(
             )
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -136,6 +153,7 @@ fun AppSettingsScreen(
             )
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -206,7 +224,61 @@ fun AppSettingsScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsHeaderCard(currentUser: UserProfile, isArabic: Boolean) {
+    val guardianReady = currentUser.guardianStatus == "VERIFIED" || !currentUser.guardianEmail.isNullOrBlank()
+    val adhanStatus = if (currentUser.isAdhanEnabled) {
+        if (isArabic) "مفعل" else "On"
+    } else {
+        if (isArabic) "متوقف" else "Off"
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = if (isArabic) "إدارة الحساب والتجربة" else "Account & Experience",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SettingsStatusPill(
+                    label = if (isArabic) "الأذان" else "Adhan",
+                    value = adhanStatus,
+                    modifier = Modifier.weight(1f)
+                )
+                SettingsStatusPill(
+                    label = if (isArabic) "الولي" else "Guardian",
+                    value = if (guardianReady) {
+                        if (isArabic) "جاهز" else "Ready"
+                    } else {
+                        if (isArabic) "غير مضاف" else "Missing"
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsStatusPill(label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun AdhanSettingsSectionFixed(
     currentUser: UserProfile,
@@ -224,6 +296,12 @@ fun AdhanSettingsSectionFixed(
     var expandedSound by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+    val locationPermissionsState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
     DisposableEffect(Unit) {
@@ -265,6 +343,7 @@ fun AdhanSettingsSectionFixed(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -279,12 +358,35 @@ fun AdhanSettingsSectionFixed(
                 }
                 Switch(
                     checked = isEnabled,
-                    onCheckedChange = { isEnabled = it }
+                    onCheckedChange = { checked ->
+                        isEnabled = checked
+                        if (checked && !locationPermissionsState.allPermissionsGranted) {
+                            locationPermissionsState.launchMultiplePermissionRequest()
+                        }
+                    }
                 )
             }
 
             if (isEnabled) {
                 Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = if (locationPermissionsState.allPermissionsGranted) {
+                        if (isArabic) "سيتم استخدام موقعك الحالي لحساب أوقات الصلاة." else "Your current location will be used for prayer times."
+                    } else {
+                        if (isArabic) "لو لم تمنح صلاحية الموقع، سنستخدم بلدك كبديل تقريبي." else "If location is not granted, your country will be used as an approximate fallback."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (!locationPermissionsState.allPermissionsGranted) {
+                    TextButton(onClick = { locationPermissionsState.launchMultiplePermissionRequest() }) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (isArabic) "منح صلاحية الموقع" else "Grant location permission")
+                    }
+                }
 
                 // Calculation Method Dropdown
                 ExposedDropdownMenuBox(
@@ -356,12 +458,45 @@ fun AdhanSettingsSectionFixed(
                 onClick = {
                     isSaving = true
                     coroutineScope.launch {
+                        if (isEnabled && !AdhanScheduler.canScheduleExactAlarms(context)) {
+                            requestExactAlarmPermission(context)
+                            isSaving = false
+                            android.widget.Toast.makeText(
+                                context,
+                                if (isArabic) "فعّل صلاحية المنبهات الدقيقة ثم اضغط حفظ مرة أخرى." else "Allow exact alarms, then tap Save again.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                            return@launch
+                        }
+
+                        val coordinates = if (isEnabled) {
+                            resolveAdhanCoordinates(context, currentUser)
+                        } else {
+                            null
+                        }
                         val updatedProfile = currentUser.copy(
                             isAdhanEnabled = isEnabled,
+                            adhanLocationLat = coordinates?.lat ?: currentUser.adhanLocationLat,
+                            adhanLocationLng = coordinates?.lng ?: currentUser.adhanLocationLng,
                             adhanCalculationMethod = calcMethod,
                             adhanSoundPattern = soundPattern
                         )
                         authViewModel.updatePrayerStats(updatedProfile)
+                        val scheduleSucceeded = if (isEnabled && coordinates != null) {
+                            AdhanScheduler.scheduleNextAdhan(
+                                context = context,
+                                lat = coordinates.lat,
+                                lng = coordinates.lng,
+                                calculationMethod = calcMethod,
+                                soundPattern = soundPattern
+                            )
+                        } else {
+                            AdhanScheduler.cancelAdhan(context)
+                            true
+                        }
+                        if (!scheduleSucceeded) {
+                            requestExactAlarmPermission(context)
+                        }
                         isSaving = false
                         android.widget.Toast.makeText(
                             context,
@@ -380,5 +515,48 @@ fun AdhanSettingsSectionFixed(
                 }
             }
         }
+    }
+}
+
+private data class AdhanCoordinates(
+    val lat: Double,
+    val lng: Double
+)
+
+private suspend fun resolveAdhanCoordinates(context: Context, currentUser: UserProfile): AdhanCoordinates {
+    if (hasLocationPermission(context)) {
+        val location = runCatching {
+            LocationServices.getFusedLocationProviderClient(context).lastLocation.await()
+        }.getOrNull()
+        if (location != null && (location.latitude != 0.0 || location.longitude != 0.0)) {
+            return AdhanCoordinates(location.latitude, location.longitude)
+        }
+    }
+
+    if (currentUser.adhanLocationLat != 0.0 || currentUser.adhanLocationLng != 0.0) {
+        return AdhanCoordinates(currentUser.adhanLocationLat, currentUser.adhanLocationLng)
+    }
+
+    val countryCoordinates = PrayerManager.getCoordinatesForCountry(currentUser.country)
+    return AdhanCoordinates(countryCoordinates.latitude, countryCoordinates.longitude)
+}
+
+private fun hasLocationPermission(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun requestExactAlarmPermission(context: Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    if (alarmManager.canScheduleExactAlarms()) return
+
+    runCatching {
+        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+            data = Uri.parse("package:${context.packageName}")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
     }
 }
