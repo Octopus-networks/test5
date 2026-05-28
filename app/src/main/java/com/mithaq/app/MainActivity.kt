@@ -41,7 +41,9 @@ import com.google.firebase.appcheck.AppCheckProviderFactory
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.mithaq.app.model.*
+import com.mithaq.app.ui.auth.AuthState
 import com.mithaq.app.ui.auth.AuthViewModel
+import com.mithaq.app.ui.auth.EntryDecisionScreen
 import com.mithaq.app.ui.auth.LoginScreen
 import com.mithaq.app.ui.auth.RegisterScreen
 import com.mithaq.app.ui.chat.ChaperonedChatBanner
@@ -601,7 +603,7 @@ fun MithaqAppNavigation(
         )
     }
 
-    androidx.activity.compose.BackHandler(enabled = currentScreen == "home" || currentScreen == "login") {
+    androidx.activity.compose.BackHandler(enabled = currentScreen == "home" || currentScreen == "login" || currentScreen == "entry") {
         showExitDialog = true
     }
 
@@ -677,7 +679,17 @@ fun MithaqAppNavigation(
     val guardianViewModel = remember { GuardianViewModel() }
 
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
+    val authState by authViewModel.authState.collectAsState()
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
+
+    LaunchedEffect(authState) {
+        val authenticated = authState as? AuthState.Authenticated ?: return@LaunchedEffect
+        if (currentScreen == "splash" || currentScreen == "entry") {
+            currentUserId = authenticated.userId
+            com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
+            currentScreen = "home"
+        }
+    }
 
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, currentUserId) {
@@ -763,7 +775,26 @@ fun MithaqAppNavigation(
 
     when (currentScreen) {
         "splash" -> {
-            SplashScreen(onComplete = { currentScreen = "login" })
+            SplashScreen(
+                onComplete = {
+                    val authenticated = authState as? AuthState.Authenticated
+                    if (authenticated != null) {
+                        currentUserId = authenticated.userId
+                        com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
+                        currentScreen = "home"
+                    } else {
+                        currentScreen = "entry"
+                    }
+                }
+            )
+        }
+        "entry" -> {
+            EntryDecisionScreen(
+                isArabic = isArabic,
+                onLanguageChange = onLanguageChange,
+                onHasAccount = { currentScreen = "login" },
+                onCreateAccount = { currentScreen = "register" }
+            )
         }
         "login" -> {
             LoginScreen(
@@ -806,15 +837,28 @@ fun MithaqAppNavigation(
                     }
                 )
             } else {
-                val isProfileIncomplete = currentUserProfile != null && (
-                        currentUserProfile!!.username.isEmpty() ||
-                        currentUserProfile!!.city.isEmpty() ||
-                        currentUserProfile!!.country.isEmpty() ||
-                        !currentUserProfile!!.oathChecked ||
-                        currentUserProfile!!.age < 18
+                val loadedProfile = currentUserProfile
+                val isProfileIncomplete = loadedProfile != null && (
+                        loadedProfile.name.isBlank() ||
+                        loadedProfile.username.isBlank() ||
+                        loadedProfile.city.isBlank() ||
+                        loadedProfile.country.isBlank() ||
+                        !loadedProfile.oathChecked ||
+                        loadedProfile.age !in 18..77
                 )
 
-                if (isProfileIncomplete) {
+                if (loadedProfile == null) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (isArabic) "جاري تجهيز حسابك..." else "Preparing your account...",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else if (isProfileIncomplete) {
                     CompleteProfileScreen(
                         userId = currentUserId,
                         onCompleteSuccess = {

@@ -46,16 +46,32 @@ fun CompleteProfileScreen(
     var currentStep by remember { mutableStateOf(1) }
     var localError by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    val currentProfile by viewModel.currentUserProfile.collectAsState()
 
     // Screen 1: Basics
-    var username by remember { mutableStateOf("") }
-    var age by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf(Gender.MALE) }
-    var oathChecked by remember { mutableStateOf(false) }
+    var name by remember(currentProfile?.uid, currentProfile?.name) {
+        mutableStateOf(currentProfile?.name.orEmpty())
+    }
+    var username by remember(currentProfile?.uid, currentProfile?.username) {
+        mutableStateOf(currentProfile?.username.orEmpty())
+    }
+    var age by remember(currentProfile?.uid, currentProfile?.age) {
+        mutableStateOf(currentProfile?.age?.takeIf { it in 18..77 }?.toString() ?: "")
+    }
+    var gender by remember(currentProfile?.uid, currentProfile?.gender) {
+        mutableStateOf(currentProfile?.gender ?: Gender.MALE)
+    }
+    var oathChecked by remember(currentProfile?.uid, currentProfile?.oathChecked) {
+        mutableStateOf(currentProfile?.oathChecked ?: false)
+    }
 
     // Screen 2: Location
-    var country by remember { mutableStateOf(if (isArabic) "السعودية" else "Saudi Arabia") }
-    var city by remember { mutableStateOf("Riyadh") }
+    var country by remember(currentProfile?.uid, currentProfile?.country) {
+        mutableStateOf(currentProfile?.country?.takeIf { it.isNotBlank() } ?: "Saudi Arabia")
+    }
+    var city by remember(currentProfile?.uid, currentProfile?.city) {
+        mutableStateOf(currentProfile?.city?.takeIf { it.isNotBlank() } ?: "Riyadh")
+    }
 
     fun validateUsername(u: String): Boolean {
         if (u.length !in 3..14) return false
@@ -139,6 +155,16 @@ fun CompleteProfileScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 OutlinedTextField(
+                                    value = name,
+                                    onValueChange = { name = it },
+                                    label = { Text(if (isArabic) "الاسم" else "Name") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
                                     value = username,
                                     onValueChange = { username = it },
                                     label = { Text(if (isArabic) "اسم المستخدم (فريد)" else "Username (Unique)") },
@@ -207,7 +233,7 @@ fun CompleteProfileScreen(
                                 Button(
                                     onClick = {
                                         val parsedAge = age.toIntOrNull()
-                                        if (username.isBlank() || parsedAge == null) {
+                                        if (name.isBlank() || username.isBlank() || parsedAge == null) {
                                             localError = if (isArabic) "الرجاء ملء جميع الحقول" else "Please fill all fields"
                                         } else if (!validateUsername(username)) {
                                             localError = if (isArabic) "اسم المستخدم غير صالح" else "Invalid username"
@@ -277,6 +303,7 @@ fun CompleteProfileScreen(
                                                 isLoading = true
                                                 viewModel.updateGoogleUserProfile(
                                                     userId = userId,
+                                                    name = name,
                                                     username = username,
                                                     age = age.toIntOrNull() ?: 25,
                                                     gender = gender,

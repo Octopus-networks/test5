@@ -1523,6 +1523,7 @@ class AuthViewModel(
 
     fun updateGoogleUserProfile(
         userId: String,
+        name: String,
         username: String,
         age: Int,
         gender: Gender,
@@ -1538,9 +1539,11 @@ class AuthViewModel(
                 val trimmedCountry = country.trim()
                 val trimmedCity = city.trim()
                 val trimmedUsername = username.trim()
+                val trimmedName = name.trim()
                 val derivedTimezone = com.mithaq.app.util.CountryUtils.getTimezoneForCountry(trimmedCountry)
                 db.collection("users").document(userId).set(
                     mapOf(
+                        "name" to trimmedName,
                         "username" to trimmedUsername,
                         "age" to age,
                         "gender" to gender.name,
@@ -1555,6 +1558,7 @@ class AuthViewModel(
 
                 val updated = (_currentUserProfile.value ?: UserProfile(uid = userId)).copy(
                     uid = userId,
+                    name = trimmedName,
                     username = trimmedUsername,
                     age = age,
                     gender = gender,
