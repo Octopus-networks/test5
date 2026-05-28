@@ -66,11 +66,14 @@ object AdhanScheduler {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // Schedule exact alarm
+            // Schedule exact alarm using setAlarmClock (bypasses Doze mode and guarantees precision)
             try {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
+                val alarmClockInfo = AlarmManager.AlarmClockInfo(
                     nextPrayerTime.time,
+                    pendingIntent // We use the same intent for the "show intent" to keep it simple
+                )
+                alarmManager.setAlarmClock(
+                    alarmClockInfo,
                     pendingIntent
                 )
                 Log.d(TAG, "Scheduled next Adhan: ${nextPrayer.name} at $nextPrayerTime")

@@ -51,11 +51,12 @@ class AdhanReceiver : BroadcastReceiver() {
     private fun showNotification(context: Context, prayerName: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Place a short "Allahu Akbar" sound in res/raw/takbeer.mp3
-        var soundUri: Uri = Uri.parse("android.resource://" + context.packageName + "/raw/takbeer")
+        // Fallback to system default alarm sound since raw resource doesn't exist yet
+        var soundUri: Uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
         
-        // If raw resource doesn't exist, this might fail, so we just try to use it.
-        // Android will fallback to default if not found in most cases.
+        if (soundUri == null) {
+            soundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelName = "Adhan Notifications"
@@ -102,9 +103,11 @@ class AdhanReceiver : BroadcastReceiver() {
             .setSmallIcon(R.drawable.ic_launcher_foreground) // Replace with proper app icon
             .setContentTitle(title)
             .setContentText(text)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setSound(soundUri)
             .setAutoCancel(true)
+            .setFullScreenIntent(pendingIntent, true)
             .setContentIntent(pendingIntent)
 
         notificationManager.notify(prayerName.hashCode(), builder.build())
