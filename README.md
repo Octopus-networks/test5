@@ -29,6 +29,8 @@ Mithaq is a Kotlin Android application for privacy-first Islamic matchmaking. It
 
 The latest cleanup hardens the app and repository:
 
+- Firebase App Check is initialized in Android; release builds use Play Integrity.
+- Cloud Functions now own privileged admin changes and server-created notifications.
 - Firestore rules now block client-side privilege escalation for admin, premium, verification, wali, and ward fields.
 - Premium upgrades are no longer granted directly by the client in production mode.
 - Guardian status values are normalized to `NONE`, `PENDING`, and `VERIFIED`.
@@ -56,6 +58,7 @@ app/src/main/java/com/mithaq/app/
 firestore.rules           Firestore access rules
 storage.rules             Firebase Storage rules
 app/proguard-rules.pro    Release shrinker rules
+functions/                Firebase Cloud Functions for privileged backend operations
 ```
 
 ## Build Requirements
@@ -80,6 +83,15 @@ $env:PATH="$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
 .\gradlew.bat :app:lintDebug
 .\gradlew.bat :app:assembleRelease
 ```
+
+Firebase backend checks and deploys require the Firebase CLI:
+
+```powershell
+firebase emulators:start --only auth,firestore,storage,functions
+firebase deploy --only firestore:rules,storage,functions
+```
+
+Before enforcing App Check in the Firebase console, register the Android app with Play Integrity and add debug App Check tokens for local test devices.
 
 ## Verification
 

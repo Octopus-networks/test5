@@ -12,3 +12,7 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
+functions/node_modules/
+functions/.runtimeconfig.json
+firebase-debug.log
+firebase-debug.*.log

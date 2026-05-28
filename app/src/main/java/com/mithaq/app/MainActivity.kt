@@ -37,6 +37,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.Done
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import com.google.firebase.appcheck.AppCheckProviderFactory
+import com.google.firebase.appcheck.FirebaseAppCheck
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.mithaq.app.model.*
 import com.mithaq.app.ui.auth.AuthViewModel
 import com.mithaq.app.ui.auth.LoginScreen
@@ -121,6 +124,7 @@ class MainActivity : FragmentActivity() {
         } catch (e: Exception) {
             // Fail-safe
         }
+        installAppCheck()
 
         setContent {
             var isArabic by remember { mutableStateOf(false) }
@@ -177,6 +181,28 @@ class MainActivity : FragmentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun installAppCheck() {
+        try {
+            val providerFactory = if (BuildConfig.IS_PRODUCTION) {
+                PlayIntegrityAppCheckProviderFactory.getInstance()
+            } else {
+                debugAppCheckProviderFactory() ?: PlayIntegrityAppCheckProviderFactory.getInstance()
+            }
+            FirebaseAppCheck.getInstance().installAppCheckProviderFactory(providerFactory)
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "App Check setup failed", e)
+        }
+    }
+
+    private fun debugAppCheckProviderFactory(): AppCheckProviderFactory? {
+        return try {
+            val clazz = Class.forName("com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory")
+            clazz.getMethod("getInstance").invoke(null) as? AppCheckProviderFactory
+        } catch (e: Exception) {
+            null
         }
     }
 }

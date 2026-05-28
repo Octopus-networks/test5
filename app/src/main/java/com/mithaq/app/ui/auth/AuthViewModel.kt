@@ -20,6 +20,7 @@ import com.mithaq.app.data.local.MithaqDatabase
 import com.mithaq.app.data.local.CachedUserProfile
 import com.mithaq.app.data.local.toCached
 import com.mithaq.app.data.local.toDomain
+import com.mithaq.app.service.BackendFunctions
 
 sealed interface AuthState {
     object Idle : AuthState
@@ -258,15 +259,6 @@ class AuthViewModel(
 
     fun adminUpdateVerification(targetUid: String, status: String) {
         viewModelScope.launch {
-            val cachedUser = userDao?.getUser(targetUid)
-            if (cachedUser != null) {
-                userDao.insertUser(cachedUser.copy(verificationStatus = status))
-            }
-
-            if (targetUid == _currentUserProfile.value?.uid) {
-                _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = status)
-            }
-
             val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
@@ -274,7 +266,12 @@ class AuthViewModel(
             }
 
             if (isMock) {
+                val cachedUser = userDao?.getUser(targetUid)
+                if (cachedUser != null) {
+                    userDao.insertUser(cachedUser.copy(verificationStatus = status))
+                }
                 if (targetUid == _currentUserProfile.value?.uid) {
+                    _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = status)
                     context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
                         putString("verificationStatus", status)
                         apply()
@@ -282,9 +279,16 @@ class AuthViewModel(
                 }
             } else {
                 try {
-                    firestore.collection("users").document(targetUid).update("verificationStatus", status).await()
+                    BackendFunctions.setVerificationStatus(targetUid, status)
+                    val cachedUser = userDao?.getUser(targetUid)
+                    if (cachedUser != null) {
+                        userDao.insertUser(cachedUser.copy(verificationStatus = status))
+                    }
+                    if (targetUid == _currentUserProfile.value?.uid) {
+                        _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = status)
+                    }
                 } catch (e: Exception) {
-                    // Ignored
+                    e.printStackTrace()
                 }
             }
         }
@@ -414,50 +418,48 @@ class AuthViewModel(
 
     fun adminUpdateUserPremium(targetUid: String, isPremium: Boolean, plan: String) {
         viewModelScope.launch {
-            val cachedUser = userDao?.getUser(targetUid)
-            if (cachedUser != null) {
-                userDao.insertUser(cachedUser.copy(isPremium = isPremium, subscriptionPlan = plan))
-            }
-            if (targetUid == _currentUserProfile.value?.uid) {
-                _currentUserProfile.value = _currentUserProfile.value?.copy(isPremium = isPremium, subscriptionPlan = plan)
-            }
             val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
                 true
             }
-            if (!isMock) {
-                try {
-                    firestore.collection("users").document(targetUid)
-                        .update("isPremium", isPremium, "subscriptionPlan", plan).await()
-                } catch (e: Exception) {
-                    e.printStackTrace()
+            try {
+                if (!isMock) {
+                    BackendFunctions.setUserPremium(targetUid, isPremium, plan)
                 }
+                val cachedUser = userDao?.getUser(targetUid)
+                if (cachedUser != null) {
+                    userDao.insertUser(cachedUser.copy(isPremium = isPremium, subscriptionPlan = plan))
+                }
+                if (targetUid == _currentUserProfile.value?.uid) {
+                    _currentUserProfile.value = _currentUserProfile.value?.copy(isPremium = isPremium, subscriptionPlan = plan)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
 
     fun adminUpdateUserRole(targetUid: String, isWali: Boolean, isAdmin: Boolean) {
         viewModelScope.launch {
-            val cachedUser = userDao?.getUser(targetUid)
-            if (cachedUser != null) {
-                userDao.insertUser(cachedUser.copy(isWaliAccount = isWali, isAdmin = isAdmin))
-            }
-            if (targetUid == _currentUserProfile.value?.uid) {
-                _currentUserProfile.value = _currentUserProfile.value?.copy(isWaliAccount = isWali, isAdmin = isAdmin)
-            }
             val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
                 true
             }
-            if (!isMock) {
-                try {
-                    firestore.collection("users").document(targetUid)
-                        .update("isWaliAccount", isWali, "isAdmin", isAdmin).await()
-                } catch (e: Exception) {
-                    e.printStackTrace()
+            try {
+                if (!isMock) {
+                    BackendFunctions.setUserRole(targetUid, isWali, isAdmin)
                 }
+                val cachedUser = userDao?.getUser(targetUid)
+                if (cachedUser != null) {
+                    userDao.insertUser(cachedUser.copy(isWaliAccount = isWali, isAdmin = isAdmin))
+                }
+                if (targetUid == _currentUserProfile.value?.uid) {
+                    _currentUserProfile.value = _currentUserProfile.value?.copy(isWaliAccount = isWali, isAdmin = isAdmin)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -476,7 +478,7 @@ class AuthViewModel(
             }
             if (!isMock) {
                 try {
-                    firestore.collection("users").document(targetUid).delete().await()
+                    BackendFunctions.deleteUserProfile(targetUid)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -1656,9 +1658,12 @@ class AuthViewModel(
                 prefs.edit().putString("verificationStatus", "VERIFIED").apply()
                 _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "VERIFIED")
             } else {
-                firestore.collection("users").document(userId)
-                    .update("verificationStatus", "VERIFIED").await()
-                _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "VERIFIED")
+                try {
+                    BackendFunctions.setVerificationStatus(userId, "VERIFIED")
+                    _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "VERIFIED")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }
@@ -1679,19 +1684,6 @@ class AuthViewModel(
                 putBoolean("isWaliAccount", isWali)
                 putBoolean("isAdmin", isAdmin)
                 apply()
-            }
-            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
-            } catch (e: Exception) {
-                true
-            }
-            if (!isMock && current.uid.isNotEmpty()) {
-                try {
-                    firestore.collection("users").document(current.uid)
-                        .update("isWaliAccount", isWali, "isAdmin", isAdmin).await()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
             }
         }
     }
