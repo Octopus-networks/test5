@@ -1,22 +1,26 @@
 package com.mithaq.app.receiver
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.mithaq.app.MainActivity
 import com.mithaq.app.R
 import com.mithaq.app.util.AdhanScheduler
+import java.util.Locale
 
 class AdhanReceiver : BroadcastReceiver() {
-    
+
     companion object {
         const val CHANNEL_ID = "adhan_channel"
         const val TAG = "AdhanReceiver"
@@ -27,10 +31,14 @@ class AdhanReceiver : BroadcastReceiver() {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             Log.d(TAG, "Boot completed. Rescheduling Adhan.")
             val prefs = context.getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
-            val lat = prefs.getFloat("adhan_lat", 0.0f).toDouble()
-            val lng = prefs.getFloat("adhan_lng", 0.0f).toDouble()
-            if (lat != 0.0 && lng != 0.0) {
-                AdhanScheduler.scheduleNextAdhan(context, lat, lng)
+            val isEnabled = prefs.getBoolean("isAdhanEnabled", false)
+            val lat = prefs.getFloat("adhan_lat", prefs.getFloat("adhanLocationLat", 0.0f)).toDouble()
+            val lng = prefs.getFloat("adhan_lng", prefs.getFloat("adhanLocationLng", 0.0f)).toDouble()
+            val calculationMethod = prefs.getString("adhan_calculation_method", "MUSLIM_WORLD_LEAGUE")
+            val soundPattern = prefs.getString("adhan_sound_pattern", "TAKBEER")
+
+            if (isEnabled && (lat != 0.0 || lng != 0.0)) {
+                AdhanScheduler.scheduleNextAdhan(context, lat, lng, calculationMethod, soundPattern)
             }
             return
         }
@@ -43,39 +51,54 @@ class AdhanReceiver : BroadcastReceiver() {
         val prayerName = intent.getStringExtra("PRAYER_NAME") ?: "Prayer"
         val lat = intent.getDoubleExtra("LAT", 0.0)
         val lng = intent.getDoubleExtra("LNG", 0.0)
-        
+        val calculationMethod = intent.getStringExtra("CALCULATION_METHOD")
+        val soundPattern = intent.getStringExtra("SOUND_PATTERN") ?: "TAKBEER"
+
         Log.d(TAG, "Adhan triggered for: $prayerName")
 
-        showNotification(context, prayerName)
+        showNotification(context, prayerName, soundPattern)
 
-        // Schedule next Adhan
-        if (lat != 0.0 && lng != 0.0) {
-            AdhanScheduler.scheduleNextAdhan(context, lat, lng)
+        if (lat != 0.0 || lng != 0.0) {
+            AdhanScheduler.scheduleNextAdhan(context, lat, lng, calculationMethod, soundPattern)
         }
     }
 
-    private fun showNotification(context: Context, prayerName: String) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private fun showNotification(context: Context, prayerName: String, soundPattern: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w(TAG, "Cannot show Adhan notification. Notification permission denied.")
+            return
+        }
 
-        // Fallback to system default alarm sound since raw resource doesn't exist yet
-        val soundUri: Uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
-            ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val isSilent = soundPattern == "SILENT"
+        val soundUri: Uri? = if (isSilent) {
+            null
+        } else {
+            android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+                ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+        }
+        val channelId = channelIdFor(soundPattern)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelName = "Adhan Notifications"
             val channel = NotificationChannel(
-                CHANNEL_ID,
-                channelName,
+                channelId,
+                "Adhan Notifications",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notifications for Prayer Times"
-                val audioAttributes = AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                    .build()
-                setSound(soundUri, audioAttributes)
+                if (isSilent || soundUri == null) {
+                    setSound(null, null)
+                } else {
+                    val audioAttributes = AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .build()
+                    setSound(soundUri, audioAttributes)
+                }
                 enableLights(true)
-                enableVibration(true)
+                enableVibration(!isSilent)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -99,20 +122,25 @@ class AdhanReceiver : BroadcastReceiver() {
             else -> prayerName
         }
 
-        val title = "حان وقت صلاة $arabicName"
-        val text = "الله أكبر، حان الآن موعد الصلاة."
-
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // Replace with proper app icon
-            .setContentTitle(title)
-            .setContentText(text)
+        val builder = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("حان وقت صلاة $arabicName")
+            .setContentText("الله أكبر، حان الآن موعد الصلاة.")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setSound(soundUri)
             .setAutoCancel(true)
             .setFullScreenIntent(pendingIntent, true)
             .setContentIntent(pendingIntent)
+            .setSilent(isSilent)
+
+        if (soundUri != null) {
+            builder.setSound(soundUri)
+        }
 
         notificationManager.notify(prayerName.hashCode(), builder.build())
+    }
+
+    private fun channelIdFor(soundPattern: String): String {
+        return "${CHANNEL_ID}_${soundPattern.lowercase(Locale.ROOT)}"
     }
 }
