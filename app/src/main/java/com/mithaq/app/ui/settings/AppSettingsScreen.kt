@@ -78,6 +78,8 @@ fun AppSettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            SettingsHeaderCard(currentUser = currentUser, isArabic = isArabic)
+
             // General Settings
             Text(
                 text = if (isArabic) "الإعدادات العامة" else "General Settings",
@@ -87,6 +89,7 @@ fun AppSettingsScreen(
             )
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -150,6 +153,7 @@ fun AppSettingsScreen(
             )
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -220,6 +224,60 @@ fun AppSettingsScreen(
     }
 }
 
+@Composable
+private fun SettingsHeaderCard(currentUser: UserProfile, isArabic: Boolean) {
+    val guardianReady = currentUser.guardianStatus == "VERIFIED" || !currentUser.guardianEmail.isNullOrBlank()
+    val adhanStatus = if (currentUser.isAdhanEnabled) {
+        if (isArabic) "مفعل" else "On"
+    } else {
+        if (isArabic) "متوقف" else "Off"
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = if (isArabic) "إدارة الحساب والتجربة" else "Account & Experience",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SettingsStatusPill(
+                    label = if (isArabic) "الأذان" else "Adhan",
+                    value = adhanStatus,
+                    modifier = Modifier.weight(1f)
+                )
+                SettingsStatusPill(
+                    label = if (isArabic) "الولي" else "Guardian",
+                    value = if (guardianReady) {
+                        if (isArabic) "جاهز" else "Ready"
+                    } else {
+                        if (isArabic) "غير مضاف" else "Missing"
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsStatusPill(label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun AdhanSettingsSectionFixed(
@@ -285,6 +343,7 @@ fun AdhanSettingsSectionFixed(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

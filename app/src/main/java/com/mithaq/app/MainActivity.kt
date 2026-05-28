@@ -208,6 +208,363 @@ class MainActivity : FragmentActivity() {
 }
 
 @Composable
+private fun HomeDashboardContent(
+    currentUser: UserProfile,
+    isArabic: Boolean,
+    likesCount: Int,
+    chatCount: Int,
+    viewsCount: Int,
+    onOpenSearch: () -> Unit,
+    onOpenChats: () -> Unit,
+    onOpenAlerts: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenProfile: () -> Unit
+) {
+    val hasPhoto = currentUser.imageUrl.isNotBlank() && !currentUser.imageUrl.contains("avatar_")
+    val hasGuardian = !currentUser.guardianEmail.isNullOrBlank()
+    val hasQuestionnaire = currentUser.questionnaireAnswers.isNotEmpty()
+    val isVerified = currentUser.verificationStatus == "VERIFIED" || currentUser.verificationStatus == "PENDING"
+    val completion = listOf(hasPhoto, hasGuardian, hasQuestionnaire, isVerified).count { it } * 25
+    val nextPrayer = remember(currentUser.country) { nextPrayerSummary(currentUser.country, isArabic) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = if (isArabic) "أهلا ${currentUser.name.ifBlank { "بك" }}" else "Welcome, ${currentUser.name.ifBlank { "there" }}",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = if (isArabic) "اكتمال الملف" else "Profile Completion",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "$completion%",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    Button(onClick = onOpenProfile, shape = RoundedCornerShape(8.dp)) {
+                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (isArabic) "الملف" else "Profile")
+                    }
+                }
+                LinearProgressIndicator(
+                    progress = completion / 100f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            DashboardMetricCard(
+                icon = Icons.Default.Favorite,
+                label = if (isArabic) "إعجابات" else "Likes",
+                value = likesCount.toString(),
+                modifier = Modifier.weight(1f),
+                onClick = onOpenAlerts
+            )
+            DashboardMetricCard(
+                icon = Icons.Default.Chat,
+                label = if (isArabic) "محادثات" else "Chats",
+                value = chatCount.toString(),
+                modifier = Modifier.weight(1f),
+                onClick = onOpenChats
+            )
+            DashboardMetricCard(
+                icon = Icons.Default.Visibility,
+                label = if (isArabic) "زيارات" else "Views",
+                value = viewsCount.toString(),
+                modifier = Modifier.weight(1f),
+                onClick = onOpenAlerts
+            )
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (isArabic) "الصلاة القادمة" else "Next Prayer",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(nextPrayer, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                TextButton(onClick = onOpenSettings) {
+                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (isArabic) "الأذان" else "Adhan")
+                }
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            DashboardActionButton(
+                icon = Icons.Default.Search,
+                label = if (isArabic) "استكشف" else "Explore",
+                modifier = Modifier.weight(1f),
+                onClick = onOpenSearch
+            )
+            DashboardActionButton(
+                icon = Icons.Default.Favorite,
+                label = if (isArabic) "التنبيهات" else "Alerts",
+                modifier = Modifier.weight(1f),
+                onClick = onOpenAlerts
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardMetricCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun DashboardActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(label)
+    }
+}
+
+@Composable
+private fun AlertsHubContent(
+    currentUser: UserProfile,
+    searchViewModel: SearchViewModel,
+    likesRepository: com.mithaq.app.data.LikesRepository,
+    isArabic: Boolean,
+    onSelectMatch: (UserProfile) -> Unit,
+    onNavigateToUpgrade: () -> Unit
+) {
+    var selected by remember { mutableStateOf(0) }
+    val labels = if (isArabic) listOf("الإعجابات", "الزيارات", "المفضلة") else listOf("Likes", "Views", "Favorites")
+
+    Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            labels.forEachIndexed { index, label ->
+                val selectedTab = selected == index
+                TextButton(
+                    onClick = { selected = index },
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            if (selectedTab) MaterialTheme.colorScheme.surface else Color.Transparent,
+                            RoundedCornerShape(6.dp)
+                        )
+                ) {
+                    Text(
+                        text = label,
+                        color = if (selectedTab) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (selectedTab) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        when (selected) {
+            0 -> LikesTabContent(
+                currentUser = currentUser,
+                searchViewModel = searchViewModel,
+                likesRepository = likesRepository,
+                isArabic = isArabic,
+                onSelectMatch = onSelectMatch,
+                onNavigateToUpgrade = onNavigateToUpgrade
+            )
+            1 -> ViewsTabContent(
+                currentUser = currentUser,
+                searchViewModel = searchViewModel,
+                likesRepository = likesRepository,
+                isArabic = isArabic,
+                onSelectMatch = onSelectMatch
+            )
+            else -> FavoritesTabContent(
+                currentUser = currentUser,
+                searchViewModel = searchViewModel,
+                likesRepository = likesRepository,
+                isArabic = isArabic,
+                onSelectMatch = onSelectMatch
+            )
+        }
+    }
+}
+
+@Composable
+private fun AccountHubContent(
+    currentUser: UserProfile,
+    isArabic: Boolean,
+    isDarkMode: Boolean,
+    onOpenProfile: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenStats: () -> Unit,
+    onOpenSubscription: () -> Unit,
+    onToggleTheme: () -> Unit,
+    onLanguageChange: () -> Unit,
+    onLogout: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            UserProfileImage(
+                imageUrl = currentUser.imageUrl,
+                gender = currentUser.gender,
+                isBlurred = false,
+                modifier = Modifier.size(64.dp),
+                shape = CircleShape
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    currentUser.name.ifBlank { if (isArabic) "حسابي" else "My Account" },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text("${currentUser.city}, ${currentUser.country}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        AccountActionRow(Icons.Default.Person, if (isArabic) "الملف الشخصي" else "Profile", onOpenProfile)
+        AccountActionRow(Icons.Default.Settings, if (isArabic) "إعدادات التطبيق" else "App Settings", onOpenSettings)
+        AccountActionRow(Icons.Default.Star, if (isArabic) "الإحصائيات" else "Stats", onOpenStats)
+        AccountActionRow(Icons.Default.LockOpen, if (isArabic) "الاشتراك" else "Subscription", onOpenSubscription)
+        AccountActionRow(
+            if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+            if (isArabic) "تبديل المظهر" else "Toggle Theme",
+            onToggleTheme
+        )
+        AccountActionRow(Icons.Default.Info, if (isArabic) "تغيير اللغة" else "Change Language", onLanguageChange)
+
+        OutlinedButton(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        ) {
+            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(if (isArabic) "تسجيل الخروج" else "Logout")
+        }
+    }
+}
+
+@Composable
+private fun AccountActionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+            Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp).alpha(0.55f))
+        }
+    }
+}
+
+private fun nextPrayerSummary(country: String, isArabic: Boolean): String {
+    return runCatching {
+        val now = java.util.Date()
+        val times = com.mithaq.app.util.PrayerManager.getDailyPrayerTimes(country)
+        val prayers = listOf(
+            (if (isArabic) "الفجر" else "Fajr") to times.fajr,
+            (if (isArabic) "الظهر" else "Dhuhr") to times.dhuhr,
+            (if (isArabic) "العصر" else "Asr") to times.asr,
+            (if (isArabic) "المغرب" else "Maghrib") to times.maghrib,
+            (if (isArabic) "العشاء" else "Isha") to times.isha
+        )
+        val next = prayers.firstOrNull { it.second.after(now) } ?: prayers.first()
+        val formatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+        "${next.first} ${formatter.format(next.second)}"
+    }.getOrElse {
+        if (isArabic) "غير متاح" else "Unavailable"
+    }
+}
+
+@Composable
 fun MithaqAppNavigation(
     isArabic: Boolean,
     onLanguageChange: (Boolean) -> Unit,
@@ -646,7 +1003,11 @@ fun HomeScreen(
 ) {
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     var selectedTab by remember(initialTab) { mutableStateOf(initialTab) }
-    val tabs = listOf(strings.searchTab, strings.likesTab, strings.chatTab, strings.viewsTab, strings.favoritesTab)
+    val tabs = if (isArabic) {
+        listOf("الرئيسية", "البحث", "المحادثات", "التنبيهات", "حسابي")
+    } else {
+        listOf("Home", "Search", "Chats", "Alerts", "Account")
+    }
 
     val profile = currentUserProfile ?: UserProfile(
         uid = currentUserId,
@@ -682,7 +1043,7 @@ fun HomeScreen(
                     // Likes badge: new admirers since last viewed
                     val totalLikers = likesRepository.getWhoLikedMe(currentUserId).size
                     val seenLikers = badgePrefs.getInt("seen_likers_$currentUserId", 0)
-                    if (selectedTab != 1) likesBadgeCount = maxOf(0, totalLikers - seenLikers)
+                    if (selectedTab != 3) likesBadgeCount = maxOf(0, totalLikers - seenLikers)
 
                     // Views badge: new visitors since last viewed
                     val totalViews = likesRepository.getProfileVisitors(currentUserId).size
@@ -733,11 +1094,16 @@ fun HomeScreen(
     // When a tab is selected, clear its badge and save "seen" count
     LaunchedEffect(selectedTab) {
         when (selectedTab) {
-            1 -> {
+            3 -> {
                 likesBadgeCount = 0
+                viewsBadgeCount = 0
                 coroutineScopeHome.launch {
-                    val total = likesRepository.getWhoLikedMe(currentUserId).size
-                    badgePrefs.edit().putInt("seen_likers_$currentUserId", total).apply()
+                    val totalLikers = likesRepository.getWhoLikedMe(currentUserId).size
+                    val totalViews = likesRepository.getProfileVisitors(currentUserId).size
+                    badgePrefs.edit()
+                        .putInt("seen_likers_$currentUserId", totalLikers)
+                        .putInt("seen_views_$currentUserId", totalViews)
+                        .apply()
                 }
             }
             2 -> {
@@ -754,13 +1120,6 @@ fun HomeScreen(
                         editor.putLong("chat_seen_$roomId", nowTs)
                     }
                     editor.apply()
-                }
-            }
-            3 -> {
-                viewsBadgeCount = 0
-                coroutineScopeHome.launch {
-                    val total = likesRepository.getProfileVisitors(currentUserId).size
-                    badgePrefs.edit().putInt("seen_views_$currentUserId", total).apply()
                 }
             }
         }
@@ -817,15 +1176,14 @@ fun HomeScreen(
                 tabs.forEachIndexed { index, label ->
                     val icon = when (index) {
                         0 -> Icons.Default.Home
-                        1 -> Icons.Default.Favorite
+                        1 -> Icons.Default.Search
                         2 -> Icons.Default.Chat
-                        3 -> Icons.Default.Visibility
-                        else -> Icons.Default.Star
+                        3 -> Icons.Default.Favorite
+                        else -> Icons.Default.Person
                     }
                     val badgeCount = when (index) {
-                        1 -> likesBadgeCount
                         2 -> chatBadgeCount
-                        3 -> viewsBadgeCount
+                        3 -> likesBadgeCount + viewsBadgeCount
                         else -> 0
                     }
                     NavigationBarItem(
@@ -894,7 +1252,19 @@ fun HomeScreen(
                     .fillMaxSize()
             ) {
                 when (selectedTab) {
-                    0 -> SearchTabContent(
+                    0 -> HomeDashboardContent(
+                        currentUser = profile,
+                        isArabic = isArabic,
+                        likesCount = likesBadgeCount,
+                        chatCount = chatBadgeCount,
+                        viewsCount = viewsBadgeCount,
+                        onOpenSearch = { selectedTab = 1 },
+                        onOpenChats = { selectedTab = 2 },
+                        onOpenAlerts = { selectedTab = 3 },
+                        onOpenSettings = { onNavigateToScreen("app_settings") },
+                        onOpenProfile = { onNavigateToScreen("profile_settings") }
+                    )
+                    1 -> SearchTabContent(
                         currentUser = profile,
                         viewModel = searchViewModel,
                         isArabic = isArabic,
@@ -902,17 +1272,8 @@ fun HomeScreen(
                             onNavigateToDetail(match)
                         },
                         onNavigateToUpgrade = { onNavigateToScreen("premium_store_platinum") },
-                        onNavigateToScreen = onNavigateToScreen
-                    )
-                    1 -> LikesTabContent(
-                        currentUser = profile,
-                        searchViewModel = searchViewModel,
-                        likesRepository = likesRepository,
-                        isArabic = isArabic,
-                        onSelectMatch = { match ->
-                            onNavigateToDetail(match)
-                        },
-                        onNavigateToUpgrade = { onNavigateToScreen("premium_store") }
+                        onNavigateToScreen = onNavigateToScreen,
+                        initialSubTab = 1
                     )
                     2 -> ChatTabContent(
                         currentUser = profile,
@@ -921,23 +1282,25 @@ fun HomeScreen(
                         guardianViewModel = guardianViewModel,
                         onNavigateToUpgrade = { onNavigateToScreen("premium_store") }
                     )
-                    3 -> ViewsTabContent(
+                    3 -> AlertsHubContent(
                         currentUser = profile,
                         searchViewModel = searchViewModel,
                         likesRepository = likesRepository,
                         isArabic = isArabic,
-                        onSelectMatch = { match ->
-                            onNavigateToDetail(match)
-                        }
+                        onSelectMatch = { match -> onNavigateToDetail(match) },
+                        onNavigateToUpgrade = { onNavigateToScreen("premium_store") }
                     )
-                    4 -> FavoritesTabContent(
+                    4 -> AccountHubContent(
                         currentUser = profile,
-                        searchViewModel = searchViewModel,
-                        likesRepository = likesRepository,
                         isArabic = isArabic,
-                        onSelectMatch = { match ->
-                            onNavigateToDetail(match)
-                        }
+                        isDarkMode = isDarkMode,
+                        onOpenProfile = { onNavigateToScreen("profile_settings") },
+                        onOpenSettings = { onNavigateToScreen("app_settings") },
+                        onOpenStats = { onNavigateToScreen("stats") },
+                        onOpenSubscription = { onNavigateToScreen("premium_store") },
+                        onToggleTheme = { onDarkModeChange(!isDarkMode) },
+                        onLanguageChange = { onLanguageChange(!isArabic) },
+                        onLogout = onLogout
                     )
                 }
             }

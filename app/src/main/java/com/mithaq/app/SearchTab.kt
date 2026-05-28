@@ -98,10 +98,11 @@ fun SearchTabContent(
     isArabic: Boolean,
     onSelectMatch: (UserProfile) -> Unit,
     onNavigateToUpgrade: () -> Unit,
-    onNavigateToScreen: (String) -> Unit = {}
+    onNavigateToScreen: (String) -> Unit = {},
+    initialSubTab: Int = 0
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var activeSubTab by remember { mutableStateOf(0) }
+    var activeSubTab by remember(initialSubTab) { mutableStateOf(initialSubTab) }
     var showFilters by remember { mutableStateOf(false) }
     var isGridView by remember { mutableStateOf(false) }
     val searchResults by viewModel.searchResults.collectAsState()
@@ -1006,10 +1007,10 @@ fun SearchTabContent(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(300.dp)
+                                        .height(280.dp)
                                         .padding(vertical = 8.dp)
                                         .let { if (!isCompatible) it.alpha(0.55f) else it },
-                                    shape = RoundedCornerShape(24.dp),
+                                    shape = RoundedCornerShape(8.dp),
                                     onClick = { 
                                         if (isCompatible) {
                                             onSelectMatch(profile) 
@@ -1022,7 +1023,7 @@ fun SearchTabContent(
                                             gender = profile.gender,
                                             isBlurred = isBlurred,
                                             modifier = Modifier.fillMaxSize(),
-                                            shape = RoundedCornerShape(24.dp)
+                                            shape = RoundedCornerShape(8.dp)
                                         )
                                         
                                         Box(
@@ -1049,7 +1050,8 @@ fun SearchTabContent(
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(8.dp))
                                                     .background(Color.Black.copy(alpha = 0.5f))
                                                     .clickable {
                                                         if (isCompatible) {

@@ -109,10 +109,10 @@ fun GridMatchCard(
 
     Card(
         modifier = modifier
-            .height(200.dp)
+            .height(220.dp)
             .padding(vertical = 4.dp)
             .let { if (!isCompatible) it.alpha(0.55f) else it },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(8.dp),
         onClick = {
             if (isCompatible) {
                 onSelectMatch(profile)
@@ -125,7 +125,7 @@ fun GridMatchCard(
                 gender = profile.gender,
                 isBlurred = isBlurred,
                 modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(8.dp)
             )
 
             Box(
@@ -147,7 +147,7 @@ fun GridMatchCard(
                 modifier = Modifier
                     .padding(8.dp)
                     .align(Alignment.TopStart)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(6.dp))
                     .background(Color.Black.copy(alpha = 0.6f))
                     .clickable {
                         if (isCompatible) {
