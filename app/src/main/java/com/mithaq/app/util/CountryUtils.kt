@@ -7,6 +7,19 @@ data class CountryTimezone(
 )
 
 object CountryUtils {
+    private val countryAliases = mapOf(
+        "UAE" to "United Arab Emirates",
+        "Emirates" to "United Arab Emirates",
+        "KSA" to "Saudi Arabia",
+        "USA" to "United States",
+        "US" to "United States",
+        "UK" to "United Kingdom",
+        "مصر" to "Egypt",
+        "السعودية" to "Saudi Arabia",
+        "الإمارات" to "United Arab Emirates",
+        "الامارات" to "United Arab Emirates"
+    )
+
     // A comprehensive list of countries and their primary timezone
     // (for countries with multiple timezones, we select the capital's timezone)
     val countries = listOf(
@@ -115,7 +128,29 @@ object CountryUtils {
     }
 
     fun getTimezoneForCountry(countryName: String): String {
-        return countries.find { it.nameEn == countryName || it.nameAr == countryName }?.timezone ?: "UTC"
+        val normalized = countryName.trim()
+        if (normalized.isEmpty()) return "UTC"
+
+        val lookupName = countryAliases[normalized] ?: normalized
+        return countries.find {
+            it.nameEn.equals(lookupName, ignoreCase = true) ||
+                it.nameAr == lookupName ||
+                it.nameEn.equals(normalized, ignoreCase = true) ||
+                it.nameAr == normalized
+        }?.timezone ?: "UTC"
+    }
+
+    fun getTimezoneForProfile(countryName: String, storedTimezone: String?): String {
+        val countryTimezone = getTimezoneForCountry(countryName)
+        return if (countryTimezone != "UTC") {
+            countryTimezone
+        } else {
+            storedTimezone?.takeIf { it.isNotBlank() } ?: "UTC"
+        }
+    }
+
+    fun formatLocalTimeForCountry(countryName: String, storedTimezone: String?, isArabic: Boolean): String {
+        return formatLocalTime(getTimezoneForProfile(countryName, storedTimezone), isArabic)
     }
 
     fun formatLocalTime(timezoneId: String, isArabic: Boolean): String {

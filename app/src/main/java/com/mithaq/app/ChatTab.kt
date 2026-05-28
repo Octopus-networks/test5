@@ -250,6 +250,10 @@ fun ChatTabContent(
                                                 val age = userDoc.getLong("age")?.toInt() ?: 25
                                                 val city = userDoc.getString("city") ?: ""
                                                 val country = userDoc.getString("country") ?: ""
+                                                val timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
+                                                    country,
+                                                    userDoc.getString("timezone")
+                                                )
                                                 val imageUrl = userDoc.getString("imageUrl") ?: ""
                                                 val sectStr = userDoc.getString("sect") ?: "SUNNI"
                                                 val sect = try { Sect.valueOf(sectStr) } catch(e: Exception) { Sect.SUNNI }
@@ -270,6 +274,7 @@ fun ChatTabContent(
                                                         age = age,
                                                         city = city,
                                                         country = country,
+                                                        timezone = timezone,
                                                         imageUrl = imageUrl,
                                                         sect = sect,
                                                         prayerFrequency = prayer,
@@ -652,11 +657,11 @@ fun ChatTabContent(
                             VerificationBadge(status = targetUser.verificationStatus)
                         }
                         
-                        var currentTime by remember { mutableStateOf(com.mithaq.app.util.CountryUtils.formatLocalTime(targetUser.timezone, strings.appName == "ميثاق")) }
+                        var currentTime by remember { mutableStateOf(com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(targetUser.country, targetUser.timezone, strings.appName == "ميثاق")) }
                         LaunchedEffect(Unit) {
                             while(true) {
                                 kotlinx.coroutines.delay(60000)
-                                currentTime = com.mithaq.app.util.CountryUtils.formatLocalTime(targetUser.timezone, strings.appName == "ميثاق")
+                                currentTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(targetUser.country, targetUser.timezone, strings.appName == "ميثاق")
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {

@@ -133,7 +133,8 @@ data class CachedUserProfile(
     val partnerPreferences: String,
     val profileHeading: String,
     val idealPartner: String,
-    val lastSeen: Long
+    val lastSeen: Long,
+    val timezone: String
 )
 
 @Entity(
@@ -328,7 +329,7 @@ interface ChatDao {
 
 @Database(
     entities = [CachedUserProfile::class, CachedMessage::class, CachedChatRoom::class],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(MithaqConverters::class)
@@ -473,7 +474,8 @@ fun UserProfile.toCached(): CachedUserProfile = CachedUserProfile(
     partnerPreferences = partnerPreferences,
     profileHeading = profileHeading,
     idealPartner = idealPartner,
-    lastSeen = lastSeen
+    lastSeen = lastSeen,
+    timezone = timezone
 )
 
 fun CachedUserProfile.toDomain(): UserProfile = UserProfile(
@@ -592,5 +594,6 @@ fun CachedUserProfile.toDomain(): UserProfile = UserProfile(
     partnerPreferences = partnerPreferences,
     profileHeading = profileHeading,
     idealPartner = idealPartner,
-    lastSeen = lastSeen
+    lastSeen = lastSeen,
+    timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(country, timezone)
 )

@@ -460,8 +460,13 @@ fun WaliDashboardScreen(
                         VerificationBadge(status = wardProfile?.verificationStatus)
                     }
                     if (wardProfile != null) {
+                        val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(
+                            wardProfile!!.country,
+                            wardProfile!!.timezone,
+                            isArabic
+                        )
                         Text(
-                            text = "${wardProfile!!.age} ${if (isArabic) "عاماً" else "years"} • ${wardProfile!!.city}, ${wardProfile!!.country}",
+                            text = "${wardProfile!!.age} ${if (isArabic) "عاماً" else "years"} • ${wardProfile!!.city}, ${wardProfile!!.country} • $localTime",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )

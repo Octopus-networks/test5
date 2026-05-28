@@ -584,9 +584,14 @@ fun SearchTabContent(
                                     }
                                     val sectLabel = topMatch.sect.getDisplayName(isArabic)
                                     val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                    val topMatchLocalTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(
+                                        topMatch.country,
+                                        topMatch.timezone,
+                                        isArabic
+                                    )
                                     Text(text = "${topMatch.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodyMedium)
                                     Text(
-                                        text = if (isArabic) "${topMatch.city}، ${topMatch.country}" else "${topMatch.city}, ${topMatch.country}",
+                                        text = if (isArabic) "${topMatch.city}، ${topMatch.country} • $topMatchLocalTime" else "${topMatch.city}, ${topMatch.country} • $topMatchLocalTime",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1153,13 +1158,18 @@ fun SearchTabContent(
                                                     if (isCompatible) {
                                                         val sectLabel = profile.sect.getDisplayName(isArabic)
                                                         val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                                        val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(
+                                                            profile.country,
+                                                            profile.timezone,
+                                                            isArabic
+                                                        )
                                                         Text(
                                                             text = "${profile.age} $ageSuffix • $sectLabel • ${profile.gender.getDisplayName(isArabic)}",
                                                             color = Color.White.copy(alpha = 0.9f),
                                                             fontSize = 14.sp
                                                         )
                                                         Text(
-                                                            text = "${profile.city}, ${profile.country}",
+                                                            text = "${profile.city}, ${profile.country} • $localTime",
                                                             color = Color.White.copy(alpha = 0.7f),
                                                             fontSize = 12.sp
                                                         )

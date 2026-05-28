@@ -248,8 +248,9 @@ fun MatchDetailScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
+                    val partnerLocalTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(partner.country, partner.timezone, isArabic)
                     Text(
-                        text = if (isCompatible) "${partner.city}, ${partner.country}" else (if (isArabic) "الموقع مخفي لعدم التوافق" else "Location hidden"),
+                        text = if (isCompatible) "${partner.city}, ${partner.country} • $partnerLocalTime" else (if (isArabic) "الموقع مخفي لعدم التوافق" else "Location hidden"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -279,11 +280,11 @@ fun MatchDetailScreen(
 
                     // Local Time Indicator
                     if (isCompatible) {
-                        var currentTime by remember { mutableStateOf(com.mithaq.app.util.CountryUtils.formatLocalTime(partner.timezone, isArabic)) }
+                        var currentTime by remember { mutableStateOf(com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(partner.country, partner.timezone, isArabic)) }
                         LaunchedEffect(Unit) {
                             while(true) {
                                 kotlinx.coroutines.delay(60000)
-                                currentTime = com.mithaq.app.util.CountryUtils.formatLocalTime(partner.timezone, isArabic)
+                                currentTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(partner.country, partner.timezone, isArabic)
                             }
                         }
                         Row(
@@ -590,7 +591,7 @@ fun MatchDetailScreen(
                         InfoChip(
                             icon = Icons.Default.Home,
                             label = if (isArabic) "يعيش في" else "Lives in",
-                            value = "${partner.city}, ${partner.country}",
+                            value = "${partner.city}, ${partner.country} • ${com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(partner.country, partner.timezone, isArabic)}",
                             verified = isVerified
                         )
                     }

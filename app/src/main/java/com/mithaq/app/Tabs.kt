@@ -256,6 +256,7 @@ fun GridMatchCard(
                 if (isCompatible) {
                     val sectLabel = profile.sect.getDisplayName(isArabic)
                     val ageSuffix = if (isArabic) "سنة" else "yrs"
+                    val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(profile.country, profile.timezone, isArabic)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Icon(Icons.Default.Star, contentDescription = null, tint = AccentGold, modifier = Modifier.size(10.dp))
                         Text(
@@ -274,7 +275,7 @@ fun GridMatchCard(
                         )
                     }
                     Text(
-                        text = "${profile.city}, ${profile.country}",
+                        text = "${profile.city}, ${profile.country} • $localTime",
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 10.sp,
                         maxLines = 1,
@@ -301,6 +302,7 @@ fun getMockUserProfile(uid: String): UserProfile {
             age = 24,
             city = "Cairo",
             country = "Egypt",
+            timezone = "Africa/Cairo",
             imageUrl = "avatar_sister_purple",
             sect = Sect.SUNNI,
             prayerFrequency = PrayerFrequency.ALWAYS,
@@ -315,6 +317,7 @@ fun getMockUserProfile(uid: String): UserProfile {
             age = 29,
             city = "Riyadh",
             country = "Saudi Arabia",
+            timezone = "Asia/Riyadh",
             imageUrl = "avatar_brother_green",
             sect = Sect.SUNNI,
             prayerFrequency = PrayerFrequency.ALWAYS,
@@ -329,6 +332,7 @@ fun getMockUserProfile(uid: String): UserProfile {
             age = 27,
             city = "Dubai",
             country = "UAE",
+            timezone = "Asia/Dubai",
             imageUrl = "avatar_sister_purple",
             sect = Sect.SUNNI,
             prayerFrequency = PrayerFrequency.USUALLY,
@@ -342,7 +346,8 @@ fun getMockUserProfile(uid: String): UserProfile {
             gender = Gender.FEMALE,
             age = 25,
             city = "Cairo",
-            country = "Egypt"
+            country = "Egypt",
+            timezone = "Africa/Cairo"
         )
     }
 }
@@ -435,6 +440,10 @@ fun rememberUserProfileResolver(
                                 age = doc.getLong("age")?.toInt() ?: 18,
                                 city = doc.getString("city") ?: "",
                                 country = doc.getString("country") ?: "",
+                                timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
+                                    doc.getString("country") ?: "",
+                                    doc.getString("timezone")
+                                ),
                                 imageUrl = doc.getString("imageUrl") ?: "",
                                 sect = sect,
                                 prayerFrequency = prayer,
@@ -759,8 +768,9 @@ fun LikesTabContent(
                                         if (isCompatible) {
                                             val sectLabel = partner.sect.getDisplayName(isArabic)
                                             val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                            val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(partner.country, partner.timezone, isArabic)
                                             Text(text = "${partner.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
-                                            Text(text = "${partner.city}, ${partner.country}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(text = "${partner.city}, ${partner.country} • $localTime", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         } else {
                                             Text(
                                                 text = if (isArabic) "التفاصيل مخفية لعدم التوافق" else "Details hidden due to incompatibility",
@@ -1032,8 +1042,9 @@ fun ViewsTabContent(
                                         if (isCompatible) {
                                             val sectLabel = partner.sect.getDisplayName(isArabic)
                                             val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                            val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(partner.country, partner.timezone, isArabic)
                                             Text(text = "${partner.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
-                                            Text(text = "${partner.city}, ${partner.country}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(text = "${partner.city}, ${partner.country} • $localTime", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         } else {
                                             Text(
                                                 text = if (isArabic) "التفاصيل مخفية لعدم التوافق" else "Details hidden due to incompatibility",
@@ -1248,8 +1259,9 @@ fun FavoritesTabContent(
                                         if (isCompatible) {
                                             val sectLabel = partner.sect.getDisplayName(isArabic)
                                             val ageSuffix = if (isArabic) "سنة" else "yrs"
+                                            val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(partner.country, partner.timezone, isArabic)
                                             Text(text = "${partner.age} $ageSuffix • $sectLabel", style = MaterialTheme.typography.bodySmall)
-                                            Text(text = "${partner.city}, ${partner.country}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(text = "${partner.city}, ${partner.country} • $localTime", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         } else {
                                             Text(
                                                 text = if (isArabic) "التفاصيل مخفية لعدم التوافق" else "Details hidden due to incompatibility",

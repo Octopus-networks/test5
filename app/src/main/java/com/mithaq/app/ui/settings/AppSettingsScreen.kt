@@ -129,6 +129,20 @@ fun AppSettingsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            Text(
+                text = if (isArabic) "فحص الموقع GPS" else "GPS Location Check",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            GpsCheckSection(
+                currentUser = currentUser,
+                authViewModel = authViewModel,
+                isArabic = isArabic
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Adhan Settings
             Text(
                 text = if (isArabic) "إعدادات الأذان والصلاة" else "Adhan & Prayer Settings",
@@ -259,6 +273,15 @@ private fun SettingsHeaderCard(currentUser: UserProfile, isArabic: Boolean) {
                     },
                     modifier = Modifier.weight(1f)
                 )
+                SettingsStatusPill(
+                    label = "GPS",
+                    value = if (currentUser.gpsLocationEnabled) {
+                        if (isArabic) "مفعل" else "Verified"
+                    } else {
+                        if (isArabic) "غير مفعل" else "Off"
+                    },
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
@@ -274,6 +297,147 @@ private fun SettingsStatusPill(label: String, value: String, modifier: Modifier 
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+private fun GpsCheckSection(
+    currentUser: UserProfile,
+    authViewModel: AuthViewModel,
+    isArabic: Boolean
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val locationPermissionsState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
+    var isChecking by remember { mutableStateOf(false) }
+    var statusMessage by remember(currentUser.gpsLocationEnabled, currentUser.adhanLocationLat, currentUser.adhanLocationLng) {
+        mutableStateOf<String?>(null)
+    }
+    val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(
+        currentUser.country,
+        currentUser.timezone,
+        isArabic
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Column {
+                        Text(
+                            text = if (isArabic) "تأكيد موقع العضو" else "Verify member location",
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isArabic) "وقت بلدك الآن: $localTime" else "Your country time now: $localTime",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                AssistChip(
+                    onClick = {},
+                    label = {
+                        Text(
+                            if (currentUser.gpsLocationEnabled) {
+                                if (isArabic) "GPS مفعل" else "GPS verified"
+                            } else {
+                                if (isArabic) "لم يتم الفحص" else "Not checked"
+                            }
+                        )
+                    }
+                )
+            }
+
+            if (currentUser.adhanLocationLat != 0.0 || currentUser.adhanLocationLng != 0.0) {
+                Text(
+                    text = "Lat ${"%.4f".format(currentUser.adhanLocationLat)}, Lng ${"%.4f".format(currentUser.adhanLocationLng)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            statusMessage?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Button(
+                onClick = {
+                    if (!locationPermissionsState.allPermissionsGranted) {
+                        locationPermissionsState.launchMultiplePermissionRequest()
+                        statusMessage = if (isArabic) {
+                            "اسمح للتطبيق باستخدام الموقع ثم اضغط فحص GPS مرة أخرى."
+                        } else {
+                            "Allow location permission, then tap Check GPS again."
+                        }
+                    } else {
+                        isChecking = true
+                        statusMessage = null
+                        coroutineScope.launch {
+                            val location = runCatching {
+                                LocationServices.getFusedLocationProviderClient(context).lastLocation.await()
+                            }.getOrNull()
+
+                            if (location == null || (location.latitude == 0.0 && location.longitude == 0.0)) {
+                                isChecking = false
+                                val message = if (isArabic) {
+                                    "لم يتم العثور على موقع حالي. افتح خدمة الموقع أو الخرائط ثم أعد المحاولة."
+                                } else {
+                                    "No current location was found. Enable location services or open Maps, then retry."
+                                }
+                                statusMessage = message
+                                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                            } else {
+                                authViewModel.updateGpsLocation(location.latitude, location.longitude) { success, error ->
+                                    isChecking = false
+                                    val message = if (success) {
+                                        if (isArabic) "تم تحديث GPS وحفظ موقعك بنجاح." else "GPS location saved successfully."
+                                    } else {
+                                        error ?: if (isArabic) "تعذر تحديث GPS." else "Could not update GPS."
+                                    }
+                                    statusMessage = message
+                                    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isChecking
+            ) {
+                if (isChecking) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White)
+                } else {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(if (isArabic) "فحص GPS الآن" else "Check GPS Now")
+                }
+            }
         }
     }
 }

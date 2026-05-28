@@ -82,6 +82,7 @@ class AuthViewModel(
                                 age = 24,
                                 city = "Cairo",
                                 country = "Egypt",
+                                timezone = "Africa/Cairo",
                                 imageUrl = "avatar_sister_purple",
                                 sect = Sect.SUNNI,
                                 prayerFrequency = PrayerFrequency.ALWAYS,
@@ -113,6 +114,7 @@ class AuthViewModel(
                                 age = 29,
                                 city = "Riyadh",
                                 country = "Saudi Arabia",
+                                timezone = "Asia/Riyadh",
                                 imageUrl = "avatar_brother_green",
                                 sect = Sect.SUNNI,
                                 prayerFrequency = PrayerFrequency.ALWAYS,
@@ -144,6 +146,7 @@ class AuthViewModel(
                                 age = 27,
                                 city = "Dubai",
                                 country = "UAE",
+                                timezone = "Asia/Dubai",
                                 imageUrl = "avatar_sister_purple",
                                 sect = Sect.SUNNI,
                                 prayerFrequency = PrayerFrequency.USUALLY,
@@ -172,6 +175,7 @@ class AuthViewModel(
                                 age = 52,
                                 city = "Cairo",
                                 country = "Egypt",
+                                timezone = "Africa/Cairo",
                                 imageUrl = "avatar_brother_green",
                                 sect = Sect.SUNNI,
                                 prayerFrequency = PrayerFrequency.ALWAYS,
@@ -200,6 +204,7 @@ class AuthViewModel(
                                 age = 35,
                                 city = "Cairo",
                                 country = "Egypt",
+                                timezone = "Africa/Cairo",
                                 imageUrl = "avatar_brother_green",
                                 sect = Sect.SUNNI,
                                 prayerFrequency = PrayerFrequency.ALWAYS,
@@ -360,7 +365,10 @@ class AuthViewModel(
                         val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
                         val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
                         val lastSeen = doc.getLong("lastSeen") ?: 0L
-                        val timezone = doc.getString("timezone") ?: "Asia/Riyadh"
+                        val timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
+                            country,
+                            doc.getString("timezone")
+                        )
                         val currentStreakDays = doc.getLong("currentStreakDays")?.toInt() ?: 0
 
                         UserProfile(
@@ -724,7 +732,10 @@ class AuthViewModel(
                     val lastMonthlyResetDate = prefs.getLong("lastMonthlyResetDate", 0L)
                     val questionnaireAnswersStr = prefs.getString("questionnaireAnswers", "{}") ?: "{}"
                     val lastSeen = prefs.getLong("lastSeen", 0L)
-                    val timezone = prefs.getString("timezone", "Asia/Riyadh") ?: "Asia/Riyadh"
+                    val timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
+                        country,
+                        prefs.getString("timezone", null)
+                    )
                     val currentStreakDays = prefs.getInt("currentStreakDays", 0)
                     val questionnaireAnswers = try {
                         val obj = org.json.JSONObject(questionnaireAnswersStr)
@@ -1016,7 +1027,10 @@ class AuthViewModel(
                     val haveChildren = doc.getString("haveChildren") ?: "no"
                     val languagesSpoken = doc.get("languagesSpoken") as? List<String> ?: emptyList()
                     val lastSeen = doc.getLong("lastSeen") ?: 0L
-                    val timezone = doc.getString("timezone") ?: "Asia/Riyadh"
+                    val timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
+                        country,
+                        doc.getString("timezone")
+                    )
                     val currentStreakDays = doc.getLong("currentStreakDays")?.toInt() ?: 0
 
                     val profile = UserProfile(
@@ -1197,6 +1211,10 @@ class AuthViewModel(
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
+                val derivedTimezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
+                    profile.country.trim(),
+                    profile.timezone
+                )
                 val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                     auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
                 } catch (e: Exception) {
@@ -1222,6 +1240,7 @@ class AuthViewModel(
                         putInt("age", profile.age)
                         putString("city", profile.city.trim())
                         putString("country", profile.country.trim())
+                        putString("timezone", derivedTimezone)
                         putString("imageUrl", finalImageUrl)
                         putString("sect", profile.sect.name)
                         putString("prayerFrequency", profile.prayerFrequency.name)
@@ -1265,7 +1284,8 @@ class AuthViewModel(
                         uid = "mock_user_123", 
                         imageUrl = finalImageUrl,
                         voiceIntroUrl = finalVoiceUrl,
-                        verificationStatus = "NONE"
+                        verificationStatus = "NONE",
+                        timezone = derivedTimezone
                     )
                     _authState.value = AuthState.Authenticated("mock_user_123")
                     return@launch
@@ -1310,6 +1330,7 @@ class AuthViewModel(
                         "age" to profile.age,
                         "city" to profile.city.trim(),
                         "country" to profile.country.trim(),
+                        "timezone" to derivedTimezone,
                         "imageUrl" to finalImageUrl,
                         "sect" to profile.sect.name,
                         "prayerFrequency" to profile.prayerFrequency.name,
@@ -1953,6 +1974,65 @@ class AuthViewModel(
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
+            }
+        }
+    }
+
+    fun updateGpsLocation(
+        latitude: Double,
+        longitude: Double,
+        onResult: (Boolean, String?) -> Unit = { _, _ -> }
+    ) {
+        viewModelScope.launch {
+            try {
+                val current = _currentUserProfile.value
+                if (current == null) {
+                    onResult(false, "No active user profile.")
+                    return@launch
+                }
+
+                val derivedTimezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
+                    current.country,
+                    current.timezone
+                )
+                val updated = current.copy(
+                    gpsLocationEnabled = true,
+                    adhanLocationLat = latitude,
+                    adhanLocationLng = longitude,
+                    timezone = derivedTimezone
+                )
+                _currentUserProfile.value = updated
+                userDao?.insertUser(updated.toCached())
+
+                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                    auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+                } catch (e: Exception) {
+                    true
+                }
+
+                if (isMock) {
+                    context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
+                        putBoolean("gpsLocationEnabled", true)
+                        putFloat("adhanLocationLat", latitude.toFloat())
+                        putFloat("adhanLocationLng", longitude.toFloat())
+                        putString("timezone", derivedTimezone)
+                        apply()
+                    }
+                } else if (current.uid.isNotEmpty()) {
+                    firestore.collection("users").document(current.uid).update(
+                        mapOf(
+                            "gpsLocationEnabled" to true,
+                            "adhanLocationLat" to latitude,
+                            "adhanLocationLng" to longitude,
+                            "timezone" to derivedTimezone
+                        )
+                    ).await()
+                }
+
+                onResult(true, null)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false, e.localizedMessage ?: "Failed to update GPS location.")
             }
         }
     }

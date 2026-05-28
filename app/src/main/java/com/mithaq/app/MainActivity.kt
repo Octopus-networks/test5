@@ -492,7 +492,8 @@ private fun AccountHubContent(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
-                Text("${currentUser.city}, ${currentUser.country}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(currentUser.country, currentUser.timezone, isArabic)
+                Text("${currentUser.city}, ${currentUser.country} • $localTime", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 

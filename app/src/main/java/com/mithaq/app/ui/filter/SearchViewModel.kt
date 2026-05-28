@@ -272,6 +272,10 @@ class SearchViewModel(
                         val age = doc.getLong("age")?.toInt() ?: 18
                         val city = doc.getString("city") ?: ""
                         val country = doc.getString("country") ?: ""
+                        val timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
+                            country,
+                            doc.getString("timezone")
+                        )
                         val imageUrl = doc.getString("imageUrl") ?: ""
                         
                         val sectStr = doc.getString("sect") ?: "SUNNI"
@@ -356,6 +360,7 @@ class SearchViewModel(
                             age = age,
                             city = city,
                             country = country,
+                            timezone = timezone,
                             imageUrl = imageUrl,
                             additionalImages = additionalImages,
                             sect = sect,

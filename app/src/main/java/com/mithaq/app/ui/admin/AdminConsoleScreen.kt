@@ -341,13 +341,14 @@ fun PendingUserVerificationCard(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
+                    val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(user.country, user.timezone, isArabic)
                     Text(
                         text = user.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${user.age} ${if (isArabic) "سنة" else "years"} • ${user.city}, ${user.country}",
+                        text = "${user.age} ${if (isArabic) "سنة" else "years"} • ${user.city}, ${user.country} • $localTime",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

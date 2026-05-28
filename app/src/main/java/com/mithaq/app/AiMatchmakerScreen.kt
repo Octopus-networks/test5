@@ -249,8 +249,13 @@ fun AiMatchmakerScreen(
                                                     )
                                                     VerificationBadge(status = profile.verificationStatus)
                                                 }
+                                                val localTime = com.mithaq.app.util.CountryUtils.formatLocalTimeForCountry(
+                                                    profile.country,
+                                                    profile.timezone,
+                                                    isArabic
+                                                )
                                                 Text(
-                                                    text = "${profile.age} • ${profile.city}, ${profile.country}",
+                                                    text = "${profile.age} • ${profile.city}, ${profile.country} • $localTime",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
