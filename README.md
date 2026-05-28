@@ -1,91 +1,104 @@
-# Mithaq (ميثاق) - Premium Islamic Matchmaking Platform
+# Mithaq
 
-**Mithaq (ميثاق)** is a highly secure, privacy-first matchmaking platform designed for serious marriage in the Islamic world. It employs a clean-architecture MVVM approach with Jetpack Compose to deliver a premium, culturally-sensitive experience.
+Mithaq is a Kotlin Android application for privacy-first Islamic matchmaking. It uses Jetpack Compose, Firebase, Room, ML Kit, and Android security APIs to support serious marriage workflows with profile verification, guardian oversight, modest photo controls, search filters, and secure chat.
 
----
+## Current Status
 
-## 🚀 Core Features & Architectural Overview
+- Package: `com.mithaq.app`
+- Platform: Android
+- Language: Kotlin
+- UI: Jetpack Compose + Material 3
+- Backend: Firebase Auth, Firestore, Storage, and Cloud Messaging
+- Local cache: Room
+- Verification: Google ML Kit Face Detection
+- AI features: Gemini SDK hooks for guided chat assistance
 
-### 1. Smart Compatibility Match Score (`com.mithaq.app.ui.match`)
-- **Islamic Compatibility Algorithm**: Scores profiles on a `0 - 100%` scale based on crucial values (Sect: 20%, Prayer: 15%, Religious Values: 15%, etc.).
-- **Dynamic Match Badges**: Visual circular compatibility progress with color grading (Emerald for high, Amber for moderate, Red/Gray for low matches).
+## Key Features
 
-### 2. The Guardian (Wali) Ecosystem (`com.mithaq.app.ui.guardian`)
-- **Guardian Invitation**: Seamless invitation flow with email validation and "Pending/Verified" status tracking.
-- **Enhanced Wali Dashboard**: A dedicated interface for guardians to monitor active conversations, approve photo access, and review identity verification requests.
-- **Wali Safety Alerts**: (NEW) Automatic detection and flagging of contact information exchange to ensure chaperoned safety.
+- Profile onboarding with religious, demographic, lifestyle, and guardian fields.
+- Compatibility scoring in `com.mithaq.app.ui.match`.
+- Guardian invitation and wali monitoring flows.
+- Chaperoned chat with optional wali logs.
+- Photo privacy requests and approved-viewer lists.
+- Identity verification status and trust badges.
+- Advanced search filters for age, sect, prayer habits, modesty, relocation, and other preferences.
+- Adhan scheduling with exact-alarm support.
+- Biometric app lock and screenshot protection for sensitive screens.
 
-### 3. Secure Chaperoned Chat (`com.mithaq.app.ui.chat`)
-- **Chaperonage Flags**: Chat rooms are marked `isChaperoned` with direct transcript mirroring to `waliLogs` in Firestore.
-- **In-Chat Translation**: Instant Arabic <-> English translation preloaded with matchmaking phrases.
-- **Ice Breakers**: (NEW) Pre-defined, respectful questions to facilitate serious and purposeful conversations.
-- **Voice Calls**: Lifecycle-aware chaperoned voice calls with integrated Wali oversight.
+## Security Updates
 
-### 4. Advanced Privacy & Security Layer (`com.mithaq.app.security`)
-- **Biometric Lock**: (NEW) Fingerprint and Face ID authentication using `BiometricPrompt` to protect sensitive data on app launch.
-- **SecureScreen**: Blocks screenshots and screen recordings on chat and profile views using `FLAG_SECURE`.
-- **Modesty Blur Overlay**: Applies hardware-accelerated `RenderEffect` blur on profile images, unlockable via multi-stage requests or premium access.
-- **Contact Info Protection**: Real-time warning system preventing the exchange of phone numbers or social media handles.
+The latest cleanup hardens the app and repository:
 
-### 5. Advanced Search & Filtering (`com.mithaq.app.ui.filter`)
-- **Logical Filtering**: Combines Firestore queries with local logical evaluation for complex criteria (Age, Sect, Prayer, Modesty, Relocation, Polygamy).
-- **Material 3 Bottom Sheets**: Intuitive UI using custom FlowRow layouts, sliders, and filter chips.
+- Firestore rules now block client-side privilege escalation for admin, premium, verification, wali, and ward fields.
+- Premium upgrades are no longer granted directly by the client in production mode.
+- Guardian status values are normalized to `NONE`, `PENDING`, and `VERIFIED`.
+- Chat rooms, messages, notifications, favorites, photo requests, and wali access now have stricter Firestore validation.
+- Unsupported Adhan receiver broadcasts are ignored.
+- Generated APKs, IDE metadata, Kotlin error logs, and old template code were removed from version control.
 
-### 6. Verification & Trust (`com.mithaq.app.ui.auth`)
-- **AI-Powered Selfie Verification**: Uses Google ML Kit Face Detection to ensure identity authenticity via selfie videos and ID card uploads.
-- **Trust Badges**: Visual verification markers across the app for verified users.
+## Repository Layout
 
-### 7. User Limits & Premium Experience (`com.mithaq.app.ui.limit`)
-- **Smart Daily Limits**: Restricts free users to 3 new chat initiations per day using calendar-based Firestore counters.
-- **Premium Store**: A gold-branded store for platinum/gold subscriptions, offering unlimited chats and enhanced modesty controls.
+```text
+app/src/main/java/com/mithaq/app/
+  model/                  Core data models
+  data/                   Repositories and local database mapping
+  receiver/               Android broadcast receivers
+  notification/           Firebase and local notification handling
+  security/               Biometric, screenshot, and blur helpers
+  ui/auth/                Login, registration, onboarding, profile auth state
+  ui/chat/                Secure chat, translation, ice breakers, voice call UI
+  ui/filter/              Search and filtering logic
+  ui/guardian/            Guardian invitation flow
+  ui/limit/               Free/premium chat limit logic
+  ui/match/               Compatibility score and match detail UI
+  util/                   Prayer, adhan, country, and reward utilities
 
----
-
-## 📂 Repository File Index
-
-```
-src/main/java/com/mithaq/app/
-│
-├── model/
-│   ├── UserProfile.kt           # Demographic, religious & lifestyle attributes
-│   ├── FilterCriteria.kt        # Advanced search preference model
-│   └── ChatRoom.kt              # Chaperoned chat room metadata
-│
-├── security/
-│   ├── BiometricAuthManager.kt  # (NEW) Biometric authentication logic
-│   ├── SafetyUtils.kt           # (NEW) Shared safety & contact detection logic
-│   ├── SecurityExtensions.kt    # Screenshot prevention wrapper
-│   └── BlurModifier.kt          # Modesty image blur utility
-│
-├── ui/
-│   ├── auth/
-│   │   ├── AuthViewModel.kt     # Firebase Sign In / Sign Up & Online status
-│   │   └── RegisterScreen.kt    # Multi-step religious onboarding
-│   │
-│   ├── chat/
-│   │   ├── IceBreakerGenerator.kt # (NEW) Purposeful chat suggestions
-│   │   ├── ChaperonedChatViewModel.kt # Wali mirroring & secure messaging
-│   │   └── TranslationHelper.kt # Instant Arabic/English bridge
-│   │
-│   ├── guardian/
-│   │   └── WaliDashboard.kt     # Guardian monitoring & safety alerts
-│   │
-│   ├── match/
-│   │   ├── MatchScoreCalculator.kt # Compatibility scoring algorithm
-│   │   └── MatchScoreBadge.kt   # Dynamic UI scoring components
-│   │
-│   └── theme/
-│       ├── Color.kt             # Emerald & Gold HSL branding
-│       └── Theme.kt             # Status bar & Light/Dark M3 coordination
+firestore.rules           Firestore access rules
+storage.rules             Firebase Storage rules
+app/proguard-rules.pro    Release shrinker rules
 ```
 
----
+## Build Requirements
 
-## 🛠️ Technical Stack
-- **Language**: Kotlin (100%)
-- **UI**: Jetpack Compose (Material 3)
-- **Architecture**: MVVM + Clean Architecture
-- **Backend**: Firebase (Auth, Firestore, Storage, Cloud Messaging)
-- **Local Cache**: Room Database (Offline-first readiness)
-- **AI/ML**: Google ML Kit (Face Detection) + Gemini SDK (AI Icebreakers)
-- **Security**: Biometric API + Android Window Manager Flags
+- Android Studio with JDK 17
+- Android SDK installed locally
+- A valid Firebase Android config at `app/google-services.json`
+- Optional local `GEMINI_API_KEY` in `local.properties` or environment variables for debug AI features
+
+## Common Commands
+
+On Windows PowerShell:
+
+```powershell
+$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
+$env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
+$env:PATH="$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
+
+.\gradlew.bat :app:assembleDebug
+.\gradlew.bat :app:testDebugUnitTest
+.\gradlew.bat :app:lintDebug
+.\gradlew.bat :app:assembleRelease
+```
+
+## Verification
+
+The current codebase was verified with:
+
+- `:app:assembleDebug`
+- `:app:testDebugUnitTest`
+- `:app:lintDebug`
+- `:app:assembleRelease`
+
+`lintDebug` currently reports warnings and hints only. There are no lint errors.
+
+## Repository Hygiene
+
+Do not commit generated build outputs or local IDE state. The repository ignores:
+
+- APK/AAB release artifacts
+- Gradle and Kotlin build directories
+- Android Studio `.idea/` metadata
+- Local machine files such as `local.properties`
+
+Release artifacts should be uploaded through GitHub Releases or CI output, not stored in the source tree.

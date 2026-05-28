@@ -20,6 +20,7 @@ class AdhanReceiver : BroadcastReceiver() {
     companion object {
         const val CHANNEL_ID = "adhan_channel"
         const val TAG = "AdhanReceiver"
+        const val ACTION_ADHAN_ALARM = "com.mithaq.app.action.ADHAN_ALARM"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -31,6 +32,11 @@ class AdhanReceiver : BroadcastReceiver() {
             if (lat != 0.0 && lng != 0.0) {
                 AdhanScheduler.scheduleNextAdhan(context, lat, lng)
             }
+            return
+        }
+
+        if (intent.action != ACTION_ADHAN_ALARM) {
+            Log.w(TAG, "Ignoring unsupported broadcast action: ${intent.action}")
             return
         }
 
@@ -52,11 +58,8 @@ class AdhanReceiver : BroadcastReceiver() {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Fallback to system default alarm sound since raw resource doesn't exist yet
-        var soundUri: Uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
-        
-        if (soundUri == null) {
-            soundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-        }
+        val soundUri: Uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+            ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelName = "Adhan Notifications"

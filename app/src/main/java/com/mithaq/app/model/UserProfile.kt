@@ -42,7 +42,7 @@ data class UserProfile(
     // Guardian (Wali) Fields
     val guardianName: String? = null,
     val guardianEmail: String? = null,
-    val guardianStatus: String? = null, // "None", "Pending", "Verified"
+    val guardianStatus: String? = null, // "NONE", "PENDING", "VERIFIED"
 
     // Photo modesty locks
     val photoAccessApprovedUsers: List<String> = emptyList(),

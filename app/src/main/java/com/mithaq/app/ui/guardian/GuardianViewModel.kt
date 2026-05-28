@@ -33,7 +33,7 @@ class GuardianViewModel(
     val uiState: StateFlow<GuardianUiState> = _uiState.asStateFlow()
 
     /**
-     * Updates the current user's document in Firestore with the guardian details and sets the status to "Pending".
+     * Updates the current user's document in Firestore with the guardian details and sets the status to "PENDING".
      */
     fun inviteGuardian(name: String, email: String) {
         val isMock = com.mithaq.app.Config.isMock()
@@ -77,6 +77,7 @@ class GuardianViewModel(
             _uiState.value = GuardianUiState.Error("Please enter a valid email address.")
             return
         }
+        val normalizedEmail = trimmedEmail.lowercase()
 
         _uiState.value = GuardianUiState.Loading
 
@@ -85,8 +86,8 @@ class GuardianViewModel(
                 val userId = currentUser.uid
                 val updates = mapOf(
                     "guardianName" to trimmedName,
-                    "guardianEmail" to trimmedEmail,
-                    "guardianStatus" to "Pending"
+                    "guardianEmail" to normalizedEmail,
+                    "guardianStatus" to "PENDING"
                 )
 
                 // Securely updates the user document with the guardian's info and pending status

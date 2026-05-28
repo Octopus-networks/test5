@@ -11,6 +11,7 @@ import com.batoulapps.adhan.CalculationParameters
 import com.batoulapps.adhan.Coordinates
 import com.batoulapps.adhan.PrayerTimes
 import com.batoulapps.adhan.data.DateComponents
+import com.mithaq.app.receiver.AdhanReceiver
 import java.util.Calendar
 import java.util.Date
 
@@ -52,7 +53,8 @@ object AdhanScheduler {
         }
 
         if (nextPrayerTime != null) {
-            val intent = Intent(context, com.mithaq.app.receiver.AdhanReceiver::class.java).apply {
+            val intent = Intent(context, AdhanReceiver::class.java).apply {
+                action = AdhanReceiver.ACTION_ADHAN_ALARM
                 putExtra("PRAYER_NAME", nextPrayer.name)
                 putExtra("LAT", lat)
                 putExtra("LNG", lng)
@@ -85,7 +87,9 @@ object AdhanScheduler {
     
     fun cancelAdhan(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, com.mithaq.app.receiver.AdhanReceiver::class.java)
+        val intent = Intent(context, AdhanReceiver::class.java).apply {
+            action = AdhanReceiver.ACTION_ADHAN_ALARM
+        }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             1001,

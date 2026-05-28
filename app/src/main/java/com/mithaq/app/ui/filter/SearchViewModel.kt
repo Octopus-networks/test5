@@ -515,9 +515,7 @@ class SearchViewModel(
     }
 
     private fun applyLocalFilters() {
-        // We show ALL profiles (filtered only by gender and not being current user)
-        // Compatibility shading/blurring will be handled in the UI based on isCompatible()
-        _searchResults.value = allUsersCache
+        _searchResults.value = allUsersCache.filter { isCompatible(it) }
     }
 
     fun resetFilters() {

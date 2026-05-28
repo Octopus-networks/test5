@@ -233,10 +233,6 @@ class AuthViewModel(
     fun purchasePremiumPlan(planId: String) {
         viewModelScope.launch {
             val current = _currentUserProfile.value ?: return@launch
-            val updated = current.copy(isPremium = true, subscriptionPlan = planId)
-            _currentUserProfile.value = updated
-            userDao?.insertUser(updated.toCached())
-
             val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
             } catch (e: Exception) {
@@ -244,22 +240,18 @@ class AuthViewModel(
             }
 
             if (isMock) {
+                val updated = current.copy(isPremium = true, subscriptionPlan = planId)
+                _currentUserProfile.value = updated
+                userDao?.insertUser(updated.toCached())
                 context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
                     putBoolean("isPremium", true)
                     putString("subscriptionPlan", planId)
                     apply()
                 }
             } else {
-                try {
-                    firestore.collection("users").document(current.uid).update(
-                        mapOf(
-                            "isPremium" to true,
-                            "subscriptionPlan" to planId
-                        )
-                    ).await()
-                } catch (e: Exception) {
-                    // Ignored / offline sync later
-                }
+                _authState.value = AuthState.Error(
+                    "Premium purchases must be verified by the payment backend before membership is upgraded."
+                )
             }
         }
     }
@@ -1304,6 +1296,10 @@ class AuthViewModel(
                         null
                     }
 
+                    val guardianName = profile.guardianName?.trim()?.takeIf { it.isNotBlank() }
+                    val guardianEmail = profile.guardianEmail?.trim()?.lowercase()?.takeIf { it.isNotBlank() }
+                    val hasGuardianInvite = guardianName != null && guardianEmail != null
+
                     // 2. Save profile to Firestore users database
                     val userProfilePayload = mapOf(
                         "uid" to userId,
@@ -1318,11 +1314,17 @@ class AuthViewModel(
                         "modestyPreference" to profile.modestyPreference.name,
                         "relocationWillingness" to profile.relocationWillingness.name,
                         "polygamyAcceptance" to profile.polygamyAcceptance,
-                        "guardianStatus" to "NONE",
+                        "guardianName" to guardianName,
+                        "guardianEmail" to guardianEmail,
+                        "guardianStatus" to if (hasGuardianInvite) "PENDING" else "NONE",
                         "isPremium" to false,
+                        "subscriptionPlan" to "FREE",
+                        "premiumExpiry" to 0L,
                         "isWaliAccount" to false,
                         "verificationStatus" to "NONE",
                         "voiceIntroUrl" to (finalVoiceUrl ?: ""),
+                        "photoAccessApprovedUsers" to emptyList<String>(),
+                        "photoAccessRequests" to emptyList<String>(),
                         
                         "username" to profile.username,
                         "oathChecked" to profile.oathChecked,
@@ -1459,7 +1461,12 @@ class AuthViewModel(
                             "name" to name,
                             "imageUrl" to (user.photoUrl?.toString() ?: ""),
                             "isPremium" to false,
+                            "subscriptionPlan" to "FREE",
+                            "premiumExpiry" to 0L,
+                            "isWaliAccount" to false,
                             "verificationStatus" to "NONE",
+                            "photoAccessApprovedUsers" to emptyList<String>(),
+                            "photoAccessRequests" to emptyList<String>(),
                             "profileComplete" to false  // Flag: must complete onboarding
                         )
                         firestore.collection("users")

@@ -58,8 +58,8 @@ class ChatLimitManager(
                 remainingChats = remaining
             )
         } catch (e: Exception) {
-            // Safe fallback on database failure: allow initiation but log error.
-            LimitState(isPremium = false, canInitiate = true, remainingChats = 1)
+            // Fail closed so a rules/network problem cannot bypass free-tier limits.
+            LimitState(isPremium = false, canInitiate = false, remainingChats = 0)
         }
     }
 
