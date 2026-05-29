@@ -235,6 +235,7 @@ private fun ChatRoomCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(12.dp))
+            // TODO: Implement message rules before enabling message sending.
             OutlinedButton(
                 onClick = onOpenPlaceholder,
                 modifier = Modifier.fillMaxWidth()

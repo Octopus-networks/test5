@@ -111,6 +111,15 @@ class ChatRequestRepository(
             if (user?.uid != request.toUserId || !user.isEmailVerified) {
                 return ChatRequestResult.Error("You can respond only to chat requests sent to you.")
             }
+            if (approved && request.status == "approved") {
+                return when (val roomResult = chatRepository.createChatRoomFromApprovedRequest(requestId)) {
+                    is ChatRoomResult.Success -> ChatRequestResult.Success(
+                        requestId = requestId,
+                        createdChatId = roomResult.chatRoom.chatId
+                    )
+                    is ChatRoomResult.Error -> ChatRequestResult.Error(roomResult.message)
+                }
+            }
             if (request.status != "pending") {
                 return ChatRequestResult.Error("This request is no longer pending.")
             }
@@ -130,7 +139,15 @@ class ChatRequestRepository(
                     requestId = requestId,
                     createdChatId = roomResult.chatRoom.chatId
                 )
-                is ChatRoomResult.Error -> ChatRequestResult.Error(roomResult.message)
+                is ChatRoomResult.Error -> {
+                    requestRef.update(
+                        mapOf(
+                            "status" to "pending",
+                            "updatedAt" to FieldValue.serverTimestamp()
+                        )
+                    ).await()
+                    ChatRequestResult.Error(roomResult.message)
+                }
             }
         } catch (e: Exception) {
             ChatRequestResult.Error(e.localizedMessage ?: "Could not update chat request.")

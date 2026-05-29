@@ -30,6 +30,8 @@ class ChatRepository(
             }
             val fromUserId = requestSnapshot.getString("fromUserId").orEmpty()
             val toUserId = requestSnapshot.getString("toUserId").orEmpty()
+            val participantIds = normalizedParticipantIds(fromUserId, toUserId)
+                ?: return ChatRoomResult.Error("Chat room requires exactly two different members.")
             if (user.uid != fromUserId && user.uid != toUserId) {
                 return ChatRoomResult.Error("You can create chats only for your approved requests.")
             }
@@ -50,10 +52,10 @@ class ChatRepository(
             }
 
             val chatId = chatIdFor(fromUserId, toUserId)
-            val participantIds = listOf(fromUserId, toUserId).sorted()
             val summaries = participantIds.associateWith { userId ->
                 publicProfileRepository.getPublicProfile(userId).toSummaryMap(userId)
             }
+            // TODO: Move chat creation to backend/Cloud Function before production.
             val roomData = mapOf(
                 "chatId" to chatId,
                 "participantIds" to participantIds,
@@ -90,7 +92,7 @@ class ChatRepository(
             .await()
             .documents
             .map { it.toChatRoom() }
-            .filter { it.chatId.isNotBlank() }
+            .filter { it.chatId.isNotBlank() && userId in it.participantIds && it.participantIds.toSet().size == 2 }
             .sortedByDescending { it.lastMessageAt ?: it.updatedAt ?: it.createdAt }
     }
 
@@ -107,10 +109,13 @@ class ChatRepository(
     }
 
     suspend fun findExistingChatRoomBetweenUsers(userA: String, userB: String): ChatRoom? {
-        if (userA.isBlank() || userB.isBlank()) return null
+        val expectedParticipants = normalizedParticipantIds(userA, userB) ?: return null
+        val expectedSet = expectedParticipants.toSet()
         val chatId = chatIdFor(userA, userB)
         val deterministic = firestore.collection("chats").document(chatId).get().await()
-        if (deterministic.exists()) return deterministic.toChatRoom()
+        if (deterministic.exists()) {
+            return deterministic.toChatRoom().takeIf { it.participantIds.toSet() == expectedSet }
+        }
 
         val legacyMatch = firestore.collection("chats")
             .whereArrayContains("participantIds", userA)
@@ -118,7 +123,7 @@ class ChatRepository(
             .await()
             .documents
             .map { it.toChatRoom() }
-            .firstOrNull { userB in it.participantIds }
+            .firstOrNull { it.participantIds.toSet() == expectedSet }
         return legacyMatch
     }
 
@@ -128,7 +133,15 @@ class ChatRepository(
     }
 
     private fun chatIdFor(userA: String, userB: String): String {
-        return listOf(userA, userB).sorted().joinToString("_")
+        return normalizedParticipantIds(userA, userB)?.joinToString("_").orEmpty()
+    }
+
+    private fun normalizedParticipantIds(userA: String, userB: String): List<String>? {
+        val participants = listOf(userA.trim(), userB.trim())
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+        return participants.takeIf { it.size == 2 }
     }
 
     private fun PublicProfile?.toSummaryMap(userId: String): Map<String, Any?> {

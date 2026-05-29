@@ -66,6 +66,8 @@ Phase 6.3 introduces `chatRequests/{requestId}` as status-only conversation requ
 
 Phase 7 creates `chats/{chatId}` after an approved chat request. The room stores participant ids and safe public summaries only; it must not contain private profile fields or messages. The client currently creates/reuses a deterministic room id for the two participants, but production should consider a Cloud Function so the server can verify the approved chat request, accepted interest, participant ids, and guardian/privacy requirements before creating the room. Messages subcollection rules should be added in a later phase before message sending is enabled.
 
+Phase 7.5 hardens chat readiness before messages. Chat rooms should always have exactly two distinct participant ids, a deterministic id derived from those two ids, `status == "active"` at creation, `lastMessagePreview == null`, and `lastMessageAt == null`. Active chat lists should show rooms only when the current user is in `participantIds`, and UI should render only `participantPublicSummaries`. If client-side room creation remains temporarily enabled, rules should validate the shape of the document and block all message writes until the dedicated message phase.
+
 ## Example Pattern
 
 ```js
@@ -179,6 +181,8 @@ match /chats/{chatId} {
 
   // Current client-side phase only. Prefer Cloud Functions in production.
   allow create: if isVerifiedEmailUser() &&
+    request.resource.data.participantIds is list &&
+    request.resource.data.participantIds.size() == 2 &&
     request.auth.uid in request.resource.data.participantIds &&
     request.resource.data.status == "active" &&
     request.resource.data.guardianApprovalStatus in ["not_required", "approved"] &&
@@ -187,8 +191,26 @@ match /chats/{chatId} {
 
   allow update: if false;
 
+  // Future messages phase only. Do not enable until the message UI and moderation
+  // rules are implemented and tested.
   match /messages/{messageId} {
     allow read, write: if false;
+
+    // Future recommended direction:
+    // allow read: if isVerifiedEmailUser() &&
+    //   request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
+    //
+    // allow create: if isVerifiedEmailUser() &&
+    //   request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds &&
+    //   get(/databases/$(database)/documents/chats/$(chatId)).data.status == "active" &&
+    //   request.resource.data.senderId == request.auth.uid &&
+    //   request.resource.data.text is string &&
+    //   request.resource.data.text.size() > 0 &&
+    //   request.resource.data.text.size() <= 2000 &&
+    //   !("attachmentUrl" in request.resource.data);
+    //
+    // Blocked or archived chats should prevent new messages, and attachments
+    // should stay disabled until attachment moderation exists.
   }
 }
 ```
