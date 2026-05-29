@@ -99,6 +99,9 @@ fun MithaqRequestsScreen(
                 onRetry = { interestRequestViewModel.loadForUser(currentUserId) },
                 onRespond = { requestId, accepted ->
                     interestRequestViewModel.respondToInterest(currentUserId, requestId, accepted)
+                },
+                onCancel = { requestId ->
+                    interestRequestViewModel.cancelInterest(currentUserId, requestId)
                 }
             )
         } else {
@@ -119,7 +122,8 @@ private fun InterestRequestsTab(
     isArabic: Boolean,
     state: InterestRequestUiState,
     onRetry: () -> Unit,
-    onRespond: (String, Boolean) -> Unit
+    onRespond: (String, Boolean) -> Unit,
+    onCancel: (String) -> Unit
 ) {
     when {
         state.isLoadingRequests -> {
@@ -142,15 +146,6 @@ private fun InterestRequestsTab(
                 modifier = Modifier.padding(horizontal = 18.dp)
             )
         }
-        state.receivedPendingRequests.isEmpty() -> {
-            MithaqEmptyState(
-                title = if (isArabic) "لا توجد طلبات اهتمام الآن" else "No interest requests yet",
-                message = if (isArabic) "عندما يرسل لك عضو اهتمامًا جادًا سيظهر هنا."
-                else "When someone sends a serious interest request, it will appear here.",
-                icon = Icons.Filled.Favorite,
-                modifier = Modifier.padding(horizontal = 18.dp)
-            )
-        }
         else -> {
             Column(
                 modifier = Modifier.padding(horizontal = 18.dp),
@@ -163,15 +158,64 @@ private fun InterestRequestsTab(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-                state.receivedPendingRequests.forEach { request ->
-                    InterestRequestCard(
-                        request = request,
-                        senderProfile = state.senderPublicProfiles[request.fromUserId],
-                        isArabic = isArabic,
-                        isResponding = request.requestId in state.respondingRequestIds,
-                        onAccept = { onRespond(request.requestId, true) },
-                        onDecline = { onRespond(request.requestId, false) }
+
+                InterestSectionTitle(if (isArabic) "طلبات واردة معلقة" else "Received pending")
+                if (state.receivedPendingRequests.isEmpty()) {
+                    MithaqEmptyState(
+                        title = if (isArabic) "لا توجد طلبات اهتمام واردة" else "No received interest requests",
+                        message = if (isArabic) "عندما يرسل لك عضو اهتمامًا جادًا سيظهر هنا."
+                        else "When someone sends a serious interest request, it will appear here.",
+                        icon = Icons.Filled.Favorite
                     )
+                } else {
+                    state.receivedPendingRequests.forEach { request ->
+                        InterestRequestCard(
+                            request = request,
+                            publicProfile = state.publicProfilesByUserId[request.fromUserId],
+                            isArabic = isArabic,
+                            isResponding = request.requestId in state.respondingRequestIds,
+                            onAccept = { onRespond(request.requestId, true) },
+                            onDecline = { onRespond(request.requestId, false) }
+                        )
+                    }
+                }
+
+                InterestSectionTitle(if (isArabic) "طلبات أرسلتها" else "Sent requests")
+                if (state.sentRequests.isEmpty()) {
+                    MithaqEmptyState(
+                        title = if (isArabic) "لا توجد طلبات مرسلة" else "No sent interest requests",
+                        message = if (isArabic) "عند إرسال اهتمام سيظهر هنا مع حالته."
+                        else "Sent interest requests will appear here with their status.",
+                        icon = Icons.Filled.Favorite
+                    )
+                } else {
+                    state.sentRequests.forEach { request ->
+                        SentInterestRequestCard(
+                            request = request,
+                            recipientProfile = state.publicProfilesByUserId[request.toUserId],
+                            isArabic = isArabic,
+                            isCancelling = request.requestId in state.cancellingRequestIds,
+                            onCancel = { onCancel(request.requestId) }
+                        )
+                    }
+                }
+
+                InterestSectionTitle(if (isArabic) "سجل الطلبات الواردة" else "Received history")
+                if (state.receivedHistoryRequests.isEmpty()) {
+                    MithaqEmptyState(
+                        title = if (isArabic) "لا يوجد سجل طلبات" else "No request history",
+                        message = if (isArabic) "الطلبات المقبولة أو المرفوضة ستظهر هنا."
+                        else "Accepted or declined received requests will appear here.",
+                        icon = Icons.Filled.Favorite
+                    )
+                } else {
+                    state.receivedHistoryRequests.forEach { request ->
+                        InterestHistoryCard(
+                            request = request,
+                            publicProfile = state.publicProfilesByUserId[request.fromUserId],
+                            isArabic = isArabic
+                        )
+                    }
                 }
             }
         }
@@ -179,22 +223,107 @@ private fun InterestRequestsTab(
 }
 
 @Composable
+private fun InterestSectionTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface
+    )
+}
+
+@Composable
 private fun InterestRequestCard(
     request: InterestRequest,
-    senderProfile: PublicProfile?,
+    publicProfile: PublicProfile?,
     isArabic: Boolean,
     isResponding: Boolean,
     onAccept: () -> Unit,
     onDecline: () -> Unit
 ) {
-    val displayName = senderProfile?.displayName
-        ?: request.fromDisplayName
-        ?: ""
+    val displayName = publicProfile?.displayName ?: request.fromDisplayName
     val safeName = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" }
-    val location = listOf(senderProfile?.city.orEmpty(), senderProfile?.country.orEmpty())
-        .filter { it.isNotBlank() }
-        .joinToString(", ")
+    val location = publicProfile.locationLabel()
 
+    InterestStatusCard(
+        title = if (isArabic) "طلب اهتمام جديد" else "New interest request",
+        name = safeName,
+        location = location,
+        status = request.status,
+        isArabic = isArabic
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = onAccept,
+                enabled = !isResponding,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (isArabic) "قبول" else "Accept")
+            }
+            OutlinedButton(
+                onClick = onDecline,
+                enabled = !isResponding,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (isArabic) "رفض" else "Decline")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SentInterestRequestCard(
+    request: InterestRequest,
+    recipientProfile: PublicProfile?,
+    isArabic: Boolean,
+    isCancelling: Boolean,
+    onCancel: () -> Unit
+) {
+    val displayName = recipientProfile?.displayName ?: request.toDisplayName
+    InterestStatusCard(
+        title = if (isArabic) "طلب مرسل" else "Sent request",
+        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        location = recipientProfile.locationLabel(),
+        status = request.status,
+        isArabic = isArabic
+    ) {
+        if (request.status == "pending") {
+            OutlinedButton(
+                onClick = onCancel,
+                enabled = !isCancelling,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (isArabic) "إلغاء الطلب" else "Cancel request")
+            }
+        }
+    }
+}
+
+@Composable
+private fun InterestHistoryCard(
+    request: InterestRequest,
+    publicProfile: PublicProfile?,
+    isArabic: Boolean
+) {
+    val displayName = publicProfile?.displayName ?: request.fromDisplayName
+    InterestStatusCard(
+        title = if (isArabic) "طلب وارد" else "Received request",
+        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        location = publicProfile.locationLabel(),
+        status = request.status,
+        isArabic = isArabic
+    )
+}
+
+@Composable
+private fun InterestStatusCard(
+    title: String,
+    name: String,
+    location: String,
+    status: String,
+    isArabic: Boolean,
+    actions: @Composable () -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -203,13 +332,13 @@ private fun InterestRequestCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = if (isArabic) "طلب اهتمام جديد" else "New interest request",
+                text = title,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.secondary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = safeName,
+                text = name,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -222,33 +351,31 @@ private fun InterestRequestCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            senderProfile?.let { profile ->
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = listOf(profile.accountType, profile.maritalStatus)
-                        .filter { it.isNotBlank() }
-                        .joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = onAccept,
-                    enabled = !isResponding,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(if (isArabic) "قبول" else "Accept")
-                }
-                OutlinedButton(
-                    onClick = onDecline,
-                    enabled = !isResponding,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(if (isArabic) "رفض" else "Decline")
-                }
-            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = statusLabel(status, isArabic),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            actions()
         }
+    }
+}
+
+private fun PublicProfile?.locationLabel(): String {
+    if (this == null) return ""
+    return listOf(city, country)
+        .filter { it.isNotBlank() }
+        .joinToString(", ")
+}
+
+private fun statusLabel(status: String, isArabic: Boolean): String {
+    return when (status) {
+        "pending" -> if (isArabic) "معلق" else "Pending"
+        "accepted" -> if (isArabic) "مقبول" else "Accepted"
+        "declined" -> if (isArabic) "مرفوض" else "Declined"
+        "cancelled" -> if (isArabic) "ملغي" else "Cancelled"
+        else -> status
     }
 }

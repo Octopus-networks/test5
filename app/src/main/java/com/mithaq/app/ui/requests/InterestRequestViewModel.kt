@@ -16,9 +16,13 @@ data class InterestRequestUiState(
     val isLoadingRequests: Boolean = false,
     val sendingToUserIds: Set<String> = emptySet(),
     val respondingRequestIds: Set<String> = emptySet(),
+    val cancellingRequestIds: Set<String> = emptySet(),
     val sentPendingToUserIds: Set<String> = emptySet(),
+    val sentStatusByUserId: Map<String, String> = emptyMap(),
+    val sentRequests: List<InterestRequest> = emptyList(),
     val receivedPendingRequests: List<InterestRequest> = emptyList(),
-    val senderPublicProfiles: Map<String, PublicProfile> = emptyMap(),
+    val receivedHistoryRequests: List<InterestRequest> = emptyList(),
+    val publicProfilesByUserId: Map<String, PublicProfile> = emptyMap(),
     val message: String? = null,
     val errorMessage: String? = null
 )
@@ -36,12 +40,16 @@ class InterestRequestViewModel(
         viewModelScope.launch {
             try {
                 val sent = repository.getSentInterestRequests(userId)
-                val receivedPending = repository.getReceivedInterestRequests(userId)
-                    .filter { it.status == "pending" }
-                val summaries = receivedPending
+                val received = repository.getReceivedInterestRequests(userId)
+                val receivedPending = received.filter { it.status == "pending" }
+                val receivedHistory = received.filter { it.status != "pending" }
+                val profileIds = (sent.map { it.toUserId } + received.map { it.fromUserId })
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                val summaries = profileIds
                     .mapNotNull { request ->
-                        publicProfileRepository.getPublicProfile(request.fromUserId)?.let { profile ->
-                            request.fromUserId to profile
+                        publicProfileRepository.getPublicProfile(request)?.let { profile ->
+                            request to profile
                         }
                     }
                     .toMap()
@@ -51,8 +59,11 @@ class InterestRequestViewModel(
                         .filter { it.status == "pending" }
                         .map { it.toUserId }
                         .toSet(),
+                    sentStatusByUserId = sent.associate { it.toUserId to it.status },
+                    sentRequests = sent,
                     receivedPendingRequests = receivedPending,
-                    senderPublicProfiles = summaries
+                    receivedHistoryRequests = receivedHistory,
+                    publicProfilesByUserId = summaries
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
@@ -76,6 +87,7 @@ class InterestRequestViewModel(
                     _state.value = _state.value.copy(
                         sendingToUserIds = _state.value.sendingToUserIds - toUserId,
                         sentPendingToUserIds = _state.value.sentPendingToUserIds + toUserId,
+                        sentStatusByUserId = _state.value.sentStatusByUserId + (toUserId to "pending"),
                         message = "Interest request sent.",
                         errorMessage = null
                     )
@@ -85,6 +97,7 @@ class InterestRequestViewModel(
                     _state.value = _state.value.copy(
                         sendingToUserIds = _state.value.sendingToUserIds - toUserId,
                         sentPendingToUserIds = _state.value.sentPendingToUserIds + toUserId,
+                        sentStatusByUserId = _state.value.sentStatusByUserId + (toUserId to "pending"),
                         message = "Interest request is already pending.",
                         errorMessage = null
                     )
@@ -111,7 +124,7 @@ class InterestRequestViewModel(
                 is InterestRequestResult.Success -> {
                     _state.value = _state.value.copy(
                         respondingRequestIds = _state.value.respondingRequestIds - requestId,
-                        message = if (accepted) "Interest request accepted." else "Interest request declined.",
+                        message = if (accepted) "Interest accepted." else "Interest declined.",
                         errorMessage = null
                     )
                     loadForUser(currentUserId)
@@ -120,6 +133,34 @@ class InterestRequestViewModel(
                 is InterestRequestResult.Error -> {
                     _state.value = _state.value.copy(
                         respondingRequestIds = _state.value.respondingRequestIds - requestId,
+                        errorMessage = result.message
+                    )
+                }
+            }
+        }
+    }
+
+    fun cancelInterest(currentUserId: String, requestId: String) {
+        if (requestId.isBlank() || requestId in _state.value.cancellingRequestIds) return
+        _state.value = _state.value.copy(
+            cancellingRequestIds = _state.value.cancellingRequestIds + requestId,
+            message = null,
+            errorMessage = null
+        )
+        viewModelScope.launch {
+            when (val result = repository.cancelInterestRequest(requestId)) {
+                is InterestRequestResult.Success -> {
+                    _state.value = _state.value.copy(
+                        cancellingRequestIds = _state.value.cancellingRequestIds - requestId,
+                        message = "Interest request cancelled.",
+                        errorMessage = null
+                    )
+                    loadForUser(currentUserId)
+                }
+                InterestRequestResult.AlreadyPending -> Unit
+                is InterestRequestResult.Error -> {
+                    _state.value = _state.value.copy(
+                        cancellingRequestIds = _state.value.cancellingRequestIds - requestId,
                         errorMessage = result.message
                     )
                 }

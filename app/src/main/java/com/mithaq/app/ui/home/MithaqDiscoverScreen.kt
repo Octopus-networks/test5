@@ -327,12 +327,14 @@ fun MithaqPublicProfileCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                val requestStatus = interestState.sentStatusByUserId[profile.userId]
+                val canSendInterest = currentUserId.isNotBlank() &&
+                        profile.userId != currentUserId &&
+                        profile.userId !in interestState.sendingToUserIds &&
+                        (requestStatus == null || requestStatus == "cancelled")
                 Button(
                     onClick = { onSendInterest(profile.userId) },
-                    enabled = currentUserId.isNotBlank() &&
-                            profile.userId != currentUserId &&
-                            profile.userId !in interestState.sentPendingToUserIds &&
-                            profile.userId !in interestState.sendingToUserIds,
+                    enabled = canSendInterest,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -343,7 +345,9 @@ fun MithaqPublicProfileCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     val buttonText = when {
                         profile.userId in interestState.sendingToUserIds -> if (isArabic) "\u062c\u0627\u0631\u064a \u0627\u0644\u0625\u0631\u0633\u0627\u0644" else "Sending..."
-                        profile.userId in interestState.sentPendingToUserIds -> if (isArabic) "\u062a\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644" else "Sent"
+                        requestStatus == "pending" -> if (isArabic) "\u062a\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644" else "Sent"
+                        requestStatus == "accepted" -> if (isArabic) "\u062a\u0645 \u0627\u0644\u0642\u0628\u0648\u0644" else "Accepted"
+                        requestStatus == "declined" -> if (isArabic) "\u062a\u0645 \u0631\u0641\u0636 \u0627\u0644\u0627\u0647\u062a\u0645\u0627\u0645" else "Interest declined"
                         else -> if (isArabic) "\u0625\u0631\u0633\u0627\u0644 \u0627\u0647\u062a\u0645\u0627\u0645" else "Send interest"
                     }
                     Text(buttonText)

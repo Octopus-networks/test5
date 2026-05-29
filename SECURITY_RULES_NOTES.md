@@ -58,6 +58,8 @@ Phase 5 connects Home/Discover and Search to `publicProfiles` through `DiscoverV
 
 Phase 6.1 introduces `interestRequests/{requestId}` for serious interest requests only. This flow must not create chats, photo requests, or expose private profile data. Request cards should use `publicProfiles` summaries only.
 
+Phase 6.1.5 keeps interest requests as status updates instead of deletes. Senders may cancel only their own pending requests by setting `status = "cancelled"`. Receivers may accept or decline only pending requests where they are `toUserId`. Users may read only requests where they are `fromUserId` or `toUserId`.
+
 ## Example Pattern
 
 ```js
