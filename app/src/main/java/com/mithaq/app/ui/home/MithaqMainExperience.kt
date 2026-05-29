@@ -132,7 +132,11 @@ fun MithaqMainExperience(
                 chatRequestViewModel = chatRequestViewModel,
                 modifier = screenModifier
             )
-            MithaqMainTab.Messages -> MithaqMessagesScreen(isArabic = isArabic, modifier = screenModifier)
+            MithaqMainTab.Messages -> MithaqMessagesScreen(
+                currentUserId = currentUserId,
+                isArabic = isArabic,
+                modifier = screenModifier
+            )
             MithaqMainTab.Profile -> MithaqProfileHubScreen(
                 isArabic = isArabic,
                 onSignOut = onSignOut,

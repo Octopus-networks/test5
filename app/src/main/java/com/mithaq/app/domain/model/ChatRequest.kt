@@ -8,6 +8,7 @@ data class ChatRequest(
     val toUserId: String = "",
     val status: String = "pending",
     val relatedInterestRequestId: String = "",
+    val createdChatId: String = "",
     val requiresGuardianApproval: Boolean = false,
     val guardianApprovalStatus: String = "not_required",
     val createdAt: Date? = null,

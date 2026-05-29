@@ -64,6 +64,8 @@ Phase 6.2 introduces `photoRequests/{requestId}` as status-only access requests.
 
 Phase 6.3 introduces `chatRequests/{requestId}` as status-only conversation requests. This phase must not create chat rooms, chat messages, or expose private data. A verified sender may create a request only for another user after accepted interest exists between both users. Users may read only chat requests where they are `fromUserId` or `toUserId`. Receivers may approve or decline only received pending requests. Senders may cancel only their own pending requests. An approved chat request is only an approval status; actual chat room creation should happen in a later phase after optional guardian/privacy checks.
 
+Phase 7 creates `chats/{chatId}` after an approved chat request. The room stores participant ids and safe public summaries only; it must not contain private profile fields or messages. The client currently creates/reuses a deterministic room id for the two participants, but production should consider a Cloud Function so the server can verify the approved chat request, accepted interest, participant ids, and guardian/privacy requirements before creating the room. Messages subcollection rules should be added in a later phase before message sending is enabled.
+
 ## Example Pattern
 
 ```js
@@ -169,6 +171,25 @@ match /chatRequests/{requestId} {
       request.resource.data.status == "cancelled"
     )
   );
+}
+
+match /chats/{chatId} {
+  allow read: if isVerifiedEmailUser() &&
+    request.auth.uid in resource.data.participantIds;
+
+  // Current client-side phase only. Prefer Cloud Functions in production.
+  allow create: if isVerifiedEmailUser() &&
+    request.auth.uid in request.resource.data.participantIds &&
+    request.resource.data.status == "active" &&
+    request.resource.data.guardianApprovalStatus in ["not_required", "approved"] &&
+    request.resource.data.lastMessagePreview == null &&
+    request.resource.data.lastMessageAt == null;
+
+  allow update: if false;
+
+  match /messages/{messageId} {
+    allow read, write: if false;
+  }
 }
 ```
 

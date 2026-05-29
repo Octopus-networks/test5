@@ -10,7 +10,8 @@ import kotlinx.coroutines.tasks.await
 
 class ChatRequestRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val chatRepository: ChatRepository = ChatRepository(firestore, auth)
 ) {
     suspend fun requestChat(fromUserId: String, toUserId: String): ChatRequestResult {
         if (fromUserId.isBlank() || toUserId.isBlank()) {
@@ -113,14 +114,24 @@ class ChatRequestRepository(
             if (request.status != "pending") {
                 return ChatRequestResult.Error("This request is no longer pending.")
             }
+            val newStatus = if (approved) "approved" else "declined"
             requestRef.update(
                 mapOf(
-                    "status" to if (approved) "approved" else "declined",
+                    "status" to newStatus,
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
             ).await()
-            // TODO: Actual chat room will be created in a later phase after chat approval and optional guardian/privacy checks.
-            ChatRequestResult.Success(requestId)
+            if (!approved) {
+                return ChatRequestResult.Success(requestId)
+            }
+
+            return when (val roomResult = chatRepository.createChatRoomFromApprovedRequest(requestId)) {
+                is ChatRoomResult.Success -> ChatRequestResult.Success(
+                    requestId = requestId,
+                    createdChatId = roomResult.chatRoom.chatId
+                )
+                is ChatRoomResult.Error -> ChatRequestResult.Error(roomResult.message)
+            }
         } catch (e: Exception) {
             ChatRequestResult.Error(e.localizedMessage ?: "Could not update chat request.")
         }
@@ -165,6 +176,7 @@ class ChatRequestRepository(
             toUserId = getString("toUserId").orEmpty(),
             status = getString("status") ?: "pending",
             relatedInterestRequestId = getString("relatedInterestRequestId").orEmpty(),
+            createdChatId = getString("createdChatId").orEmpty(),
             requiresGuardianApproval = getBoolean("requiresGuardianApproval") ?: false,
             guardianApprovalStatus = getString("guardianApprovalStatus") ?: "not_required",
             createdAt = getTimestamp("createdAt")?.toDate(),
@@ -174,7 +186,10 @@ class ChatRequestRepository(
 }
 
 sealed interface ChatRequestResult {
-    data class Success(val requestId: String) : ChatRequestResult
+    data class Success(
+        val requestId: String,
+        val createdChatId: String? = null
+    ) : ChatRequestResult
     data object AlreadyPending : ChatRequestResult
     data class Error(val message: String) : ChatRequestResult
 }
