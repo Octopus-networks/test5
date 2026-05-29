@@ -108,6 +108,12 @@ class ChatRepository(
         }
     }
 
+    suspend fun isUserParticipant(chatId: String, userId: String): Boolean {
+        if (chatId.isBlank() || userId.isBlank()) return false
+        val room = getChatRoom(chatId) ?: return false
+        return userId in room.participantIds
+    }
+
     suspend fun findExistingChatRoomBetweenUsers(userA: String, userB: String): ChatRoom? {
         val expectedParticipants = normalizedParticipantIds(userA, userB) ?: return null
         val expectedSet = expectedParticipants.toSet()

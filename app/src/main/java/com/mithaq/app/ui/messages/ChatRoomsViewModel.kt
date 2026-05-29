@@ -13,7 +13,7 @@ data class ChatRoomsUiState(
     val isLoading: Boolean = false,
     val chatRooms: List<ChatRoom> = emptyList(),
     val errorMessage: String? = null,
-    val selectedPlaceholderChatId: String? = null
+    val selectedChatId: String? = null
 )
 
 class ChatRoomsViewModel(
@@ -40,11 +40,11 @@ class ChatRoomsViewModel(
         }
     }
 
-    fun showPlaceholder(chatId: String) {
-        _state.value = _state.value.copy(selectedPlaceholderChatId = chatId)
+    fun openChat(chatId: String) {
+        _state.value = _state.value.copy(selectedChatId = chatId)
     }
 
-    fun clearPlaceholder() {
-        _state.value = _state.value.copy(selectedPlaceholderChatId = null)
+    fun closeChat() {
+        _state.value = _state.value.copy(selectedChatId = null)
     }
 }

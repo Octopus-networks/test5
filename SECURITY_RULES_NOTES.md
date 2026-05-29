@@ -68,6 +68,8 @@ Phase 7 creates `chats/{chatId}` after an approved chat request. The room stores
 
 Phase 7.5 hardens chat readiness before messages. Chat rooms should always have exactly two distinct participant ids, a deterministic id derived from those two ids, `status == "active"` at creation, `lastMessagePreview == null`, and `lastMessageAt == null`. Active chat lists should show rooms only when the current user is in `participantIds`, and UI should render only `participantPublicSummaries`. If client-side room creation remains temporarily enabled, rules should validate the shape of the document and block all message writes until the dedicated message phase.
 
+Phase 8 introduces basic text messages under `chats/{chatId}/messages/{messageId}`. Only verified chat participants should read or write messages, the parent chat must be `active`, `senderId` must equal `request.auth.uid`, `chatId` must match the parent path, `type` must be `text`, and text must be non-empty with a maximum of 1000 characters. Attachments, image messages, voice messages, files, stickers, edits, deletes, and forwarding are not enabled in this phase. `lastMessagePreview` should be a safe truncated text preview only.
+
 ## Example Pattern
 
 ```js
@@ -189,26 +191,30 @@ match /chats/{chatId} {
     request.resource.data.lastMessagePreview == null &&
     request.resource.data.lastMessageAt == null;
 
-  allow update: if false;
+  allow update: if isVerifiedEmailUser() &&
+    request.auth.uid in resource.data.participantIds &&
+    resource.data.status == "active" &&
+    request.resource.data.diff(resource.data).affectedKeys()
+      .hasOnly(["lastMessagePreview", "lastMessageAt", "updatedAt"]);
 
-  // Future messages phase only. Do not enable until the message UI and moderation
-  // rules are implemented and tested.
   match /messages/{messageId} {
-    allow read, write: if false;
+    allow read: if isVerifiedEmailUser() &&
+      request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
 
-    // Future recommended direction:
-    // allow read: if isVerifiedEmailUser() &&
-    //   request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
-    //
-    // allow create: if isVerifiedEmailUser() &&
-    //   request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds &&
-    //   get(/databases/$(database)/documents/chats/$(chatId)).data.status == "active" &&
-    //   request.resource.data.senderId == request.auth.uid &&
-    //   request.resource.data.text is string &&
-    //   request.resource.data.text.size() > 0 &&
-    //   request.resource.data.text.size() <= 2000 &&
-    //   !("attachmentUrl" in request.resource.data);
-    //
+    allow create: if isVerifiedEmailUser() &&
+      request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds &&
+      get(/databases/$(database)/documents/chats/$(chatId)).data.status == "active" &&
+      request.resource.data.senderId == request.auth.uid &&
+      request.resource.data.chatId == chatId &&
+      request.resource.data.type == "text" &&
+      request.resource.data.status == "sent" &&
+      request.resource.data.text is string &&
+      request.resource.data.text.size() > 0 &&
+      request.resource.data.text.size() <= 1000 &&
+      !("attachmentUrl" in request.resource.data);
+
+    allow update, delete: if false;
+
     // Blocked or archived chats should prevent new messages, and attachments
     // should stay disabled until attachment moderation exists.
   }
