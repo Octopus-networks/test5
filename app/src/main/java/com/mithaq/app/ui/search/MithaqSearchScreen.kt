@@ -1,45 +1,41 @@
 package com.mithaq.app.ui.search
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.home.DiscoverUiState
+import com.mithaq.app.ui.home.DiscoverViewModel
+import com.mithaq.app.ui.home.MithaqPublicProfileCard
+import com.mithaq.app.ui.home.PublicProfileFilterRow
 
 @Composable
 fun MithaqSearchScreen(
     isArabic: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: DiscoverViewModel = viewModel(key = "mithaq_public_search")
 ) {
-    val filters = if (isArabic) {
-        listOf("البلد", "العمر", "التوثيق", "وجود ولي", "الخصوصية")
-    } else {
-        listOf("Country", "Age", "Verified", "Guardian", "Privacy")
-    }
-    var selectedFilter by remember { mutableStateOf(filters.first()) }
+    val state by viewModel.state.collectAsState()
 
     Column(
         modifier = modifier
@@ -55,56 +51,86 @@ fun MithaqSearchScreen(
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = if (isArabic) "فلترة هادئة تساعدك تصل لتوافق جاد بدون ازدحام."
-            else "Quiet filters for serious, respectful discovery.",
+            text = if (isArabic) "فلترة آمنة على البيانات العامة فقط، بدون كشف بيانات خاصة."
+            else "Safe filtering over public profile data only, without exposing private fields.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(18.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = if (isArabic) "فلاتر سريعة" else "Quick filters",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    filters.take(3).forEach { filter ->
-                        FilterChip(
-                            selected = selectedFilter == filter,
-                            onClick = { selectedFilter = filter },
-                            label = { Text(filter) }
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    filters.drop(3).forEach { filter ->
-                        FilterChip(
-                            selected = selectedFilter == filter,
-                            onClick = { selectedFilter = filter },
-                            label = { Text(filter) }
-                        )
-                    }
-                }
-            }
+        PublicProfileFilterRow(
+            isArabic = isArabic,
+            selectedFilter = state.selectedFilter,
+            onFilterSelected = viewModel::selectFilter
+        )
+        if (state.isNearMePlaceholder) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = if (isArabic) "فلتر القرب مؤقتًا يعتمد على نفس النتائج لحين تجهيز المدينة/GPS."
+                else "Near me currently keeps the same results until city/GPS matching is wired.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         Spacer(modifier = Modifier.height(18.dp))
-        MithaqEmptyState(
-            title = if (isArabic) "البحث الحقيقي قادم قريبًا" else "Search results will appear here",
-            message = if (isArabic) "سنربط هذه الفلاتر بملفات حقيقية بعد تثبيت تجربة الواجهة."
-            else "These filters are ready for real profile data once search is wired safely.",
-            icon = Icons.Filled.Search
+        SearchResultsContent(
+            state = state,
+            isArabic = isArabic,
+            onRetry = viewModel::loadProfiles
         )
+    }
+}
+
+@Composable
+private fun SearchResultsContent(
+    state: DiscoverUiState,
+    isArabic: Boolean,
+    onRetry: () -> Unit
+) {
+    when {
+        state.isLoading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        state.errorMessage != null -> {
+            MithaqEmptyState(
+                title = if (isArabic) "تعذر تحميل نتائج البحث" else "Could not load search results",
+                message = if (isArabic) "البيانات العامة غير متاحة الآن. حاول مرة أخرى."
+                else "Public profile data is not available right now. Please try again.",
+                icon = Icons.Filled.Refresh,
+                actionLabel = if (isArabic) "إعادة المحاولة" else "Retry",
+                onAction = onRetry
+            )
+        }
+        state.isEmpty -> {
+            MithaqEmptyState(
+                title = if (isArabic) "لا توجد ملفات عامة للبحث" else "No public profiles to search",
+                message = if (isArabic) "عند اكتمال ملفات أعضاء آخرين ستظهر النتائج هنا."
+                else "When other completed public profiles are available, results will appear here.",
+                icon = Icons.Filled.Search
+            )
+        }
+        state.hasNoFilterResults -> {
+            MithaqEmptyState(
+                title = if (isArabic) "لا توجد نتائج مطابقة" else "No matching results",
+                message = if (isArabic) "غيّر الفلتر أو ارجع إلى المقترحات."
+                else "Change the filter or return to recommended profiles.",
+                icon = Icons.Filled.Search
+            )
+        }
+        else -> {
+            state.visibleProfiles.forEach { profile ->
+                MithaqPublicProfileCard(
+                    profile = profile,
+                    isArabic = isArabic,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+        }
     }
 }

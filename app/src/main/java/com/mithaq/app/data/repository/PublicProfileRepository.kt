@@ -4,7 +4,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.mithaq.app.domain.model.PublicProfile
 import kotlinx.coroutines.tasks.await
@@ -48,18 +47,19 @@ class PublicProfileRepository(
     }
 
     suspend fun getDiscoverProfiles(limit: Long = 20): List<PublicProfile> {
-        return try {
-            firestore.collection("publicProfiles")
-                .whereEqualTo("isEmailVerified", true)
-                .orderBy("updatedAt", Query.Direction.DESCENDING)
-                .limit(limit)
-                .get()
-                .await()
-                .documents
-                .map { it.toPublicProfile() }
-        } catch (e: Exception) {
-            emptyList()
-        }
+        val currentUserId = auth.currentUser?.uid
+        return firestore.collection("publicProfiles")
+            .whereEqualTo("isEmailVerified", true)
+            .limit(limit)
+            .get()
+            .await()
+            .documents
+            .map { it.toPublicProfile() }
+            .filter { it.userId.isNotBlank() && it.userId != currentUserId }
+            .sortedWith(
+                compareByDescending<PublicProfile> { it.lastActiveAt }
+                    .thenByDescending { it.updatedAt }
+            )
     }
 
     suspend fun getPublicProfile(userId: String): PublicProfile? {
