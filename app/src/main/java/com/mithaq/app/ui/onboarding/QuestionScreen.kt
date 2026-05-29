@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,6 +31,7 @@ import com.mithaq.app.domain.model.OnboardingStep
 import com.mithaq.app.domain.model.QuestionOption
 import com.mithaq.app.domain.model.QuestionType
 import com.mithaq.app.ui.onboarding.components.MithaqInputField
+import com.mithaq.app.ui.onboarding.components.MithaqIllustrationHeader
 import com.mithaq.app.ui.onboarding.components.MithaqOptionCard
 import com.mithaq.app.ui.onboarding.components.MithaqPrimaryButton
 import com.mithaq.app.ui.onboarding.components.MithaqQuestionScaffold
@@ -37,22 +39,24 @@ import com.mithaq.app.ui.onboarding.components.MithaqQuestionScaffold
 @Composable
 fun QuestionScreen(
     viewModel: OnboardingViewModel = remember { OnboardingViewModel() },
+    userId: String = "",
     onExitRequested: () -> Unit = {},
-    onComplete: (Map<String, OnboardingAnswer>) -> Unit = {}
+    onComplete: (answeredQuestions: Int, profileCompletionPercent: Int) -> Unit = { _, _ -> }
 ) {
     val state by viewModel.state.collectAsState()
     val step = state.currentStep
     var showExitConfirm by remember { mutableStateOf(false) }
 
     if (state.isComplete) {
-        LaunchedEffect(Unit) {
-            onComplete(state.answers)
+        LaunchedEffect(state.answeredQuestions, state.profileCompletionPercent) {
+            onComplete(state.answeredQuestions, state.profileCompletionPercent)
         }
         Text("Completing profile setup...")
         return
     }
 
     fun handleBack() {
+        if (state.isLoading) return
         if (state.canGoBack) {
             viewModel.goBack()
         } else {
@@ -99,13 +103,31 @@ fun QuestionScreen(
         title = step.title,
         helperText = step.helperText,
         validationMessage = state.validationMessage,
-        canGoBack = true,
-        canContinue = canContinue,
+        canGoBack = !state.isLoading,
+        canContinue = canContinue && !state.isLoading,
         showSkip = step.isOptional,
         onBack = ::handleBack,
-        onContinue = viewModel::continueToNext,
+        onContinue = { viewModel.continueToNext(userId) },
         onSkip = viewModel::skipOptional
     ) {
+        if (state.isLoading) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CircularProgressIndicator()
+                Text(
+                    text = "Saving your profile setup...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+        }
+        step.illustration?.let { illustration ->
+            MithaqIllustrationHeader(illustration = illustration)
+            Spacer(modifier = Modifier.height(18.dp))
+        }
         QuestionContent(
             step = step,
             answer = answer,

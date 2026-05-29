@@ -1,6 +1,10 @@
 package com.mithaq.app.ui.onboarding
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mithaq.app.data.repository.OnboardingRepository
+import com.mithaq.app.data.repository.OnboardingSaveResult
+import com.mithaq.app.domain.model.IllustrationKey
 import com.mithaq.app.domain.model.OnboardingAnswer
 import com.mithaq.app.domain.model.OnboardingSection
 import com.mithaq.app.domain.model.OnboardingState
@@ -11,10 +15,24 @@ import com.mithaq.app.domain.model.QuestionType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class OnboardingViewModel : ViewModel() {
+class OnboardingViewModel(
+    private val repository: OnboardingRepository = OnboardingRepository()
+) : ViewModel() {
     private val _state = MutableStateFlow(OnboardingState(steps = sampleSteps()))
     val state: StateFlow<OnboardingState> = _state.asStateFlow()
+
+    fun loadCompletionStatus(userId: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val completed = repository.loadCompletionStatus(userId)
+            onResult(completed)
+        }
+    }
+
+    fun saveCompletionCache(userId: String, completed: Boolean) {
+        repository.saveCompletionCache(userId, completed)
+    }
 
     fun selectOption(optionId: String) {
         val current = _state.value
@@ -53,8 +71,9 @@ class OnboardingViewModel : ViewModel() {
         }
     }
 
-    fun continueToNext() {
+    fun continueToNext(userId: String? = null) {
         val current = _state.value
+        if (current.isLoading) return
         val step = current.currentStep ?: return
         val answer = current.answers[step.id]
         val validationMessage = validate(step, answer)
@@ -64,7 +83,7 @@ class OnboardingViewModel : ViewModel() {
         }
 
         if (current.currentStepIndex >= current.steps.lastIndex) {
-            _state.value = current.copy(validationMessage = null, isComplete = true)
+            saveOnboarding(userId.orEmpty())
         } else {
             _state.value = current.copy(
                 currentStepIndex = current.currentStepIndex + 1,
@@ -76,6 +95,7 @@ class OnboardingViewModel : ViewModel() {
 
     fun skipOptional() {
         val current = _state.value
+        if (current.isLoading) return
         val step = current.currentStep ?: return
         if (!step.isOptional) return
         if (current.currentStepIndex >= current.steps.lastIndex) {
@@ -85,6 +105,35 @@ class OnboardingViewModel : ViewModel() {
                 currentStepIndex = current.currentStepIndex + 1,
                 validationMessage = null
             )
+        }
+    }
+
+    private fun saveOnboarding(userId: String) {
+        val current = _state.value
+        _state.value = current.copy(
+            isLoading = true,
+            validationMessage = null,
+            isComplete = false
+        )
+        viewModelScope.launch {
+            when (val result = repository.saveOnboardingAnswers(userId, current.answers, current.steps)) {
+                is OnboardingSaveResult.Success -> {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        validationMessage = null,
+                        isComplete = true,
+                        answeredQuestions = result.answeredQuestions,
+                        profileCompletionPercent = result.profileCompletionPercent
+                    )
+                }
+                is OnboardingSaveResult.Error -> {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        validationMessage = result.message,
+                        isComplete = false
+                    )
+                }
+            }
         }
     }
 
@@ -159,6 +208,7 @@ class OnboardingViewModel : ViewModel() {
                 section = basics,
                 type = QuestionType.SingleChoice,
                 title = "What type of account are you creating?",
+                illustration = IllustrationKey.ACCOUNT_TYPE,
                 options = listOf(
                     QuestionOption("male", "Male seeking wife"),
                     QuestionOption("female", "Female seeking husband"),
@@ -172,6 +222,7 @@ class OnboardingViewModel : ViewModel() {
                 type = QuestionType.TextInput,
                 title = "What is your name?",
                 helperText = "Use the name you want serious matches to see.",
+                illustration = IllustrationKey.BASIC_INFO,
                 validationRules = listOf(
                     OnboardingValidationRule.Required,
                     OnboardingValidationRule.MinLength(3),
@@ -183,6 +234,7 @@ class OnboardingViewModel : ViewModel() {
                 section = basics,
                 type = QuestionType.NumberInput,
                 title = "How old are you?",
+                illustration = IllustrationKey.BASIC_INFO,
                 validationRules = listOf(
                     OnboardingValidationRule.Required,
                     OnboardingValidationRule.NumberRange(18, 77)
@@ -193,6 +245,7 @@ class OnboardingViewModel : ViewModel() {
                 section = basics,
                 type = QuestionType.SearchableList,
                 title = "Which country do you live in?",
+                illustration = IllustrationKey.LOCATION,
                 options = listOf(
                     QuestionOption("egypt", "Egypt"),
                     QuestionOption("saudi_arabia", "Saudi Arabia"),
@@ -208,6 +261,7 @@ class OnboardingViewModel : ViewModel() {
                 section = basics,
                 type = QuestionType.TextInput,
                 title = "Which city are you in?",
+                illustration = IllustrationKey.LOCATION,
                 validationRules = listOf(
                     OnboardingValidationRule.Required,
                     OnboardingValidationRule.MinLength(2)
@@ -218,6 +272,7 @@ class OnboardingViewModel : ViewModel() {
                 section = personal,
                 type = QuestionType.SingleChoice,
                 title = "What is your marital status?",
+                illustration = IllustrationKey.MARITAL_STATUS,
                 options = listOf(
                     QuestionOption("single", "Single"),
                     QuestionOption("divorced_no_children", "Divorced without children"),
@@ -233,6 +288,7 @@ class OnboardingViewModel : ViewModel() {
                 type = QuestionType.PrivacyMode,
                 title = "How would you describe your prayer habit?",
                 helperText = "This is private by default and can be hidden.",
+                illustration = IllustrationKey.RELIGION,
                 options = listOf(
                     QuestionOption("always", "Always"),
                     QuestionOption("daily", "Daily"),
@@ -246,6 +302,7 @@ class OnboardingViewModel : ViewModel() {
                 section = intent,
                 type = QuestionType.SingleChoice,
                 title = "When do you plan to get married?",
+                illustration = IllustrationKey.MARRIAGE_INTENT,
                 options = listOf(
                     QuestionOption("soon", "As soon as possible"),
                     QuestionOption("one_two_years", "In 1 to 2 years"),

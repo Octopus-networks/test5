@@ -41,8 +41,9 @@ import com.google.firebase.FirebaseOptions
 import com.google.firebase.appcheck.AppCheckProviderFactory
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+import com.mithaq.app.data.repository.OnboardingRepository
 import com.mithaq.app.model.*
-import com.mithaq.app.domain.model.OnboardingAnswer
+import com.mithaq.app.domain.model.IllustrationKey
 import com.mithaq.app.navigation.AuthGate
 import com.mithaq.app.navigation.Routes
 import com.mithaq.app.ui.auth.AuthState
@@ -80,7 +81,9 @@ import com.mithaq.app.ui.limit.PremiumStoreScreen
 import com.mithaq.app.ui.match.QuestionnaireScreen
 import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
 import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
+import com.mithaq.app.ui.onboarding.OnboardingViewModel
 import com.mithaq.app.ui.onboarding.QuestionScreen
+import com.mithaq.app.ui.onboarding.components.MithaqIllustrationHeader
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
 import com.mithaq.app.security.SecureScreen
@@ -262,6 +265,8 @@ private fun OnboardingTemporaryCompletionScreen(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                MithaqIllustrationHeader(illustration = IllustrationKey.PROFILE_COMPLETE)
+                Spacer(modifier = Modifier.height(12.dp))
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
@@ -794,12 +799,12 @@ fun MithaqAppNavigation(
     val authViewModel = remember { AuthViewModel(context = context) }
     val searchViewModel = remember { SearchViewModel(context = context) }
     val guardianViewModel = remember { GuardianViewModel() }
+    val onboardingViewModel = remember {
+        OnboardingViewModel(OnboardingRepository(context = context))
+    }
 
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
     val authState by authViewModel.authState.collectAsState()
-    val onboardingPrefs = remember {
-        context.getSharedPreferences("mithaq_onboarding_engine_v2", android.content.Context.MODE_PRIVATE)
-    }
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
     var onboardingAnsweredCount by remember { mutableStateOf(0) }
     var onboardingCompletionPercent by remember { mutableStateOf(0) }
@@ -808,20 +813,14 @@ fun MithaqAppNavigation(
     }
     val launchIntentData = deepLinkData
 
-    fun isLocalOnboardingComplete(userId: String): Boolean {
-        return onboardingPrefs.getBoolean("completed_$userId", false)
-    }
-
-    fun answerHasContent(answer: OnboardingAnswer): Boolean {
-        return answer.selectedOptionIds.isNotEmpty() || answer.text.isNotBlank() || answer.number != null
-    }
-
     fun routeVerifiedUser(userId: String) {
         currentUserId = userId
         com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-        val completed = isLocalOnboardingComplete(userId)
-        hasDismissedOnboarding = completed
-        currentScreen = if (completed) Routes.Home else Routes.OnboardingQuestion
+        currentScreen = Routes.OnboardingQuestion
+        onboardingViewModel.loadCompletionStatus(userId) { completed ->
+            hasDismissedOnboarding = completed
+            currentScreen = if (completed) Routes.Home else Routes.OnboardingQuestion
+        }
     }
 
     LaunchedEffect(launchIntentData, deepLinkNonce) {
@@ -1028,18 +1027,14 @@ fun MithaqAppNavigation(
         }
         Routes.OnboardingQuestion -> {
             QuestionScreen(
+                viewModel = onboardingViewModel,
+                userId = currentUserId,
                 onExitRequested = {
                     currentScreen = Routes.Home
                 },
-                onComplete = { answers ->
-                    val answered = answers.values.count(::answerHasContent)
-                    onboardingAnsweredCount = answered
-                    onboardingCompletionPercent = ((answered.toFloat() / 8f) * 100f).toInt().coerceIn(0, 100)
-                    if (currentUserId.isNotBlank()) {
-                        onboardingPrefs.edit()
-                            .putBoolean("completed_$currentUserId", true)
-                            .apply()
-                    }
+                onComplete = { answeredQuestions, profileCompletionPercent ->
+                    onboardingAnsweredCount = answeredQuestions
+                    onboardingCompletionPercent = profileCompletionPercent
                     hasDismissedOnboarding = true
                     currentScreen = Routes.OnboardingComplete
                 }

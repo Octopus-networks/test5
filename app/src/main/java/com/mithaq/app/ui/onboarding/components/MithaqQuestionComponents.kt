@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -32,10 +33,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mithaq.app.R
+import com.mithaq.app.domain.model.IllustrationKey
 import com.mithaq.app.domain.model.OnboardingProgress
 import com.mithaq.app.domain.model.QuestionOption
 
@@ -84,6 +89,57 @@ fun MithaqQuestionScaffold(
             )
         }
     }
+}
+
+@Composable
+fun MithaqIllustrationHeader(
+    illustration: IllustrationKey,
+    modifier: Modifier = Modifier
+) {
+    val drawableRes = when (illustration) {
+        IllustrationKey.LANGUAGE -> R.drawable.illustration_language
+        IllustrationKey.OATH -> R.drawable.illustration_oath
+        IllustrationKey.ACCOUNT_TYPE -> R.drawable.illustration_account_type
+        IllustrationKey.BASIC_INFO -> R.drawable.illustration_basic_info
+        IllustrationKey.LOCATION -> R.drawable.illustration_location
+        IllustrationKey.MARITAL_STATUS -> R.drawable.illustration_marital_status
+        IllustrationKey.EDUCATION -> R.drawable.illustration_education
+        IllustrationKey.WORK -> R.drawable.illustration_work
+        IllustrationKey.RELIGION -> R.drawable.illustration_religion
+        IllustrationKey.PRAYER -> R.drawable.illustration_prayer
+        IllustrationKey.MARRIAGE_INTENT -> R.drawable.illustration_marriage_intent
+        IllustrationKey.PRIVACY -> R.drawable.illustration_privacy
+        IllustrationKey.PHOTO_PRIVACY -> R.drawable.illustration_photo_privacy
+        IllustrationKey.GUARDIAN -> R.drawable.illustration_guardian
+        IllustrationKey.DESCRIPTION -> R.drawable.illustration_description
+        IllustrationKey.PROFILE_COMPLETE -> R.drawable.illustration_profile_complete
+    }
+    val descriptionRes = when (illustration) {
+        IllustrationKey.LANGUAGE -> R.string.illustration_language_desc
+        IllustrationKey.OATH -> R.string.illustration_oath_desc
+        IllustrationKey.ACCOUNT_TYPE -> R.string.illustration_account_type_desc
+        IllustrationKey.BASIC_INFO -> R.string.illustration_basic_info_desc
+        IllustrationKey.LOCATION -> R.string.illustration_location_desc
+        IllustrationKey.MARITAL_STATUS -> R.string.illustration_marital_status_desc
+        IllustrationKey.EDUCATION -> R.string.illustration_education_desc
+        IllustrationKey.WORK -> R.string.illustration_work_desc
+        IllustrationKey.RELIGION -> R.string.illustration_religion_desc
+        IllustrationKey.PRAYER -> R.string.illustration_prayer_desc
+        IllustrationKey.MARRIAGE_INTENT -> R.string.illustration_marriage_intent_desc
+        IllustrationKey.PRIVACY -> R.string.illustration_privacy_desc
+        IllustrationKey.PHOTO_PRIVACY -> R.string.illustration_photo_privacy_desc
+        IllustrationKey.GUARDIAN -> R.string.illustration_guardian_desc
+        IllustrationKey.DESCRIPTION -> R.string.illustration_description_desc
+        IllustrationKey.PROFILE_COMPLETE -> R.string.illustration_profile_complete_desc
+    }
+
+    Image(
+        painter = painterResource(id = drawableRes),
+        contentDescription = stringResource(id = descriptionRes),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(132.dp)
+    )
 }
 
 @Composable
@@ -141,6 +197,7 @@ fun MithaqOptionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // TODO: Add small option icons after the question engine visuals are fully tested.
     val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     val background = if (selected) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)

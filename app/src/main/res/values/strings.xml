@@ -1,3 +1,19 @@
 <resources>
     <string name="app_name">Mithaq</string>
+    <string name="illustration_language_desc">Language selection illustration</string>
+    <string name="illustration_oath_desc">Marriage oath illustration</string>
+    <string name="illustration_account_type_desc">Account type illustration</string>
+    <string name="illustration_basic_info_desc">Basic profile information illustration</string>
+    <string name="illustration_location_desc">Location illustration</string>
+    <string name="illustration_marital_status_desc">Marital status illustration</string>
+    <string name="illustration_education_desc">Education illustration</string>
+    <string name="illustration_work_desc">Work information illustration</string>
+    <string name="illustration_religion_desc">Religious practice illustration</string>
+    <string name="illustration_prayer_desc">Prayer routine illustration</string>
+    <string name="illustration_marriage_intent_desc">Marriage intent illustration</string>
+    <string name="illustration_privacy_desc">Privacy settings illustration</string>
+    <string name="illustration_photo_privacy_desc">Photo privacy illustration</string>
+    <string name="illustration_guardian_desc">Guardian setup illustration</string>
+    <string name="illustration_description_desc">Profile description illustration</string>
+    <string name="illustration_profile_complete_desc">Profile completion illustration</string>
 </resources>

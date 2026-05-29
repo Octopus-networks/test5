@@ -12,6 +12,25 @@ enum class QuestionType {
     Summary
 }
 
+enum class IllustrationKey {
+    LANGUAGE,
+    OATH,
+    ACCOUNT_TYPE,
+    BASIC_INFO,
+    LOCATION,
+    MARITAL_STATUS,
+    EDUCATION,
+    WORK,
+    RELIGION,
+    PRAYER,
+    MARRIAGE_INTENT,
+    PRIVACY,
+    PHOTO_PRIVACY,
+    GUARDIAN,
+    DESCRIPTION,
+    PROFILE_COMPLETE
+}
+
 data class OnboardingSection(
     val id: String,
     val title: String,
@@ -38,6 +57,7 @@ data class OnboardingStep(
     val type: QuestionType,
     val title: String,
     val helperText: String = "",
+    val illustration: IllustrationKey? = null,
     val options: List<QuestionOption> = emptyList(),
     val validationRules: List<OnboardingValidationRule> = emptyList(),
     val isOptional: Boolean = false
@@ -64,7 +84,9 @@ data class OnboardingState(
     val answers: Map<String, OnboardingAnswer> = emptyMap(),
     val validationMessage: String? = null,
     val isLoading: Boolean = false,
-    val isComplete: Boolean = false
+    val isComplete: Boolean = false,
+    val answeredQuestions: Int = 0,
+    val profileCompletionPercent: Int = 0
 ) {
     val currentStep: OnboardingStep?
         get() = steps.getOrNull(currentStepIndex)
