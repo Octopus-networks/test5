@@ -47,6 +47,7 @@ import com.mithaq.app.navigation.Routes
 import com.mithaq.app.ui.auth.AuthState
 import com.mithaq.app.ui.auth.AuthViewModel
 import com.mithaq.app.ui.auth.EntryDecisionScreen
+import com.mithaq.app.ui.auth.ForgotPasswordScreen
 import com.mithaq.app.ui.auth.LoginScreen
 import com.mithaq.app.ui.auth.RegisterScreen
 import com.mithaq.app.ui.chat.ChaperonedChatBanner
@@ -203,7 +204,9 @@ class MainActivity : FragmentActivity() {
 
     private fun captureVerificationDeepLink(intent: Intent?) {
         val data = intent?.dataString
-        if (data?.startsWith("https://mithaq.app/verify-email") == true) {
+        if (data?.startsWith("https://mithaq.app/verify-email") == true ||
+            data?.startsWith("https://mithaq.app/reset-password") == true
+        ) {
             latestDeepLinkData = data
             latestDeepLinkNonce += 1
         }
@@ -721,21 +724,26 @@ fun MithaqAppNavigation(
     val authState by authViewModel.authState.collectAsState()
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
     val publicRoutes = remember {
-        setOf(Routes.Splash, Routes.Entry, Routes.Login, Routes.Register, Routes.VerifyEmail)
+        setOf(Routes.Splash, Routes.Entry, Routes.Login, Routes.Register, Routes.VerifyEmail, Routes.ForgotPassword)
     }
     val launchIntentData = deepLinkData
 
     LaunchedEffect(launchIntentData, deepLinkNonce) {
-        if (launchIntentData?.startsWith("https://mithaq.app/verify-email") == true) {
-            currentScreen = Routes.VerifyEmail
-            authViewModel.reloadAndCheckEmailVerification { verified, _ ->
-                if (verified) {
-                    val uid = (authViewModel.authState.value as? AuthState.Authenticated)?.userId
-                    if (uid != null) {
-                        currentUserId = uid
-                        currentScreen = Routes.Home
+        when {
+            launchIntentData?.startsWith("https://mithaq.app/verify-email") == true -> {
+                currentScreen = Routes.VerifyEmail
+                authViewModel.reloadAndCheckEmailVerification { verified, _ ->
+                    if (verified) {
+                        val uid = (authViewModel.authState.value as? AuthState.Authenticated)?.userId
+                        if (uid != null) {
+                            currentUserId = uid
+                            currentScreen = Routes.Home
+                        }
                     }
                 }
+            }
+            launchIntentData?.startsWith("https://mithaq.app/reset-password") == true -> {
+                currentScreen = Routes.Login
             }
         }
     }
@@ -917,6 +925,7 @@ fun MithaqAppNavigation(
         Routes.Login -> {
             LoginScreen(
                 onNavigateToRegister = { currentScreen = Routes.Register },
+                onForgotPassword = { currentScreen = Routes.ForgotPassword },
                 onLoginSuccess = { uid ->
                     currentUserId = uid
                     com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
@@ -925,6 +934,13 @@ fun MithaqAppNavigation(
                 viewModel = authViewModel,
                 isArabic = isArabic,
                 onLanguageChange = onLanguageChange
+            )
+        }
+        Routes.ForgotPassword -> {
+            ForgotPasswordScreen(
+                viewModel = authViewModel,
+                isArabic = isArabic,
+                onBackToLogin = { currentScreen = Routes.Login }
             )
         }
         Routes.Register -> {

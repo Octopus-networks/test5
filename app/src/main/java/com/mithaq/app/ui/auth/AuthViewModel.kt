@@ -3,7 +3,9 @@ package com.mithaq.app.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.ActionCodeSettings
+import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
@@ -43,7 +45,9 @@ class AuthViewModel(
     private val context: android.content.Context? = null
 ) : ViewModel() {
     private val verificationEmailCooldownMs = 60_000L
+    private val passwordResetCooldownMs = 60_000L
     private var lastVerificationEmailSentAtMs = 0L
+    private var lastPasswordResetSentAtMs = 0L
 
 
     private val db = context?.let { MithaqDatabase.getDatabase(it) }
@@ -256,6 +260,14 @@ class AuthViewModel(
             .build()
     }
 
+    private fun passwordResetSettings(): ActionCodeSettings {
+        return ActionCodeSettings.newBuilder()
+            .setUrl("https://mithaq.app/reset-password")
+            .setHandleCodeInApp(false)
+            .setAndroidPackageName("com.mithaq.app", true, null)
+            .build()
+    }
+
     suspend fun sendVerificationEmailToCurrentUser() {
         val user = auth.currentUser ?: throw IllegalStateException("No signed-in user.")
         user.sendEmailVerification(emailVerificationSettings()).await()
@@ -301,6 +313,40 @@ class AuthViewModel(
                 }
             } catch (e: Exception) {
                 onResult(false, e.localizedMessage ?: "Could not check email verification. Please check your connection and try again.")
+            }
+        }
+    }
+
+    fun sendPasswordResetEmail(email: String, onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            val trimmedEmail = email.trim()
+            if (trimmedEmail.isBlank()) {
+                onResult(false, "Email is required.")
+                return@launch
+            }
+            if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
+                onResult(false, "Please enter a valid email address.")
+                return@launch
+            }
+
+            val elapsedMs = System.currentTimeMillis() - lastPasswordResetSentAtMs
+            if (elapsedMs in 0 until passwordResetCooldownMs) {
+                val remainingSeconds = ((passwordResetCooldownMs - elapsedMs) / 1000L).coerceAtLeast(1L)
+                onResult(false, "Please wait $remainingSeconds seconds before requesting another reset link.")
+                return@launch
+            }
+
+            try {
+                auth.sendPasswordResetEmail(trimmedEmail, passwordResetSettings()).await()
+                lastPasswordResetSentAtMs = System.currentTimeMillis()
+                onResult(true, "If this email is registered, we will send a password reset link.")
+            } catch (e: FirebaseTooManyRequestsException) {
+                onResult(false, "Too many requests. Please wait a few minutes and try again.")
+            } catch (e: FirebaseNetworkException) {
+                onResult(false, "Network error. Please check your connection and try again.")
+            } catch (e: Exception) {
+                lastPasswordResetSentAtMs = System.currentTimeMillis()
+                onResult(true, "If this email is registered, we will send a password reset link.")
             }
         }
     }
@@ -1261,8 +1307,12 @@ class AuthViewModel(
                 } else {
                     _authState.value = AuthState.Error("Failed to authenticate.")
                 }
+            } catch (e: FirebaseTooManyRequestsException) {
+                _authState.value = AuthState.Error("Too many attempts. Please wait a few minutes and try again.")
+            } catch (e: FirebaseNetworkException) {
+                _authState.value = AuthState.Error("Network error. Please check your connection and try again.")
             } catch (e: Exception) {
-                _authState.value = AuthState.Error(e.localizedMessage ?: "Invalid email or password.")
+                _authState.value = AuthState.Error("Invalid email or password.")
             }
         }
     }

@@ -8,6 +8,8 @@ object Routes {
     const val Login = "login"
     const val Register = "register"
     const val VerifyEmail = "verify_email"
+    const val ForgotPassword = "forgot_password"
+    const val ResetEmailSent = "reset_email_sent"
     const val AccountType = "account_type"
     const val OnboardingQuestion = "onboarding_question"
     const val DescriptionHub = "description_hub"

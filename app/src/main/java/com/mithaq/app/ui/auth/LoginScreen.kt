@@ -39,6 +39,7 @@ import com.google.android.gms.common.api.ApiException
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
+    onForgotPassword: () -> Unit,
     onLoginSuccess: (userId: String) -> Unit,
     viewModel: AuthViewModel,
     isArabic: Boolean,
@@ -276,6 +277,18 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                TextButton(
+                    onClick = onForgotPassword,
+                    enabled = authState !is AuthState.Loading,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text(
+                        text = if (isArabic) "\u0646\u0633\u064a\u062a \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u061f" else "Forgot password?",
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
 
                 // Error Message block
                 val errorToDisplay = localError ?: (authState as? AuthState.Error)?.errorMessage

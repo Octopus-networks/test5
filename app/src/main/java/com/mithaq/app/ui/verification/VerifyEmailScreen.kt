@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Button
@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mithaq.app.ui.auth.AuthState
 import com.mithaq.app.ui.auth.AuthViewModel
 
 @Composable
@@ -50,11 +51,22 @@ fun VerifyEmailScreen(
     var message by remember { mutableStateOf<String?>(null) }
     var isError by remember { mutableStateOf(false) }
 
-    val title = if (isArabic) "تحقق من بريدك الإلكتروني" else "Check your email"
+    val title = if (isArabic) "\u062a\u062d\u0642\u0642 \u0645\u0646 \u0628\u0631\u064a\u062f\u0643 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a" else "Check your email"
     val body = if (isArabic) {
-        "أرسلنا رابط تفعيل إلى بريدك الإلكتروني. افتح البريد واضغط على تفعيل الحساب للمتابعة."
+        "\u0623\u0631\u0633\u0644\u0646\u0627 \u0631\u0627\u0628\u0637 \u062a\u0641\u0639\u064a\u0644 \u0625\u0644\u0649 \u0628\u0631\u064a\u062f\u0643 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a. \u0627\u0641\u062a\u062d \u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0627\u0636\u063a\u0637 \u0639\u0644\u0649 \u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628 \u0644\u0644\u0645\u062a\u0627\u0628\u0639\u0629."
     } else {
         "We sent an activation link to your email. Please open your inbox and tap Activate Account to continue."
+    }
+
+    fun arabicResendError(resultMessage: String): String {
+        return when {
+            resultMessage.contains("wait", ignoreCase = true) ->
+                "\u0627\u0646\u062a\u0638\u0631 \u0642\u0644\u064a\u0644\u0627\u064b \u0642\u0628\u0644 \u0625\u0639\u0627\u062f\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u062a\u0641\u0639\u064a\u0644."
+            resultMessage.contains("connection", ignoreCase = true) || resultMessage.contains("network", ignoreCase = true) ->
+                "\u062d\u062f\u062b\u062a \u0645\u0634\u0643\u0644\u0629 \u0641\u064a \u0627\u0644\u0627\u062a\u0635\u0627\u0644. \u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a \u0648\u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649."
+            else ->
+                "\u0644\u0645 \u0646\u062a\u0645\u0643\u0646 \u0645\u0646 \u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062a\u0641\u0639\u064a\u0644. \u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649."
+        }
     }
 
     Column(
@@ -77,7 +89,7 @@ fun VerifyEmailScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Email,
-                    contentDescription = if (isArabic) "البريد الإلكتروني" else "Email",
+                    contentDescription = if (isArabic) "\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a" else "Email",
                     modifier = Modifier.size(56.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -97,7 +109,7 @@ fun VerifyEmailScreen(
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(
-                    text = email ?: (if (isArabic) "البريد غير متاح" else "Email unavailable"),
+                    text = email ?: (if (isArabic) "\u0627\u0644\u0628\u0631\u064a\u062f \u063a\u064a\u0631 \u0645\u062a\u0627\u062d" else "Email unavailable"),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center
@@ -123,12 +135,18 @@ fun VerifyEmailScreen(
                             isChecking = false
                             isError = !verified
                             message = if (verified) {
-                                if (isArabic) "تم تفعيل البريد بنجاح." else "Email verified successfully."
+                                if (isArabic) "\u062a\u0645 \u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u0628\u0631\u064a\u062f \u0628\u0646\u062c\u0627\u062d." else "Email verified successfully."
+                            } else if (isArabic) {
+                                if (resultMessage.contains("connection", ignoreCase = true) || resultMessage.contains("network", ignoreCase = true)) {
+                                    "\u062d\u062f\u062b\u062a \u0645\u0634\u0643\u0644\u0629 \u0641\u064a \u0627\u0644\u0627\u062a\u0635\u0627\u0644. \u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a \u0648\u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649."
+                                } else {
+                                    "\u0644\u0645 \u064a\u062a\u0645 \u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u0628\u0631\u064a\u062f \u0628\u0639\u062f. \u0627\u0641\u062a\u062d \u0631\u0627\u0628\u0637 \u0627\u0644\u062a\u0641\u0639\u064a\u0644 \u0623\u0648\u0644\u0627\u064b."
+                                }
                             } else {
-                                if (isArabic) "لم يتم تفعيل البريد بعد. افتح رابط التفعيل أولاً." else resultMessage
+                                resultMessage
                             }
                             if (verified) {
-                                val uid = (viewModel.authState.value as? com.mithaq.app.ui.auth.AuthState.Authenticated)?.userId
+                                val uid = (viewModel.authState.value as? AuthState.Authenticated)?.userId
                                 if (uid != null) onVerified(uid)
                             }
                         }
@@ -146,7 +164,7 @@ fun VerifyEmailScreen(
                     } else {
                         Icon(Icons.Default.VerifiedUser, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.size(8.dp))
-                        Text(if (isArabic) "تم تفعيل البريد" else "I verified my email")
+                        Text(if (isArabic) "\u062a\u0645 \u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u0628\u0631\u064a\u062f" else "I verified my email")
                     }
                 }
 
@@ -160,7 +178,9 @@ fun VerifyEmailScreen(
                             isResending = false
                             isError = !success
                             message = if (success) {
-                                if (isArabic) "تم إرسال رسالة التفعيل مرة أخرى." else "Verification email sent again."
+                                if (isArabic) "\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062a\u0641\u0639\u064a\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649." else "Verification email sent again."
+                            } else if (isArabic) {
+                                arabicResendError(resultMessage)
                             } else {
                                 resultMessage
                             }
@@ -175,7 +195,7 @@ fun VerifyEmailScreen(
                     } else {
                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.size(8.dp))
-                        Text(if (isArabic) "إعادة إرسال الرسالة" else "Resend email")
+                        Text(if (isArabic) "\u0625\u0639\u0627\u062f\u0629 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629" else "Resend email")
                     }
                 }
 
@@ -193,7 +213,7 @@ fun VerifyEmailScreen(
                         },
                         enabled = !isChecking && !isResending
                     ) {
-                        Text(if (isArabic) "تغيير البريد" else "Change email")
+                        Text(if (isArabic) "\u062a\u063a\u064a\u064a\u0631 \u0627\u0644\u0628\u0631\u064a\u062f" else "Change email")
                     }
 
                     TextButton(
@@ -203,9 +223,9 @@ fun VerifyEmailScreen(
                         },
                         enabled = !isChecking && !isResending
                     ) {
-                        Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(17.dp))
+                        Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(17.dp))
                         Spacer(modifier = Modifier.size(6.dp))
-                        Text(if (isArabic) "تسجيل الخروج" else "Sign out")
+                        Text(if (isArabic) "\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c" else "Sign out")
                     }
                 }
             }
