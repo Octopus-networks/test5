@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.domain.model.PublicProfile
 import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.requests.ChatRequestUiState
+import com.mithaq.app.ui.requests.ChatRequestViewModel
 import com.mithaq.app.ui.requests.InterestRequestUiState
 import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.PhotoRequestUiState
@@ -66,11 +68,13 @@ fun MithaqDiscoverScreen(
     modifier: Modifier = Modifier,
     viewModel: DiscoverViewModel = viewModel(key = "mithaq_discover_home"),
     interestRequestViewModel: InterestRequestViewModel,
-    photoRequestViewModel: PhotoRequestViewModel
+    photoRequestViewModel: PhotoRequestViewModel,
+    chatRequestViewModel: ChatRequestViewModel
 ) {
     val state by viewModel.state.collectAsState()
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
+    val chatState by chatRequestViewModel.state.collectAsState()
 
     Column(
         modifier = modifier
@@ -109,10 +113,13 @@ fun MithaqDiscoverScreen(
         Spacer(modifier = Modifier.height(18.dp))
         InterestRequestMessage(state = interestState)
         PhotoRequestMessage(state = photoState)
+        ChatRequestMessage(state = chatState)
         if (interestState.message != null ||
             interestState.errorMessage != null ||
             photoState.message != null ||
-            photoState.errorMessage != null
+            photoState.errorMessage != null ||
+            chatState.message != null ||
+            chatState.errorMessage != null
         ) {
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -122,11 +129,15 @@ fun MithaqDiscoverScreen(
             currentUserId = currentUserId,
             interestState = interestState,
             photoState = photoState,
+            chatState = chatState,
             onSendInterest = { toUserId ->
                 interestRequestViewModel.sendInterest(currentUserId, toUserId)
             },
             onRequestPhoto = { toUserId ->
                 photoRequestViewModel.requestPhoto(currentUserId, toUserId)
+            },
+            onRequestChat = { toUserId ->
+                chatRequestViewModel.requestChat(currentUserId, toUserId)
             },
             onRetry = viewModel::loadProfiles
         )
@@ -218,14 +229,44 @@ private fun PhotoRequestMessage(state: PhotoRequestUiState) {
 }
 
 @Composable
+private fun ChatRequestMessage(state: ChatRequestUiState) {
+    val message = state.errorMessage ?: state.message ?: return
+    val isError = state.errorMessage != null
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isError) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.primaryContainer
+            }
+        )
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(14.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isError) {
+                MaterialTheme.colorScheme.onErrorContainer
+            } else {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            }
+        )
+    }
+}
+
+@Composable
 private fun DiscoverProfileContent(
     state: DiscoverUiState,
     isArabic: Boolean,
     currentUserId: String,
     interestState: InterestRequestUiState,
     photoState: PhotoRequestUiState,
+    chatState: ChatRequestUiState,
     onSendInterest: (String) -> Unit,
     onRequestPhoto: (String) -> Unit,
+    onRequestChat: (String) -> Unit,
     onRetry: () -> Unit
 ) {
     when {
@@ -273,8 +314,10 @@ private fun DiscoverProfileContent(
                     currentUserId = currentUserId,
                     interestState = interestState,
                     photoState = photoState,
+                    chatState = chatState,
                     onSendInterest = onSendInterest,
                     onRequestPhoto = onRequestPhoto,
+                    onRequestChat = onRequestChat,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
@@ -290,8 +333,10 @@ fun MithaqPublicProfileCard(
     currentUserId: String = "",
     interestState: InterestRequestUiState = InterestRequestUiState(),
     photoState: PhotoRequestUiState = PhotoRequestUiState(),
+    chatState: ChatRequestUiState = ChatRequestUiState(),
     onSendInterest: (String) -> Unit = {},
-    onRequestPhoto: (String) -> Unit = {}
+    onRequestPhoto: (String) -> Unit = {},
+    onRequestChat: (String) -> Unit = {}
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -431,13 +476,29 @@ fun MithaqPublicProfileCard(
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
+            val chatStatus = chatState.sentStatusByUserId[profile.userId]
+            val hasAcceptedInterestForChat = profile.userId in interestState.acceptedWithUserIds
+            val canRequestChat = currentUserId.isNotBlank() &&
+                    profile.userId != currentUserId &&
+                    profile.userId !in chatState.requestingToUserIds &&
+                    hasAcceptedInterestForChat &&
+                    (chatStatus == null || chatStatus == "cancelled")
             OutlinedButton(
-                onClick = {},
+                onClick = { onRequestChat(profile.userId) },
+                enabled = canRequestChat,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(if (isArabic) "طلب محادثة محترمة" else "Request chat")
+                val chatButtonText = when {
+                    profile.userId in chatState.requestingToUserIds -> if (isArabic) "جاري الطلب" else "Requesting..."
+                    chatStatus == "pending" -> if (isArabic) "تم طلب التواصل" else "Chat requested"
+                    chatStatus == "approved" -> if (isArabic) "تم قبول التواصل" else "Chat approved"
+                    chatStatus == "declined" -> if (isArabic) "تم رفض التواصل" else "Chat request declined"
+                    !hasAcceptedInterestForChat -> if (isArabic) "الاهتمام أولا" else "Interest first"
+                    else -> if (isArabic) "طلب تواصل" else "Request chat"
+                }
+                Text(chatButtonText)
             }
         }
     }

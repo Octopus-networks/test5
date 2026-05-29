@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mithaq.app.domain.model.ChatRequest
 import com.mithaq.app.domain.model.InterestRequest
 import com.mithaq.app.domain.model.PhotoRequest
 import com.mithaq.app.domain.model.PublicProfile
@@ -46,6 +47,7 @@ fun MithaqRequestsScreen(
     isArabic: Boolean,
     interestRequestViewModel: InterestRequestViewModel,
     photoRequestViewModel: PhotoRequestViewModel,
+    chatRequestViewModel: ChatRequestViewModel,
     modifier: Modifier = Modifier
 ) {
     val tabs = if (isArabic) {
@@ -56,6 +58,7 @@ fun MithaqRequestsScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
+    val chatState by chatRequestViewModel.state.collectAsState()
 
     Column(
         modifier = modifier
@@ -117,6 +120,18 @@ fun MithaqRequestsScreen(
                 },
                 onCancel = { requestId ->
                     photoRequestViewModel.cancelPhotoRequest(currentUserId, requestId)
+                }
+            )
+            2 -> ChatRequestsTab(
+                currentUserId = currentUserId,
+                isArabic = isArabic,
+                state = chatState,
+                onRetry = { chatRequestViewModel.loadForUser(currentUserId) },
+                onRespond = { requestId, approved ->
+                    chatRequestViewModel.respondToChatRequest(currentUserId, requestId, approved)
+                },
+                onCancel = { requestId ->
+                    chatRequestViewModel.cancelChatRequest(currentUserId, requestId)
                 }
             )
             else -> MithaqEmptyState(
@@ -343,6 +358,112 @@ private fun PhotoRequestsTab(
 }
 
 @Composable
+private fun ChatRequestsTab(
+    currentUserId: String,
+    isArabic: Boolean,
+    state: ChatRequestUiState,
+    onRetry: () -> Unit,
+    onRespond: (String, Boolean) -> Unit,
+    onCancel: (String) -> Unit
+) {
+    when {
+        state.isLoadingRequests -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        state.errorMessage != null -> {
+            MithaqEmptyState(
+                title = if (isArabic) "تعذر تحميل طلبات التواصل" else "Could not load chat requests",
+                message = state.errorMessage,
+                icon = Icons.Filled.Refresh,
+                actionLabel = if (isArabic) "إعادة المحاولة" else "Retry",
+                onAction = onRetry,
+                modifier = Modifier.padding(horizontal = 18.dp)
+            )
+        }
+        else -> {
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                state.message?.let { message ->
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                InterestSectionTitle(if (isArabic) "طلبات تواصل واردة معلقة" else "Received pending")
+                if (state.receivedPendingRequests.isEmpty()) {
+                    MithaqEmptyState(
+                        title = if (isArabic) "لا توجد طلبات تواصل واردة" else "No received chat requests",
+                        message = if (isArabic) "تبدأ المحادثة بعد الموافقة فقط."
+                        else "Respectful conversation starts only after approval.",
+                        icon = Icons.Filled.Favorite
+                    )
+                } else {
+                    state.receivedPendingRequests.forEach { request ->
+                        ChatRequestCard(
+                            request = request,
+                            publicProfile = state.publicProfilesByUserId[request.fromUserId],
+                            isArabic = isArabic,
+                            isResponding = request.requestId in state.respondingRequestIds,
+                            onApprove = { onRespond(request.requestId, true) },
+                            onDecline = { onRespond(request.requestId, false) }
+                        )
+                    }
+                }
+
+                InterestSectionTitle(if (isArabic) "طلبات تواصل أرسلتها" else "Sent chat requests")
+                if (state.sentRequests.isEmpty()) {
+                    MithaqEmptyState(
+                        title = if (isArabic) "لا توجد طلبات تواصل مرسلة" else "No sent chat requests",
+                        message = if (isArabic) "عند طلب تواصل بعد اهتمام مقبول سيظهر الطلب هنا."
+                        else "When you request chat after accepted interest, it will appear here.",
+                        icon = Icons.Filled.Favorite
+                    )
+                } else {
+                    state.sentRequests.forEach { request ->
+                        SentChatRequestCard(
+                            request = request,
+                            recipientProfile = state.publicProfilesByUserId[request.toUserId],
+                            isArabic = isArabic,
+                            isCancelling = request.requestId in state.cancellingRequestIds,
+                            onCancel = { onCancel(request.requestId) }
+                        )
+                    }
+                }
+
+                InterestSectionTitle(if (isArabic) "سجل طلبات التواصل الواردة" else "Received chat history")
+                if (state.receivedHistoryRequests.isEmpty()) {
+                    MithaqEmptyState(
+                        title = if (isArabic) "لا يوجد سجل طلبات تواصل" else "No chat request history",
+                        message = if (isArabic) "الطلبات المقبولة أو المرفوضة ستظهر هنا."
+                        else "Approved or declined received chat requests will appear here.",
+                        icon = Icons.Filled.Favorite
+                    )
+                } else {
+                    state.receivedHistoryRequests.forEach { request ->
+                        ChatHistoryCard(
+                            request = request,
+                            publicProfile = state.publicProfilesByUserId[request.fromUserId],
+                            isArabic = isArabic
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun InterestSectionTitle(title: String) {
     Text(
         text = title,
@@ -515,6 +636,93 @@ private fun PhotoHistoryCard(
     val displayName = publicProfile?.displayName.orEmpty()
     InterestStatusCard(
         title = if (isArabic) "طلب صورة وارد" else "Received photo request",
+        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        location = publicProfile.locationLabel(),
+        status = request.status,
+        isArabic = isArabic
+    )
+}
+
+@Composable
+private fun ChatRequestCard(
+    request: ChatRequest,
+    publicProfile: PublicProfile?,
+    isArabic: Boolean,
+    isResponding: Boolean,
+    onApprove: () -> Unit,
+    onDecline: () -> Unit
+) {
+    val displayName = publicProfile?.displayName.orEmpty()
+    InterestStatusCard(
+        title = if (isArabic) "طلب تواصل" else "Chat request",
+        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        location = publicProfile.locationLabel(),
+        status = request.status,
+        isArabic = isArabic
+    ) {
+        Text(
+            text = if (isArabic) "تبدأ المحادثة بعد الموافقة فقط. لن يتم إنشاء رسائل في هذه المرحلة."
+            else "Respectful conversation starts only after approval. No messages are created in this phase.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = onApprove,
+                enabled = !isResponding,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (isArabic) "موافقة" else "Approve")
+            }
+            OutlinedButton(
+                onClick = onDecline,
+                enabled = !isResponding,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (isArabic) "رفض" else "Decline")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SentChatRequestCard(
+    request: ChatRequest,
+    recipientProfile: PublicProfile?,
+    isArabic: Boolean,
+    isCancelling: Boolean,
+    onCancel: () -> Unit
+) {
+    val displayName = recipientProfile?.displayName.orEmpty()
+    InterestStatusCard(
+        title = if (isArabic) "طلب تواصل مرسل" else "Sent chat request",
+        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        location = recipientProfile.locationLabel(),
+        status = request.status,
+        isArabic = isArabic
+    ) {
+        if (request.status == "pending") {
+            OutlinedButton(
+                onClick = onCancel,
+                enabled = !isCancelling,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (isArabic) "إلغاء طلب التواصل" else "Cancel chat request")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatHistoryCard(
+    request: ChatRequest,
+    publicProfile: PublicProfile?,
+    isArabic: Boolean
+) {
+    val displayName = publicProfile?.displayName.orEmpty()
+    InterestStatusCard(
+        title = if (isArabic) "طلب تواصل وارد" else "Received chat request",
         name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
         location = publicProfile.locationLabel(),
         status = request.status,

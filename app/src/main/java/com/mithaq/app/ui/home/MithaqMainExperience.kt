@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.mithaq.app.ui.messages.MithaqMessagesScreen
 import com.mithaq.app.ui.profile.MithaqProfileHubScreen
+import com.mithaq.app.ui.requests.ChatRequestViewModel
 import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.MithaqRequestsScreen
 import com.mithaq.app.ui.requests.PhotoRequestViewModel
@@ -64,10 +65,12 @@ fun MithaqMainExperience(
     var selectedTab by remember { mutableStateOf(MithaqMainTab.Home) }
     val interestRequestViewModel: InterestRequestViewModel = viewModel(key = "mithaq_interest_requests")
     val photoRequestViewModel: PhotoRequestViewModel = viewModel(key = "mithaq_photo_requests")
+    val chatRequestViewModel: ChatRequestViewModel = viewModel(key = "mithaq_chat_requests")
 
     LaunchedEffect(currentUserId) {
         interestRequestViewModel.loadForUser(currentUserId)
         photoRequestViewModel.loadForUser(currentUserId)
+        chatRequestViewModel.loadForUser(currentUserId)
     }
 
     Scaffold(
@@ -110,6 +113,7 @@ fun MithaqMainExperience(
                 isArabic = isArabic,
                 interestRequestViewModel = interestRequestViewModel,
                 photoRequestViewModel = photoRequestViewModel,
+                chatRequestViewModel = chatRequestViewModel,
                 modifier = screenModifier
             )
             MithaqMainTab.Search -> MithaqSearchScreen(
@@ -117,6 +121,7 @@ fun MithaqMainExperience(
                 isArabic = isArabic,
                 interestRequestViewModel = interestRequestViewModel,
                 photoRequestViewModel = photoRequestViewModel,
+                chatRequestViewModel = chatRequestViewModel,
                 modifier = screenModifier
             )
             MithaqMainTab.Requests -> MithaqRequestsScreen(
@@ -124,6 +129,7 @@ fun MithaqMainExperience(
                 isArabic = isArabic,
                 interestRequestViewModel = interestRequestViewModel,
                 photoRequestViewModel = photoRequestViewModel,
+                chatRequestViewModel = chatRequestViewModel,
                 modifier = screenModifier
             )
             MithaqMainTab.Messages -> MithaqMessagesScreen(isArabic = isArabic, modifier = screenModifier)

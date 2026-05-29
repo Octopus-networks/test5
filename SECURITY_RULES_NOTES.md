@@ -62,6 +62,8 @@ Phase 6.1.5 keeps interest requests as status updates instead of deletes. Sender
 
 Phase 6.2 introduces `photoRequests/{requestId}` as status-only access requests. This phase must not expose Firebase Storage URLs or private photo fields. A verified sender may create a request only for another user, preferably after an accepted interest exists between both users and the target public profile allows request-based photo access. Users may read only photo requests where they are `fromUserId` or `toUserId`. Receivers may approve or decline only received pending requests. Senders may cancel only their own pending requests. An approved photo request is only an access status; actual private photo rendering/storage access should be enforced separately in a later backend/storage-rules phase.
 
+Phase 6.3 introduces `chatRequests/{requestId}` as status-only conversation requests. This phase must not create chat rooms, chat messages, or expose private data. A verified sender may create a request only for another user after accepted interest exists between both users. Users may read only chat requests where they are `fromUserId` or `toUserId`. Receivers may approve or decline only received pending requests. Senders may cancel only their own pending requests. An approved chat request is only an approval status; actual chat room creation should happen in a later phase after optional guardian/privacy checks.
+
 ## Example Pattern
 
 ```js
@@ -123,6 +125,33 @@ match /photoRequests/{requestId} {
     request.resource.data.toUserId is string &&
     request.resource.data.toUserId != request.auth.uid &&
     request.resource.data.status == "pending";
+
+  allow read: if isVerifiedEmailUser() &&
+    (resource.data.fromUserId == request.auth.uid ||
+     resource.data.toUserId == request.auth.uid);
+
+  allow update: if isVerifiedEmailUser() && (
+    (
+      resource.data.toUserId == request.auth.uid &&
+      resource.data.status == "pending" &&
+      request.resource.data.status in ["approved", "declined"]
+    ) ||
+    (
+      resource.data.fromUserId == request.auth.uid &&
+      resource.data.status == "pending" &&
+      request.resource.data.status == "cancelled"
+    )
+  );
+}
+
+match /chatRequests/{requestId} {
+  allow create: if isVerifiedEmailUser() &&
+    request.resource.data.fromUserId == request.auth.uid &&
+    request.resource.data.toUserId is string &&
+    request.resource.data.toUserId != request.auth.uid &&
+    request.resource.data.status == "pending" &&
+    request.resource.data.requiresGuardianApproval == false &&
+    request.resource.data.guardianApprovalStatus == "not_required";
 
   allow read: if isVerifiedEmailUser() &&
     (resource.data.fromUserId == request.auth.uid ||

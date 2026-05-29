@@ -28,6 +28,8 @@ import com.mithaq.app.ui.home.DiscoverUiState
 import com.mithaq.app.ui.home.DiscoverViewModel
 import com.mithaq.app.ui.home.MithaqPublicProfileCard
 import com.mithaq.app.ui.home.PublicProfileFilterRow
+import com.mithaq.app.ui.requests.ChatRequestUiState
+import com.mithaq.app.ui.requests.ChatRequestViewModel
 import com.mithaq.app.ui.requests.InterestRequestUiState
 import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.PhotoRequestUiState
@@ -40,11 +42,13 @@ fun MithaqSearchScreen(
     modifier: Modifier = Modifier,
     viewModel: DiscoverViewModel = viewModel(key = "mithaq_public_search"),
     interestRequestViewModel: InterestRequestViewModel,
-    photoRequestViewModel: PhotoRequestViewModel
+    photoRequestViewModel: PhotoRequestViewModel,
+    chatRequestViewModel: ChatRequestViewModel
 ) {
     val state by viewModel.state.collectAsState()
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
+    val chatState by chatRequestViewModel.state.collectAsState()
 
     Column(
         modifier = modifier
@@ -87,11 +91,15 @@ fun MithaqSearchScreen(
             currentUserId = currentUserId,
             interestState = interestState,
             photoState = photoState,
+            chatState = chatState,
             onSendInterest = { toUserId ->
                 interestRequestViewModel.sendInterest(currentUserId, toUserId)
             },
             onRequestPhoto = { toUserId ->
                 photoRequestViewModel.requestPhoto(currentUserId, toUserId)
+            },
+            onRequestChat = { toUserId ->
+                chatRequestViewModel.requestChat(currentUserId, toUserId)
             },
             onRetry = viewModel::loadProfiles
         )
@@ -105,8 +113,10 @@ private fun SearchResultsContent(
     currentUserId: String,
     interestState: InterestRequestUiState,
     photoState: PhotoRequestUiState,
+    chatState: ChatRequestUiState,
     onSendInterest: (String) -> Unit,
     onRequestPhoto: (String) -> Unit,
+    onRequestChat: (String) -> Unit,
     onRetry: () -> Unit
 ) {
     when {
@@ -154,8 +164,10 @@ private fun SearchResultsContent(
                     currentUserId = currentUserId,
                     interestState = interestState,
                     photoState = photoState,
+                    chatState = chatState,
                     onSendInterest = onSendInterest,
                     onRequestPhoto = onRequestPhoto,
+                    onRequestChat = onRequestChat,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
