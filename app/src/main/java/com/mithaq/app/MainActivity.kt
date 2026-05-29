@@ -59,6 +59,7 @@ import com.mithaq.app.ui.filter.SearchFilterBottomSheet
 import com.mithaq.app.ui.filter.SearchViewModel
 import com.mithaq.app.ui.guardian.GuardianViewModel
 import com.mithaq.app.ui.guardian.InviteGuardianDialog
+import com.mithaq.app.ui.home.MithaqMainExperience
 import com.mithaq.app.ui.match.MatchScoreBadge
 import com.mithaq.app.ui.match.MatchScoreCalculator
 import com.mithaq.app.ui.photo.PhotoAccessRequestCard
@@ -1101,6 +1102,15 @@ fun MithaqAppNavigation(
                         currentScreen = "login"
                     }
                 )
+            } else if (hasDismissedOnboarding) {
+                MithaqMainExperience(
+                    isArabic = isArabic,
+                    onSignOut = {
+                        authViewModel.signOut()
+                        com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
+                        currentScreen = Routes.Login
+                    }
+                )
             } else {
                 val loadedProfile = currentUserProfile
                 val isProfileIncomplete = loadedProfile != null && (
@@ -1153,39 +1163,12 @@ fun MithaqAppNavigation(
                             }
                         )
                     } else {
-                    HomeScreen(
-                        currentUserId = currentUserId,
-                        currentUserProfile = currentUserProfile,
-                        authViewModel = authViewModel,
-                        searchViewModel = searchViewModel,
-                        guardianViewModel = guardianViewModel,
+                    MithaqMainExperience(
                         isArabic = isArabic,
-                        isDarkMode = isDarkMode,
-                        onDarkModeChange = onDarkModeChange,
-                        initialTab = initialTab,
-                        initialChatUser = initialChatUser,
-                        onClearInitialChat = {
-                            initialTab = 0
-                            initialChatUser = null
-                        },
-                        onLanguageChange = onLanguageChange,
-                        onLogout = {
+                        onSignOut = {
                             authViewModel.signOut()
                             com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
-                            currentScreen = "login"
-                        },
-                        onNavigateToScreen = { screen ->
-                            if (screen == "premium_store_platinum") {
-                                premiumStoreInitialTab = 1
-                                currentScreen = "premium_store"
-                            } else {
-                                premiumStoreInitialTab = 0
-                                currentScreen = screen
-                            }
-                        },
-                        onNavigateToDetail = { partner ->
-                            selectedMatchProfile = partner
-                            currentScreen = "match_detail"
+                            currentScreen = Routes.Login
                         }
                     )
                 }
