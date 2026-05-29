@@ -62,6 +62,7 @@ private data class DiscoverProfile(
 )
 
 private val sampleProfiles = listOf(
+    // TODO: Replace with PublicProfileRepository.getDiscoverProfiles() through a ViewModel.
     DiscoverProfile(
         name = "Maryam",
         age = 28,

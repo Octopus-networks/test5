@@ -16,9 +16,43 @@ function isVerifiedEmailUser() {
 - Protected profile/app reads and writes should require `isVerifiedEmailUser()`.
 - Raw user creation may remain possible for the signed-in owner if the app needs to create the initial user document immediately after registration.
 - Home, onboarding, search, matches, requests, chat, guardian, prayer settings, photo upload, verification, and admin data should require verified email.
+- `profiles/{userId}` should be treated as private profile data: owner-only reads/writes plus role-based admin/backend access.
+- `publicProfiles/{userId}` should contain sanitized discovery data only and may be readable by verified users.
+- `publicProfiles/{userId}` should be writable only by the owner during the current client-side mirror phase, or preferably by backend/admin logic in production.
 - Raw prayer logs should remain private to the owner and privileged server/admin flows only.
+- Guardian details such as phone, email, relationship notes, and permissions should remain private and must not be copied into public discovery documents.
+- Chat data and message contents should remain private to room members, authorized wali access, and role-based admin moderation flows only.
+- Private photo URLs should remain protected by the approval/photo-request system; public discovery should expose only privacy mode/status, not raw URLs.
 - Sensitive profile data should be exposed only through visibility-aware summary fields.
 - Admin access should remain role-based and should not rely on client-controlled fields.
+
+## Public Discovery Mirror
+
+Phase 4.5 introduces `publicProfiles/{userId}` as a sanitized mirror for Discover/Home/Search. The client currently creates this document after onboarding from approved public fields only:
+
+- display name
+- age
+- city/country
+- account type
+- marital status
+- marriage timeline
+- verification badges/status placeholders
+- guardian presence boolean
+- photo privacy mode
+- profile completion percent
+
+It must not include sensitive raw data:
+
+- income
+- health or fertility details
+- weight or hidden appearance fields
+- exact prayer logs or raw prayer answers
+- guardian contact details
+- private photo URLs
+- chat data
+- hidden visibility settings
+
+For stronger production security, move public profile mirroring to trusted backend logic such as Cloud Functions or an admin service. Client-side sanitization improves app behavior now, but server-side mirroring is the stronger boundary.
 
 ## Example Pattern
 
@@ -29,6 +63,24 @@ match /users/{userId} {
   allow read: if isVerifiedEmailUser();
 
   allow update: if isVerifiedEmailUser() &&
+    request.auth.uid == userId;
+}
+```
+
+Recommended profile split:
+
+```js
+match /profiles/{userId} {
+  allow read, write: if isVerifiedEmailUser() &&
+    request.auth.uid == userId;
+}
+
+match /publicProfiles/{userId} {
+  allow read: if isVerifiedEmailUser();
+
+  // Current client-side mirror phase only.
+  // Prefer backend/admin writes in production.
+  allow write: if isVerifiedEmailUser() &&
     request.auth.uid == userId;
 }
 ```

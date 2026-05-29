@@ -13,6 +13,7 @@ import kotlinx.coroutines.tasks.await
 class OnboardingRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val publicProfileRepository: PublicProfileRepository = PublicProfileRepository(firestore, auth),
     context: Context? = null
 ) {
     private val prefs = context?.getSharedPreferences("mithaq_onboarding_engine_v2", Context.MODE_PRIVATE)
@@ -88,6 +89,10 @@ class OnboardingRepository(
                 .document(userId)
                 .set(profileData, SetOptions.merge())
                 .await()
+            when (val publicResult = publicProfileRepository.createOrUpdatePublicProfileFromOnboarding(userId)) {
+                PublicProfileWriteResult.Success -> Unit
+                is PublicProfileWriteResult.Error -> return OnboardingSaveResult.Error(publicResult.message)
+            }
             saveCompletionCache(userId, true)
             OnboardingSaveResult.Success(
                 answeredQuestions = answers.values.count { it.hasContent() },
