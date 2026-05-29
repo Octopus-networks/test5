@@ -30,6 +30,8 @@ import com.mithaq.app.ui.home.MithaqPublicProfileCard
 import com.mithaq.app.ui.home.PublicProfileFilterRow
 import com.mithaq.app.ui.requests.InterestRequestUiState
 import com.mithaq.app.ui.requests.InterestRequestViewModel
+import com.mithaq.app.ui.requests.PhotoRequestUiState
+import com.mithaq.app.ui.requests.PhotoRequestViewModel
 
 @Composable
 fun MithaqSearchScreen(
@@ -37,10 +39,12 @@ fun MithaqSearchScreen(
     isArabic: Boolean,
     modifier: Modifier = Modifier,
     viewModel: DiscoverViewModel = viewModel(key = "mithaq_public_search"),
-    interestRequestViewModel: InterestRequestViewModel
+    interestRequestViewModel: InterestRequestViewModel,
+    photoRequestViewModel: PhotoRequestViewModel
 ) {
     val state by viewModel.state.collectAsState()
     val interestState by interestRequestViewModel.state.collectAsState()
+    val photoState by photoRequestViewModel.state.collectAsState()
 
     Column(
         modifier = modifier
@@ -82,8 +86,12 @@ fun MithaqSearchScreen(
             isArabic = isArabic,
             currentUserId = currentUserId,
             interestState = interestState,
+            photoState = photoState,
             onSendInterest = { toUserId ->
                 interestRequestViewModel.sendInterest(currentUserId, toUserId)
+            },
+            onRequestPhoto = { toUserId ->
+                photoRequestViewModel.requestPhoto(currentUserId, toUserId)
             },
             onRetry = viewModel::loadProfiles
         )
@@ -96,7 +104,9 @@ private fun SearchResultsContent(
     isArabic: Boolean,
     currentUserId: String,
     interestState: InterestRequestUiState,
+    photoState: PhotoRequestUiState,
     onSendInterest: (String) -> Unit,
+    onRequestPhoto: (String) -> Unit,
     onRetry: () -> Unit
 ) {
     when {
@@ -143,7 +153,9 @@ private fun SearchResultsContent(
                     isArabic = isArabic,
                     currentUserId = currentUserId,
                     interestState = interestState,
+                    photoState = photoState,
                     onSendInterest = onSendInterest,
+                    onRequestPhoto = onRequestPhoto,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }

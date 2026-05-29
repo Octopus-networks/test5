@@ -56,6 +56,8 @@ import com.mithaq.app.domain.model.PublicProfile
 import com.mithaq.app.ui.components.MithaqEmptyState
 import com.mithaq.app.ui.requests.InterestRequestUiState
 import com.mithaq.app.ui.requests.InterestRequestViewModel
+import com.mithaq.app.ui.requests.PhotoRequestUiState
+import com.mithaq.app.ui.requests.PhotoRequestViewModel
 
 @Composable
 fun MithaqDiscoverScreen(
@@ -63,10 +65,12 @@ fun MithaqDiscoverScreen(
     isArabic: Boolean,
     modifier: Modifier = Modifier,
     viewModel: DiscoverViewModel = viewModel(key = "mithaq_discover_home"),
-    interestRequestViewModel: InterestRequestViewModel
+    interestRequestViewModel: InterestRequestViewModel,
+    photoRequestViewModel: PhotoRequestViewModel
 ) {
     val state by viewModel.state.collectAsState()
     val interestState by interestRequestViewModel.state.collectAsState()
+    val photoState by photoRequestViewModel.state.collectAsState()
 
     Column(
         modifier = modifier
@@ -104,7 +108,12 @@ fun MithaqDiscoverScreen(
         }
         Spacer(modifier = Modifier.height(18.dp))
         InterestRequestMessage(state = interestState)
-        if (interestState.message != null || interestState.errorMessage != null) {
+        PhotoRequestMessage(state = photoState)
+        if (interestState.message != null ||
+            interestState.errorMessage != null ||
+            photoState.message != null ||
+            photoState.errorMessage != null
+        ) {
             Spacer(modifier = Modifier.height(12.dp))
         }
         DiscoverProfileContent(
@@ -112,8 +121,12 @@ fun MithaqDiscoverScreen(
             isArabic = isArabic,
             currentUserId = currentUserId,
             interestState = interestState,
+            photoState = photoState,
             onSendInterest = { toUserId ->
                 interestRequestViewModel.sendInterest(currentUserId, toUserId)
+            },
+            onRequestPhoto = { toUserId ->
+                photoRequestViewModel.requestPhoto(currentUserId, toUserId)
             },
             onRetry = viewModel::loadProfiles
         )
@@ -177,12 +190,42 @@ private fun InterestRequestMessage(state: InterestRequestUiState) {
 }
 
 @Composable
+private fun PhotoRequestMessage(state: PhotoRequestUiState) {
+    val message = state.errorMessage ?: state.message ?: return
+    val isError = state.errorMessage != null
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isError) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.secondaryContainer
+            }
+        )
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(14.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isError) {
+                MaterialTheme.colorScheme.onErrorContainer
+            } else {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            }
+        )
+    }
+}
+
+@Composable
 private fun DiscoverProfileContent(
     state: DiscoverUiState,
     isArabic: Boolean,
     currentUserId: String,
     interestState: InterestRequestUiState,
+    photoState: PhotoRequestUiState,
     onSendInterest: (String) -> Unit,
+    onRequestPhoto: (String) -> Unit,
     onRetry: () -> Unit
 ) {
     when {
@@ -229,7 +272,9 @@ private fun DiscoverProfileContent(
                     isArabic = isArabic,
                     currentUserId = currentUserId,
                     interestState = interestState,
+                    photoState = photoState,
                     onSendInterest = onSendInterest,
+                    onRequestPhoto = onRequestPhoto,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
@@ -244,7 +289,9 @@ fun MithaqPublicProfileCard(
     modifier: Modifier = Modifier,
     currentUserId: String = "",
     interestState: InterestRequestUiState = InterestRequestUiState(),
-    onSendInterest: (String) -> Unit = {}
+    photoState: PhotoRequestUiState = PhotoRequestUiState(),
+    onSendInterest: (String) -> Unit = {},
+    onRequestPhoto: (String) -> Unit = {}
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -352,13 +399,35 @@ fun MithaqPublicProfileCard(
                     }
                     Text(buttonText)
                 }
+                val photoStatus = photoState.sentStatusByUserId[profile.userId]
+                val hasAcceptedInterest = profile.userId in interestState.acceptedWithUserIds
+                val normalizedPhotoMode = profile.photoPrivacyMode.ifBlank { "blurred_by_default" }
+                val photoModeAllowsRequest = normalizedPhotoMode == "blurred_by_default" ||
+                        normalizedPhotoMode == "approved_users_only"
+                val canRequestPhoto = currentUserId.isNotBlank() &&
+                        profile.userId != currentUserId &&
+                        profile.userId !in photoState.requestingToUserIds &&
+                        hasAcceptedInterest &&
+                        photoModeAllowsRequest &&
+                        (photoStatus == null || photoStatus == "cancelled")
                 OutlinedButton(
-                    onClick = {},
+                    onClick = { onRequestPhoto(profile.userId) },
+                    enabled = canRequestPhoto,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(if (isArabic) "طلب الصورة" else "Request photo")
+                    val photoButtonText = when {
+                        profile.userId in photoState.requestingToUserIds -> if (isArabic) "جاري الطلب" else "Requesting..."
+                        photoStatus == "pending" -> if (isArabic) "تم طلب الصورة" else "Photo requested"
+                        photoStatus == "approved" -> if (isArabic) "تمت الموافقة" else "Photo access approved"
+                        photoStatus == "declined" -> if (isArabic) "رفض طلب الصورة" else "Photo request declined"
+                        !photoModeAllowsRequest && normalizedPhotoMode == "matched_users_only" -> if (isArabic) "للمتوافقين فقط" else "Matched only"
+                        !photoModeAllowsRequest -> if (isArabic) "الصور خاصة" else "Photos private"
+                        !hasAcceptedInterest -> if (isArabic) "الاهتمام أولا" else "Interest first"
+                        else -> if (isArabic) "طلب عرض الصورة" else "Request photo access"
+                    }
+                    Text(photoButtonText)
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))

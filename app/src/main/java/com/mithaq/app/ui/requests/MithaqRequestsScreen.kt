@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.domain.model.InterestRequest
+import com.mithaq.app.domain.model.PhotoRequest
 import com.mithaq.app.domain.model.PublicProfile
 import com.mithaq.app.ui.components.MithaqEmptyState
 
@@ -44,6 +45,7 @@ fun MithaqRequestsScreen(
     currentUserId: String,
     isArabic: Boolean,
     interestRequestViewModel: InterestRequestViewModel,
+    photoRequestViewModel: PhotoRequestViewModel,
     modifier: Modifier = Modifier
 ) {
     val tabs = if (isArabic) {
@@ -53,6 +55,7 @@ fun MithaqRequestsScreen(
     }
     var selectedTab by remember { mutableIntStateOf(0) }
     val interestState by interestRequestViewModel.state.collectAsState()
+    val photoState by photoRequestViewModel.state.collectAsState()
 
     Column(
         modifier = modifier
@@ -91,8 +94,8 @@ fun MithaqRequestsScreen(
             }
         }
         Spacer(modifier = Modifier.height(18.dp))
-        if (selectedTab == 0) {
-            InterestRequestsTab(
+        when (selectedTab) {
+            0 -> InterestRequestsTab(
                 currentUserId = currentUserId,
                 isArabic = isArabic,
                 state = interestState,
@@ -104,8 +107,19 @@ fun MithaqRequestsScreen(
                     interestRequestViewModel.cancelInterest(currentUserId, requestId)
                 }
             )
-        } else {
-            MithaqEmptyState(
+            1 -> PhotoRequestsTab(
+                currentUserId = currentUserId,
+                isArabic = isArabic,
+                state = photoState,
+                onRetry = { photoRequestViewModel.loadForUser(currentUserId) },
+                onRespond = { requestId, approved ->
+                    photoRequestViewModel.respondToPhotoRequest(currentUserId, requestId, approved)
+                },
+                onCancel = { requestId ->
+                    photoRequestViewModel.cancelPhotoRequest(currentUserId, requestId)
+                }
+            )
+            else -> MithaqEmptyState(
                 title = if (isArabic) "لا توجد ${tabs[selectedTab]} الآن" else "No ${tabs[selectedTab].lowercase()} yet",
                 message = if (isArabic) "عندما تصلك طلبات جديدة ستظهر هنا مع خطوات واضحة."
                 else "New requests will appear here with clear next steps.",
@@ -223,6 +237,112 @@ private fun InterestRequestsTab(
 }
 
 @Composable
+private fun PhotoRequestsTab(
+    currentUserId: String,
+    isArabic: Boolean,
+    state: PhotoRequestUiState,
+    onRetry: () -> Unit,
+    onRespond: (String, Boolean) -> Unit,
+    onCancel: (String) -> Unit
+) {
+    when {
+        state.isLoadingRequests -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        state.errorMessage != null -> {
+            MithaqEmptyState(
+                title = if (isArabic) "تعذر تحميل طلبات الصور" else "Could not load photo requests",
+                message = state.errorMessage,
+                icon = Icons.Filled.Refresh,
+                actionLabel = if (isArabic) "إعادة المحاولة" else "Retry",
+                onAction = onRetry,
+                modifier = Modifier.padding(horizontal = 18.dp)
+            )
+        }
+        else -> {
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                state.message?.let { message ->
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                InterestSectionTitle(if (isArabic) "طلبات صور واردة معلقة" else "Received pending")
+                if (state.receivedPendingRequests.isEmpty()) {
+                    MithaqEmptyState(
+                        title = if (isArabic) "لا توجد طلبات صور واردة" else "No received photo requests",
+                        message = if (isArabic) "طلبات عرض الصور ستظهر هنا دون كشف أي روابط صور خاصة."
+                        else "Photo access requests will appear here without exposing private photo links.",
+                        icon = Icons.Filled.Favorite
+                    )
+                } else {
+                    state.receivedPendingRequests.forEach { request ->
+                        PhotoRequestCard(
+                            request = request,
+                            publicProfile = state.publicProfilesByUserId[request.fromUserId],
+                            isArabic = isArabic,
+                            isResponding = request.requestId in state.respondingRequestIds,
+                            onApprove = { onRespond(request.requestId, true) },
+                            onDecline = { onRespond(request.requestId, false) }
+                        )
+                    }
+                }
+
+                InterestSectionTitle(if (isArabic) "طلبات صور أرسلتها" else "Sent photo requests")
+                if (state.sentRequests.isEmpty()) {
+                    MithaqEmptyState(
+                        title = if (isArabic) "لا توجد طلبات صور مرسلة" else "No sent photo requests",
+                        message = if (isArabic) "عند طلب عرض صورة عضو بعد اهتمام مقبول سيظهر الطلب هنا."
+                        else "When you request photo access after accepted interest, it will appear here.",
+                        icon = Icons.Filled.Favorite
+                    )
+                } else {
+                    state.sentRequests.forEach { request ->
+                        SentPhotoRequestCard(
+                            request = request,
+                            recipientProfile = state.publicProfilesByUserId[request.toUserId],
+                            isArabic = isArabic,
+                            isCancelling = request.requestId in state.cancellingRequestIds,
+                            onCancel = { onCancel(request.requestId) }
+                        )
+                    }
+                }
+
+                InterestSectionTitle(if (isArabic) "سجل طلبات الصور الواردة" else "Received photo history")
+                if (state.receivedHistoryRequests.isEmpty()) {
+                    MithaqEmptyState(
+                        title = if (isArabic) "لا يوجد سجل طلبات صور" else "No photo request history",
+                        message = if (isArabic) "الطلبات الموافق عليها أو المرفوضة ستظهر هنا."
+                        else "Approved or declined received photo requests will appear here.",
+                        icon = Icons.Filled.Favorite
+                    )
+                } else {
+                    state.receivedHistoryRequests.forEach { request ->
+                        PhotoHistoryCard(
+                            request = request,
+                            publicProfile = state.publicProfilesByUserId[request.fromUserId],
+                            isArabic = isArabic
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun InterestSectionTitle(title: String) {
     Text(
         text = title,
@@ -316,6 +436,93 @@ private fun InterestHistoryCard(
 }
 
 @Composable
+private fun PhotoRequestCard(
+    request: PhotoRequest,
+    publicProfile: PublicProfile?,
+    isArabic: Boolean,
+    isResponding: Boolean,
+    onApprove: () -> Unit,
+    onDecline: () -> Unit
+) {
+    val displayName = publicProfile?.displayName.orEmpty()
+    InterestStatusCard(
+        title = if (isArabic) "طلب عرض صورة" else "Photo access request",
+        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        location = publicProfile.locationLabel(),
+        status = request.status,
+        isArabic = isArabic
+    ) {
+        Text(
+            text = if (isArabic) "الموافقة تغير حالة الطلب فقط ولا تعرض روابط الصور الخاصة في هذه المرحلة."
+            else "Approval only updates request status; private photo URLs are not shown in this phase.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = onApprove,
+                enabled = !isResponding,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (isArabic) "موافقة" else "Approve")
+            }
+            OutlinedButton(
+                onClick = onDecline,
+                enabled = !isResponding,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (isArabic) "رفض" else "Decline")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SentPhotoRequestCard(
+    request: PhotoRequest,
+    recipientProfile: PublicProfile?,
+    isArabic: Boolean,
+    isCancelling: Boolean,
+    onCancel: () -> Unit
+) {
+    val displayName = recipientProfile?.displayName.orEmpty()
+    InterestStatusCard(
+        title = if (isArabic) "طلب صورة مرسل" else "Sent photo request",
+        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        location = recipientProfile.locationLabel(),
+        status = request.status,
+        isArabic = isArabic
+    ) {
+        if (request.status == "pending") {
+            OutlinedButton(
+                onClick = onCancel,
+                enabled = !isCancelling,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (isArabic) "إلغاء طلب الصورة" else "Cancel photo request")
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotoHistoryCard(
+    request: PhotoRequest,
+    publicProfile: PublicProfile?,
+    isArabic: Boolean
+) {
+    val displayName = publicProfile?.displayName.orEmpty()
+    InterestStatusCard(
+        title = if (isArabic) "طلب صورة وارد" else "Received photo request",
+        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        location = publicProfile.locationLabel(),
+        status = request.status,
+        isArabic = isArabic
+    )
+}
+
+@Composable
 private fun InterestStatusCard(
     title: String,
     name: String,
@@ -374,6 +581,7 @@ private fun statusLabel(status: String, isArabic: Boolean): String {
     return when (status) {
         "pending" -> if (isArabic) "معلق" else "Pending"
         "accepted" -> if (isArabic) "مقبول" else "Accepted"
+        "approved" -> if (isArabic) "تمت الموافقة" else "Approved"
         "declined" -> if (isArabic) "مرفوض" else "Declined"
         "cancelled" -> if (isArabic) "ملغي" else "Cancelled"
         else -> status

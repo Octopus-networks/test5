@@ -27,6 +27,7 @@ import com.mithaq.app.ui.messages.MithaqMessagesScreen
 import com.mithaq.app.ui.profile.MithaqProfileHubScreen
 import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.MithaqRequestsScreen
+import com.mithaq.app.ui.requests.PhotoRequestViewModel
 import com.mithaq.app.ui.search.MithaqSearchScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -62,9 +63,11 @@ fun MithaqMainExperience(
 ) {
     var selectedTab by remember { mutableStateOf(MithaqMainTab.Home) }
     val interestRequestViewModel: InterestRequestViewModel = viewModel(key = "mithaq_interest_requests")
+    val photoRequestViewModel: PhotoRequestViewModel = viewModel(key = "mithaq_photo_requests")
 
     LaunchedEffect(currentUserId) {
         interestRequestViewModel.loadForUser(currentUserId)
+        photoRequestViewModel.loadForUser(currentUserId)
     }
 
     Scaffold(
@@ -106,18 +109,21 @@ fun MithaqMainExperience(
                 currentUserId = currentUserId,
                 isArabic = isArabic,
                 interestRequestViewModel = interestRequestViewModel,
+                photoRequestViewModel = photoRequestViewModel,
                 modifier = screenModifier
             )
             MithaqMainTab.Search -> MithaqSearchScreen(
                 currentUserId = currentUserId,
                 isArabic = isArabic,
                 interestRequestViewModel = interestRequestViewModel,
+                photoRequestViewModel = photoRequestViewModel,
                 modifier = screenModifier
             )
             MithaqMainTab.Requests -> MithaqRequestsScreen(
                 currentUserId = currentUserId,
                 isArabic = isArabic,
                 interestRequestViewModel = interestRequestViewModel,
+                photoRequestViewModel = photoRequestViewModel,
                 modifier = screenModifier
             )
             MithaqMainTab.Messages -> MithaqMessagesScreen(isArabic = isArabic, modifier = screenModifier)

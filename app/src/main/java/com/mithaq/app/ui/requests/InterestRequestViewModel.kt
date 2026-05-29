@@ -19,6 +19,7 @@ data class InterestRequestUiState(
     val cancellingRequestIds: Set<String> = emptySet(),
     val sentPendingToUserIds: Set<String> = emptySet(),
     val sentStatusByUserId: Map<String, String> = emptyMap(),
+    val acceptedWithUserIds: Set<String> = emptySet(),
     val sentRequests: List<InterestRequest> = emptyList(),
     val receivedPendingRequests: List<InterestRequest> = emptyList(),
     val receivedHistoryRequests: List<InterestRequest> = emptyList(),
@@ -60,6 +61,10 @@ class InterestRequestViewModel(
                         .map { it.toUserId }
                         .toSet(),
                     sentStatusByUserId = sent.associate { it.toUserId to it.status },
+                    acceptedWithUserIds = (
+                        sent.filter { it.status == "accepted" }.map { it.toUserId } +
+                            received.filter { it.status == "accepted" }.map { it.fromUserId }
+                        ).toSet(),
                     sentRequests = sent,
                     receivedPendingRequests = receivedPending,
                     receivedHistoryRequests = receivedHistory,
