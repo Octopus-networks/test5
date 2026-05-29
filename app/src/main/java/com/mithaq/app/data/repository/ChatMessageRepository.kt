@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.mithaq.app.domain.model.ChatMessage
 import kotlinx.coroutines.tasks.await
 
@@ -25,6 +26,36 @@ class ChatMessageRepository(
             .documents
             .map { it.toChatMessage(chatId) }
             .filter { it.deletedAt == null && it.type == "text" }
+    }
+
+    fun listenToMessages(
+        chatId: String,
+        onMessages: (List<ChatMessage>) -> Unit,
+        onError: (String) -> Unit
+    ): ListenerRegistration? {
+        val user = auth.currentUser
+        if (chatId.isBlank() || user?.isEmailVerified != true) {
+            onError("Please verify your email before opening messages.")
+            return null
+        }
+
+        return firestore.collection("chats")
+            .document(chatId)
+            .collection("messages")
+            .orderBy("createdAt")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error.localizedMessage ?: "Could not listen to messages.")
+                    return@addSnapshotListener
+                }
+                val messages = snapshot
+                    ?.documents
+                    .orEmpty()
+                    .map { it.toChatMessage(chatId) }
+                    .filter { it.deletedAt == null && it.type == "text" }
+                    .distinctBy { it.messageId }
+                onMessages(messages)
+            }
     }
 
     suspend fun sendTextMessage(chatId: String, senderId: String, text: String): ChatMessageResult {

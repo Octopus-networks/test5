@@ -78,6 +78,8 @@ Phase 8.5 introduces basic chat safety foundations:
 - Existing messages remain visible after a block, but new messages should be disabled for both participants until the block state changes.
 - Reports and blocks do not expose private profiles, photo URLs, guardian data, or raw prayer data.
 
+Phase 8.6 adds realtime Firestore listeners for active chat rooms and text messages. Listener access must still be protected by the same Firestore rules as normal reads: verified users may listen only to `chats/{chatId}` documents where their uid is in `participantIds`, and only to `chats/{chatId}/messages/{messageId}` under chats where they are participants. Realtime updates do not relax the text-only message limits, participant checks, block checks, or private-profile boundaries.
+
 ## Example Pattern
 
 ```js

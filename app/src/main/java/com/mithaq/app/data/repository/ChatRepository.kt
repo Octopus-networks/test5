@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.mithaq.app.domain.model.ChatParticipantSummary
 import com.mithaq.app.domain.model.ChatRoom
@@ -94,6 +95,34 @@ class ChatRepository(
             .map { it.toChatRoom() }
             .filter { it.chatId.isNotBlank() && userId in it.participantIds && it.participantIds.toSet().size == 2 }
             .sortedByDescending { it.lastMessageAt ?: it.updatedAt ?: it.createdAt }
+    }
+
+    fun listenToUserChatRooms(
+        userId: String,
+        onRooms: (List<ChatRoom>) -> Unit,
+        onError: (String) -> Unit
+    ): ListenerRegistration? {
+        if (!canReadForUser(userId)) {
+            onError("Please verify your email before opening chats.")
+            return null
+        }
+
+        return firestore.collection("chats")
+            .whereArrayContains("participantIds", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error.localizedMessage ?: "Could not listen to chats.")
+                    return@addSnapshotListener
+                }
+                val rooms = snapshot
+                    ?.documents
+                    .orEmpty()
+                    .map { it.toChatRoom() }
+                    .filter { it.chatId.isNotBlank() && userId in it.participantIds && it.participantIds.toSet().size == 2 }
+                    .distinctBy { it.chatId }
+                    .sortedByDescending { it.lastMessageAt ?: it.updatedAt ?: it.createdAt }
+                onRooms(rooms)
+            }
     }
 
     suspend fun getChatRoom(chatId: String): ChatRoom? {

@@ -1,13 +1,12 @@
 package com.mithaq.app.ui.messages
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.ListenerRegistration
 import com.mithaq.app.data.repository.ChatRepository
 import com.mithaq.app.domain.model.ChatRoom
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class ChatRoomsUiState(
     val isLoading: Boolean = false,
@@ -21,23 +20,35 @@ class ChatRoomsViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ChatRoomsUiState())
     val state: StateFlow<ChatRoomsUiState> = _state.asStateFlow()
+    private var roomsRegistration: ListenerRegistration? = null
+    private var listeningUserId: String? = null
 
     fun loadChatRooms(userId: String) {
         if (userId.isBlank()) return
+        listenToChatRooms(userId)
+    }
+
+    fun listenToChatRooms(userId: String) {
+        if (userId.isBlank() || listeningUserId == userId && roomsRegistration != null) return
+        stopListening()
+        listeningUserId = userId
         _state.value = _state.value.copy(isLoading = true, errorMessage = null)
-        viewModelScope.launch {
-            try {
+        roomsRegistration = repository.listenToUserChatRooms(
+            userId = userId,
+            onRooms = { rooms ->
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    chatRooms = repository.getUserChatRooms(userId)
+                    chatRooms = rooms.distinctBy { it.chatId },
+                    errorMessage = null
                 )
-            } catch (e: Exception) {
+            },
+            onError = { message ->
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    errorMessage = e.localizedMessage ?: "Could not load chats."
+                    errorMessage = message
                 )
             }
-        }
+        )
     }
 
     fun openChat(chatId: String) {
@@ -46,5 +57,16 @@ class ChatRoomsViewModel(
 
     fun closeChat() {
         _state.value = _state.value.copy(selectedChatId = null)
+    }
+
+    fun stopListening() {
+        roomsRegistration?.remove()
+        roomsRegistration = null
+        listeningUserId = null
+    }
+
+    override fun onCleared() {
+        stopListening()
+        super.onCleared()
     }
 }

@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -285,13 +286,22 @@ private fun ChatScreen(
     var draft by remember(room.chatId) { mutableStateOf("") }
     var showReportDialog by remember(room.chatId) { mutableStateOf(false) }
     var showBlockDialog by remember(room.chatId) { mutableStateOf(false) }
+    val messageScrollState = rememberScrollState()
     val otherUserId = room.participantIds.firstOrNull { it != currentUserId }.orEmpty()
     val summary = room.participantPublicSummaries[otherUserId] ?: ChatParticipantSummary(userId = otherUserId)
     val canSend = room.status == "active" && !safetyState.isBlocked && !state.isSending && !safetyState.isCheckingBlock
 
     LaunchedEffect(room.chatId, currentUserId, otherUserId) {
-        viewModel.loadMessages(room.chatId)
+        viewModel.listenToMessages(room.chatId)
         safetyViewModel.loadBlockState(currentUserId, otherUserId)
+    }
+    DisposableEffect(room.chatId) {
+        onDispose { viewModel.stopListening() }
+    }
+    LaunchedEffect(state.messages.size) {
+        if (state.messages.isNotEmpty()) {
+            messageScrollState.animateScrollTo(messageScrollState.maxValue)
+        }
     }
 
     Column(
@@ -398,7 +408,7 @@ private fun ChatScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(messageScrollState),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     state.messages.forEach { message ->

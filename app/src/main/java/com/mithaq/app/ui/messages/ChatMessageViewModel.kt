@@ -2,6 +2,7 @@ package com.mithaq.app.ui.messages
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.ListenerRegistration
 import com.mithaq.app.data.repository.ChatMessageRepository
 import com.mithaq.app.data.repository.ChatMessageResult
 import com.mithaq.app.domain.model.ChatMessage
@@ -22,23 +23,35 @@ class ChatMessageViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ChatMessageUiState())
     val state: StateFlow<ChatMessageUiState> = _state.asStateFlow()
+    private var messagesRegistration: ListenerRegistration? = null
+    private var listeningChatId: String? = null
 
     fun loadMessages(chatId: String) {
         if (chatId.isBlank()) return
+        listenToMessages(chatId)
+    }
+
+    fun listenToMessages(chatId: String) {
+        if (chatId.isBlank() || listeningChatId == chatId && messagesRegistration != null) return
+        stopListening()
+        listeningChatId = chatId
         _state.value = _state.value.copy(isLoading = true, errorMessage = null)
-        viewModelScope.launch {
-            try {
+        messagesRegistration = repository.listenToMessages(
+            chatId = chatId,
+            onMessages = { messages ->
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    messages = repository.getMessages(chatId)
+                    messages = messages.distinctBy { it.messageId },
+                    errorMessage = null
                 )
-            } catch (e: Exception) {
+            },
+            onError = { message ->
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    errorMessage = e.localizedMessage ?: "Could not load messages."
+                    errorMessage = message
                 )
             }
-        }
+        )
     }
 
     fun sendTextMessage(chatId: String, senderId: String, text: String) {
@@ -50,7 +63,6 @@ class ChatMessageViewModel(
             when (val result = repository.sendTextMessage(chatId, senderId, trimmed)) {
                 is ChatMessageResult.Success -> {
                     _state.value = _state.value.copy(isSending = false)
-                    loadMessages(chatId)
                 }
                 is ChatMessageResult.Error -> {
                     _state.value = _state.value.copy(
@@ -60,5 +72,16 @@ class ChatMessageViewModel(
                 }
             }
         }
+    }
+
+    fun stopListening() {
+        messagesRegistration?.remove()
+        messagesRegistration = null
+        listeningChatId = null
+    }
+
+    override fun onCleared() {
+        stopListening()
+        super.onCleared()
     }
 }
