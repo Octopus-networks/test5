@@ -1,5 +1,6 @@
 package com.mithaq.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
@@ -41,6 +42,8 @@ import com.google.firebase.appcheck.AppCheckProviderFactory
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.mithaq.app.model.*
+import com.mithaq.app.navigation.AuthGate
+import com.mithaq.app.navigation.Routes
 import com.mithaq.app.ui.auth.AuthState
 import com.mithaq.app.ui.auth.AuthViewModel
 import com.mithaq.app.ui.auth.EntryDecisionScreen
@@ -94,12 +97,16 @@ import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
 import com.mithaq.app.ui.auth.CompleteProfileScreen
 import com.mithaq.app.ui.settings.AppSettingsScreen
+import com.mithaq.app.ui.verification.VerifyEmailScreen
 
 
 class MainActivity : FragmentActivity() {
+    private var latestDeepLinkData by mutableStateOf<String?>(null)
+    private var latestDeepLinkNonce by mutableStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        captureVerificationDeepLink(intent)
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val manager = getSystemService(android.app.NotificationManager::class.java)
@@ -158,7 +165,9 @@ class MainActivity : FragmentActivity() {
                             isArabic = isArabic,
                             onLanguageChange = { isArabic = it },
                             isDarkMode = isDarkMode,
-                            onDarkModeChange = { isDarkMode = it }
+                            onDarkModeChange = { isDarkMode = it },
+                            deepLinkData = latestDeepLinkData,
+                            deepLinkNonce = latestDeepLinkNonce
                         )
                     } else {
                         // Show a loading or locked state
@@ -183,6 +192,20 @@ class MainActivity : FragmentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        captureVerificationDeepLink(intent)
+    }
+
+    private fun captureVerificationDeepLink(intent: Intent?) {
+        val data = intent?.dataString
+        if (data?.startsWith("https://mithaq.app/verify-email") == true) {
+            latestDeepLinkData = data
+            latestDeepLinkNonce += 1
         }
     }
 
@@ -586,9 +609,11 @@ fun MithaqAppNavigation(
     isArabic: Boolean,
     onLanguageChange: (Boolean) -> Unit,
     isDarkMode: Boolean = false,
-    onDarkModeChange: (Boolean) -> Unit = {}
+    onDarkModeChange: (Boolean) -> Unit = {},
+    deepLinkData: String? = null,
+    deepLinkNonce: Int = 0
 ) {
-    var currentScreen by remember { mutableStateOf("splash") }
+    var currentScreen by remember { mutableStateOf(Routes.Splash) }
     var currentUserId by remember { mutableStateOf("") }
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
@@ -617,7 +642,7 @@ fun MithaqAppNavigation(
         )
     }
 
-    androidx.activity.compose.BackHandler(enabled = currentScreen == "home" || currentScreen == "login" || currentScreen == "entry") {
+    androidx.activity.compose.BackHandler(enabled = currentScreen == Routes.Home || currentScreen == Routes.Login || currentScreen == Routes.Entry) {
         showExitDialog = true
     }
 
@@ -695,6 +720,25 @@ fun MithaqAppNavigation(
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
     val authState by authViewModel.authState.collectAsState()
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
+    val publicRoutes = remember {
+        setOf(Routes.Splash, Routes.Entry, Routes.Login, Routes.Register, Routes.VerifyEmail)
+    }
+    val launchIntentData = deepLinkData
+
+    LaunchedEffect(launchIntentData, deepLinkNonce) {
+        if (launchIntentData?.startsWith("https://mithaq.app/verify-email") == true) {
+            currentScreen = Routes.VerifyEmail
+            authViewModel.reloadAndCheckEmailVerification { verified, _ ->
+                if (verified) {
+                    val uid = (authViewModel.authState.value as? AuthState.Authenticated)?.userId
+                    if (uid != null) {
+                        currentUserId = uid
+                        currentScreen = Routes.Home
+                    }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(
         currentUserProfile?.uid,
@@ -716,12 +760,33 @@ fun MithaqAppNavigation(
         }
     }
 
-    LaunchedEffect(authState) {
-        val authenticated = authState as? AuthState.Authenticated ?: return@LaunchedEffect
-        if (currentScreen == "splash" || currentScreen == "entry") {
-            currentUserId = authenticated.userId
-            com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-            currentScreen = "home"
+    LaunchedEffect(authState, currentScreen) {
+        when (val state = authState) {
+            is AuthState.Authenticated -> {
+                currentUserId = state.userId
+                if (currentScreen in setOf(Routes.Splash, Routes.Entry, Routes.Login, Routes.Register, Routes.VerifyEmail)) {
+                    com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
+                    currentScreen = AuthGate.routeFor(state)
+                }
+            }
+            is AuthState.EmailVerificationRequired -> {
+                currentUserId = ""
+                com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
+                if (currentScreen != Routes.VerifyEmail) {
+                    currentScreen = Routes.VerifyEmail
+                }
+            }
+            AuthState.Idle -> {
+                if (currentScreen !in publicRoutes) {
+                    currentUserId = ""
+                    currentScreen = Routes.Entry
+                }
+            }
+            else -> {
+                if (!AuthGate.canAccessProtectedRoute(authState) && currentScreen !in publicRoutes) {
+                    currentScreen = Routes.Entry
+                }
+            }
         }
     }
 
@@ -826,55 +891,77 @@ fun MithaqAppNavigation(
     }
 
     when (currentScreen) {
-        "splash" -> {
+        Routes.Splash -> {
             SplashScreen(
                 onComplete = {
-                    val authenticated = authState as? AuthState.Authenticated
-                    if (authenticated != null) {
-                        currentUserId = authenticated.userId
-                        com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-                        currentScreen = "home"
-                    } else {
-                        currentScreen = "entry"
+                    when (val state = authState) {
+                        is AuthState.Authenticated -> {
+                            currentUserId = state.userId
+                            com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
+                            currentScreen = Routes.Home
+                        }
+                        is AuthState.EmailVerificationRequired -> currentScreen = Routes.VerifyEmail
+                        else -> currentScreen = Routes.Entry
                     }
                 }
             )
         }
-        "entry" -> {
+        Routes.Entry -> {
             EntryDecisionScreen(
                 isArabic = isArabic,
                 onLanguageChange = onLanguageChange,
-                onHasAccount = { currentScreen = "login" },
-                onCreateAccount = { currentScreen = "register" }
+                onHasAccount = { currentScreen = Routes.Login },
+                onCreateAccount = { currentScreen = Routes.Register }
             )
         }
-        "login" -> {
+        Routes.Login -> {
             LoginScreen(
-                onNavigateToRegister = { currentScreen = "register" },
+                onNavigateToRegister = { currentScreen = Routes.Register },
                 onLoginSuccess = { uid ->
                     currentUserId = uid
                     com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-                    currentScreen = "home"
+                    currentScreen = Routes.Home
                 },
                 viewModel = authViewModel,
                 isArabic = isArabic,
                 onLanguageChange = onLanguageChange
             )
         }
-        "register" -> {
+        Routes.Register -> {
             RegisterScreen(
-                onNavigateToLogin = { currentScreen = "login" },
+                onNavigateToLogin = { currentScreen = Routes.Login },
                 onRegisterSuccess = { uid ->
                     currentUserId = uid
                     com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-                    currentScreen = "home"
+                    currentScreen = Routes.Home
                 },
                 viewModel = authViewModel,
                 isArabic = isArabic,
                 onLanguageChange = onLanguageChange
             )
         }
-        "home" -> {
+        Routes.VerifyEmail -> {
+            val verifyState = authState as? AuthState.EmailVerificationRequired
+            VerifyEmailScreen(
+                email = verifyState?.email ?: authViewModel.currentUserEmail,
+                viewModel = authViewModel,
+                isArabic = isArabic,
+                onVerified = { uid ->
+                    currentUserId = uid
+                    com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
+                    currentScreen = Routes.Home
+                },
+                onChangeEmail = {
+                    currentUserId = ""
+                    currentScreen = Routes.Login
+                },
+                onSignOut = {
+                    currentUserId = ""
+                    currentScreen = Routes.Entry
+                }
+            )
+        }
+        Routes.Home -> {
             if (currentUserProfile?.isWaliAccount == true) {
                 WaliDashboardScreen(
                     currentUserId = currentUserId,

@@ -2,6 +2,7 @@ package com.mithaq.app.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.ActionCodeSettings
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.mlkit.vision.common.InputImage
@@ -26,6 +27,7 @@ sealed interface AuthState {
     object Idle : AuthState
     object Loading : AuthState
     data class Authenticated(val userId: String) : AuthState
+    data class EmailVerificationRequired(val userId: String, val email: String?) : AuthState
     data class Error(val errorMessage: String) : AuthState
     /** New Google Sign-In users who haven't completed the onboarding questionnaire yet. */
     data class NeedsProfileCompletion(val userId: String) : AuthState
@@ -40,6 +42,9 @@ class AuthViewModel(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val context: android.content.Context? = null
 ) : ViewModel() {
+    private val verificationEmailCooldownMs = 60_000L
+    private var lastVerificationEmailSentAtMs = 0L
+
 
     private val db = context?.let { MithaqDatabase.getDatabase(it) }
     private val userDao = db?.userDao()
@@ -58,11 +63,18 @@ class AuthViewModel(
         list.map { it.toDomain() }
     } ?: flowOf(emptyList())
 
+    val currentUserEmail: String?
+        get() = auth.currentUser?.email
+
     init {
         val currentUser = auth.currentUser
         if (currentUser != null) {
-            _authState.value = AuthState.Authenticated(currentUser.uid)
-            fetchCurrentUserProfile(currentUser.uid)
+            if (currentUser.isEmailVerified) {
+                _authState.value = AuthState.Authenticated(currentUser.uid)
+                fetchCurrentUserProfile(currentUser.uid)
+            } else {
+                _authState.value = AuthState.EmailVerificationRequired(currentUser.uid, currentUser.email)
+            }
         }
         prepopulateMockUsersIfEmpty()
     }
@@ -232,6 +244,63 @@ class AuthViewModel(
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    private fun emailVerificationSettings(): ActionCodeSettings {
+        return ActionCodeSettings.newBuilder()
+            .setUrl("https://mithaq.app/verify-email")
+            .setHandleCodeInApp(true)
+            .setAndroidPackageName("com.mithaq.app", true, null)
+            .build()
+    }
+
+    suspend fun sendVerificationEmailToCurrentUser() {
+        val user = auth.currentUser ?: throw IllegalStateException("No signed-in user.")
+        user.sendEmailVerification(emailVerificationSettings()).await()
+        lastVerificationEmailSentAtMs = System.currentTimeMillis()
+    }
+
+    fun resendVerificationEmail(onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            try {
+                val elapsedMs = System.currentTimeMillis() - lastVerificationEmailSentAtMs
+                if (elapsedMs in 0 until verificationEmailCooldownMs) {
+                    val remainingSeconds = ((verificationEmailCooldownMs - elapsedMs) / 1000L).coerceAtLeast(1L)
+                    onResult(false, "Please wait $remainingSeconds seconds before resending the email.")
+                    return@launch
+                }
+                sendVerificationEmailToCurrentUser()
+                onResult(true, "Verification email sent.")
+            } catch (e: Exception) {
+                onResult(false, e.localizedMessage ?: "Could not resend verification email. Please check your connection and try again.")
+            }
+        }
+    }
+
+    fun reloadAndCheckEmailVerification(onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            try {
+                val user = auth.currentUser
+                if (user == null) {
+                    _authState.value = AuthState.Idle
+                    onResult(false, "Please sign in again.")
+                    return@launch
+                }
+
+                user.reload().await()
+                val reloadedUser = auth.currentUser
+                if (reloadedUser?.isEmailVerified == true) {
+                    _authState.value = AuthState.Authenticated(reloadedUser.uid)
+                    fetchCurrentUserProfile(reloadedUser.uid)
+                    onResult(true, "Email verified.")
+                } else {
+                    _authState.value = AuthState.EmailVerificationRequired(user.uid, user.email)
+                    onResult(false, "Your email is not verified yet. Please open the activation link first.")
+                }
+            } catch (e: Exception) {
+                onResult(false, e.localizedMessage ?: "Could not check email verification. Please check your connection and try again.")
             }
         }
     }
@@ -1181,8 +1250,14 @@ class AuthViewModel(
                 val result = auth.signInWithEmailAndPassword(email.trim(), emailPassed).await()
                 val user = result.user
                 if (user != null) {
-                    fetchCurrentUserProfile(user.uid)
-                    _authState.value = AuthState.Authenticated(user.uid)
+                    user.reload().await()
+                    val reloadedUser = auth.currentUser ?: user
+                    if (reloadedUser.isEmailVerified) {
+                        fetchCurrentUserProfile(reloadedUser.uid)
+                        _authState.value = AuthState.Authenticated(reloadedUser.uid)
+                    } else {
+                        _authState.value = AuthState.EmailVerificationRequired(reloadedUser.uid, reloadedUser.email)
+                    }
                 } else {
                     _authState.value = AuthState.Error("Failed to authenticate.")
                 }
@@ -1389,8 +1464,8 @@ class AuthViewModel(
                         .set(userProfilePayload)
                         .await()
 
-                    fetchCurrentUserProfile(userId)
-                    _authState.value = AuthState.Authenticated(userId)
+                    sendVerificationEmailToCurrentUser()
+                    _authState.value = AuthState.EmailVerificationRequired(userId, authResult.user?.email)
                 } else {
                     _authState.value = AuthState.Error("Could not retrieve created user ID.")
                 }
@@ -1478,6 +1553,13 @@ class AuthViewModel(
                 val authResult = auth.signInWithCredential(credential).await()
                 val user = authResult.user
                 if (user != null) {
+                    user.reload().await()
+                    val reloadedUser = auth.currentUser ?: user
+                    if (!reloadedUser.isEmailVerified) {
+                        _authState.value = AuthState.EmailVerificationRequired(reloadedUser.uid, reloadedUser.email)
+                        return@launch
+                    }
+
                     val doc = firestore.collection("users").document(user.uid).get().await()
                     if (!doc.exists()) {
                         // New Google user: create a minimal skeleton profile.
