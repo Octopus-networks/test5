@@ -28,18 +28,16 @@ class AdhanReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            Log.d(TAG, "Boot completed. Rescheduling Adhan.")
-            val prefs = context.getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
-            val isEnabled = prefs.getBoolean("isAdhanEnabled", false)
-            val lat = prefs.getFloat("adhan_lat", prefs.getFloat("adhanLocationLat", 0.0f)).toDouble()
-            val lng = prefs.getFloat("adhan_lng", prefs.getFloat("adhanLocationLng", 0.0f)).toDouble()
-            val calculationMethod = prefs.getString("adhan_calculation_method", "MUSLIM_WORLD_LEAGUE")
-            val soundPattern = prefs.getString("adhan_sound_pattern", "TAKBEER")
-
-            if (isEnabled && (lat != 0.0 || lng != 0.0)) {
-                AdhanScheduler.scheduleNextAdhan(context, lat, lng, calculationMethod, soundPattern)
-            }
+        if (intent.action in setOf(
+                Intent.ACTION_BOOT_COMPLETED,
+                Intent.ACTION_LOCKED_BOOT_COMPLETED,
+                Intent.ACTION_MY_PACKAGE_REPLACED,
+                Intent.ACTION_TIME_CHANGED,
+                Intent.ACTION_TIMEZONE_CHANGED
+            )
+        ) {
+            Log.d(TAG, "System schedule event (${intent.action}). Rescheduling Adhan.")
+            rescheduleSavedAdhan(context)
             return
         }
 
@@ -59,6 +57,21 @@ class AdhanReceiver : BroadcastReceiver() {
         showNotification(context, prayerName, soundPattern)
 
         if (lat != 0.0 || lng != 0.0) {
+            AdhanScheduler.scheduleNextAdhan(context, lat, lng, calculationMethod, soundPattern)
+        }
+    }
+
+    private fun rescheduleSavedAdhan(context: Context) {
+        val prefs = context.getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
+        val isEnabled = prefs.getBoolean("isAdhanEnabled", false)
+        val lat = prefs.getFloat("adhan_lat", prefs.getFloat("adhanLocationLat", 0.0f)).toDouble()
+        val lng = prefs.getFloat("adhan_lng", prefs.getFloat("adhanLocationLng", 0.0f)).toDouble()
+        val calculationMethod = prefs.getString("adhan_calculation_method", "MUSLIM_WORLD_LEAGUE")
+            ?: "MUSLIM_WORLD_LEAGUE"
+        val soundPattern = prefs.getString("adhan_sound_pattern", "TAKBEER")
+            ?: "TAKBEER"
+
+        if (isEnabled && (lat != 0.0 || lng != 0.0)) {
             AdhanScheduler.scheduleNextAdhan(context, lat, lng, calculationMethod, soundPattern)
         }
     }

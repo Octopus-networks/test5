@@ -1,4 +1,4 @@
-package com.mithaq.app.ui.chat
+﻿package com.mithaq.app.ui.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -108,9 +108,9 @@ class ChaperonedChatViewModel(
                 val cached = chatDao?.getMessagesForRoom(roomId) ?: emptyList()
                 if (cached.isEmpty()) {
                     val list = listOf(
-                        ChatMessage("system", "يعمل بدون اتصال - أرشيف الرسائل المحفوظ محلياً / Working Offline - Locally Cached Archive", 1716200000000L),
-                        ChatMessage("mock_other_user", "Assalamu Alaikum, I would like to inquire about your requirements.", 1716200010000L, "السلام عليكم، أود الاستفسار عن شروطك للموافقة."),
-                        ChatMessage("mock_user", "Wa Alaikum Assalam, my guardian is aware. Here are my conditions.", 1716200020000L, "وعليكم السلام، ولي أمري على علم بكل التفاصيل. إليك شروطي.")
+                        ChatMessage("system", "ÙŠØ¹Ù…Ù„ Ø¨Ø¯ÙˆÙ† Ø§ØªØµØ§Ù„ - Ø£Ø±Ø´ÙŠÙ Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ù…Ø­ÙÙˆØ¸ Ù…Ø­Ù„ÙŠØ§Ù‹ / Working Offline - Locally Cached Archive", 1716200000000L),
+                        ChatMessage("mock_other_user", "Assalamu Alaikum, I would like to inquire about your requirements.", 1716200010000L, "Ø§Ù„Ø³Ù„Ø§Ù… Ø¹Ù„ÙŠÙƒÙ…ØŒ Ø£ÙˆØ¯ Ø§Ù„Ø§Ø³ØªÙØ³Ø§Ø± Ø¹Ù† Ø´Ø±ÙˆØ·Ùƒ Ù„Ù„Ù…ÙˆØ§ÙÙ‚Ø©."),
+                        ChatMessage("mock_user", "Wa Alaikum Assalam, my guardian is aware. Here are my conditions.", 1716200020000L, "ÙˆØ¹Ù„ÙŠÙƒÙ… Ø§Ù„Ø³Ù„Ø§Ù…ØŒ ÙˆÙ„ÙŠ Ø£Ù…Ø±ÙŠ Ø¹Ù„Ù‰ Ø¹Ù„Ù… Ø¨ÙƒÙ„ Ø§Ù„ØªÙØ§ØµÙŠÙ„. Ø¥Ù„ÙŠÙƒ Ø´Ø±ÙˆØ·ÙŠ.")
                     )
                     list.forEach { msg ->
                         chatDao?.insertMessage(msg.toCached(roomId))
@@ -143,8 +143,8 @@ class ChaperonedChatViewModel(
             if (list.isEmpty()) {
                 list.addAll(listOf(
                     ChatMessage("system", "Wali monitoring active. This chat is chaperoned.", 1716200000000L),
-                    ChatMessage("mock_other_user", "Assalamu Alaikum, I would like to inquire about your requirements.", 1716200010000L, "السلام عليكم، أود الاستفسار عن شروطك للموافقة."),
-                    ChatMessage("mock_user", "Wa Alaikum Assalam, my guardian is aware. Here are my conditions.", 1716200020000L, "وعليكم السلام، ولي أمري على علم بكل التفاصيل. إليك شروطي.")
+                    ChatMessage("mock_other_user", "Assalamu Alaikum, I would like to inquire about your requirements.", 1716200010000L, "Ø§Ù„Ø³Ù„Ø§Ù… Ø¹Ù„ÙŠÙƒÙ…ØŒ Ø£ÙˆØ¯ Ø§Ù„Ø§Ø³ØªÙØ³Ø§Ø± Ø¹Ù† Ø´Ø±ÙˆØ·Ùƒ Ù„Ù„Ù…ÙˆØ§ÙÙ‚Ø©."),
+                    ChatMessage("mock_user", "Wa Alaikum Assalam, my guardian is aware. Here are my conditions.", 1716200020000L, "ÙˆØ¹Ù„ÙŠÙƒÙ… Ø§Ù„Ø³Ù„Ø§Ù…ØŒ ÙˆÙ„ÙŠ Ø£Ù…Ø±ÙŠ Ø¹Ù„Ù‰ Ø¹Ù„Ù… Ø¨ÙƒÙ„ Ø§Ù„ØªÙØ§ØµÙŠÙ„. Ø¥Ù„ÙŠÙƒ Ø´Ø±ÙˆØ·ÙŠ.")
                 ))
                 saveMessagesMock(list)
             }
@@ -359,7 +359,7 @@ class ChaperonedChatViewModel(
         if (messageText.trim().isEmpty()) return
  
         if (SafetyUtils.containsContactInfo(messageText)) {
-            _warningState.value = "تنبيه أمان: يُمنع تبادل أرقام الهواتف أو حسابات التواصل الاجتماعي لحمايتك ولضمان بقاء المحادثة تحت إشراف ولي الأمر."
+            _warningState.value = "ØªÙ†Ø¨ÙŠÙ‡ Ø£Ù…Ø§Ù†: ÙŠÙÙ…Ù†Ø¹ ØªØ¨Ø§Ø¯Ù„ Ø£Ø±Ù‚Ø§Ù… Ø§Ù„Ù‡ÙˆØ§ØªÙ Ø£Ùˆ Ø­Ø³Ø§Ø¨Ø§Øª Ø§Ù„ØªÙˆØ§ØµÙ„ Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ Ù„Ø­Ù…Ø§ÙŠØªÙƒ ÙˆÙ„Ø¶Ù…Ø§Ù† Ø¨Ù‚Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ØªØ­Øª Ø¥Ø´Ø±Ø§Ù ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±."
             return
         }
  
@@ -397,14 +397,14 @@ class ChaperonedChatViewModel(
                 // QUEUE NOTIFICATION for the recipient
                 queueMockNotification(
                     recipientId = roomId.split("_").firstOrNull { it != senderId } ?: "target",
-                    title = "ميثاق - رسالة جديدة",
+                    title = "Ù…ÙŠØ«Ø§Ù‚ - Ø±Ø³Ø§Ù„Ø© Ø¬Ø¯ÙŠØ¯Ø©",
                     body = messageText.trim()
                 )
 
                 // Simulate an automated reply after 3 seconds
                 viewModelScope.launch {
                     delay(3000)
-                    val replyAr = "شكرًا لرسالتك، سيقوم ولي أمري بمراجعتها والرد عليك قريبًا إن شاء الله."
+                    val replyAr = "Ø´ÙƒØ±Ù‹Ø§ Ù„Ø±Ø³Ø§Ù„ØªÙƒØŒ Ø³ÙŠÙ‚ÙˆÙ… ÙˆÙ„ÙŠ Ø£Ù…Ø±ÙŠ Ø¨Ù…Ø±Ø§Ø¬Ø¹ØªÙ‡Ø§ ÙˆØ§Ù„Ø±Ø¯ Ø¹Ù„ÙŠÙƒ Ù‚Ø±ÙŠØ¨Ù‹Ø§ Ø¥Ù† Ø´Ø§Ø¡ Ø§Ù„Ù„Ù‡."
                     val replyEn = "Thank you for your message, my guardian will review it and reply soon, God willing."
                     val replyMsg = ChatMessage("mock_other_user", replyEn, System.currentTimeMillis(), replyAr)
 
@@ -418,7 +418,7 @@ class ChaperonedChatViewModel(
                     context?.let { ctx ->
                         com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
                             context = ctx,
-                            title = "ميثاق - رسالة جديدة",
+                            title = "Ù…ÙŠØ«Ø§Ù‚ - Ø±Ø³Ø§Ù„Ø© Ø¬Ø¯ÙŠØ¯Ø©",
                             body = replyAr
                         )
                     }
@@ -482,26 +482,7 @@ class ChaperonedChatViewModel(
                         .await()
                 }
 
-                // 4. Send real-time Firestore notification to the other room participant
-                val recipientUid = roomId.split("_").firstOrNull { it != senderId }
-                if (!recipientUid.isNullOrBlank()) {
-                    try {
-                        // Fetch sender's name for the notification body
-                        val senderDoc = firestore.collection("users").document(senderId).get().await()
-                        val senderName = senderDoc.getString("name") ?: "عضو"
-                        val notifData = hashMapOf(
-                            "senderUid" to senderId,
-                            "recipientUid" to recipientUid,
-                            "title" to "ميثاق - رسالة جديدة 💬",
-                            "body" to "$senderName: ${messageText.trim().take(80)}",
-                            "status" to "PENDING",
-                            "timestamp" to timestamp
-                        )
-                        firestore.collection("notifications").add(notifData).await()
-                    } catch (notifEx: Exception) {
-                        // Notification failure is non-critical; message was already delivered
-                    }
-                }
+                // Chat push notifications are sent by the onChatMessageCreated Cloud Function.
 
             } catch (e: Exception) {
                 // If network/firestore write fails, it is already cached locally in Room DB

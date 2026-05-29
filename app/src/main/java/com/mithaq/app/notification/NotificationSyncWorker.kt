@@ -6,6 +6,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.google.firebase.auth.FirebaseAuth
 import org.json.JSONArray
 import java.util.concurrent.TimeUnit
 
@@ -39,8 +40,7 @@ class NotificationSyncWorker(
     // ─── 1. Queued Notifications (likes / views / photo requests) ────────────
 
     private fun checkQueuedNotifications() {
-        val authPrefs = context.getSharedPreferences("mithaq_mock_auth", Context.MODE_PRIVATE)
-        val currentUid = authPrefs.getString("uid", null) ?: return
+        val currentUid = currentUserId() ?: return
 
         val queuePrefs = context.getSharedPreferences("mithaq_notification_queue", Context.MODE_PRIVATE)
         val queueStr = queuePrefs.getString("queue_$currentUid", "[]") ?: "[]"
@@ -63,9 +63,7 @@ class NotificationSyncWorker(
     // ─── 2. New Chat Messages ─────────────────────────────────────────────────
 
     private fun checkNewChatMessages() {
-        val authPrefs = context.getSharedPreferences("mithaq_mock_auth", Context.MODE_PRIVATE)
-        val currentUid = authPrefs.getString("uid", null) ?: return
-        val currentName = authPrefs.getString("name", "عضو") ?: "عضو"
+        val currentUid = currentUserId() ?: return
 
         val seenPrefs = context.getSharedPreferences("mithaq_badge_prefs", Context.MODE_PRIVATE)
 
@@ -142,6 +140,16 @@ class NotificationSyncWorker(
                     }
             } catch (_: Exception) {}
         }
+    }
+
+    private fun currentUserId(): String? {
+        FirebaseAuth.getInstance().currentUser?.uid?.let { return it }
+
+        val appPrefs = context.getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
+        appPrefs.getString("uid", null)?.let { return it }
+
+        val authPrefs = context.getSharedPreferences("mithaq_mock_auth", Context.MODE_PRIVATE)
+        return authPrefs.getString("uid", null)
     }
 
     companion object {

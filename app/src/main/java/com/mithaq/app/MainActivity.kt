@@ -102,13 +102,13 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val channel = android.app.NotificationChannel(
-                "mithaq_alerts_channel_v4",
-                "Mithaq Alerts",
-                android.app.NotificationManager.IMPORTANCE_HIGH
-            )
             val manager = getSystemService(android.app.NotificationManager::class.java)
-            manager?.createNotificationChannel(channel)
+            if (manager != null) {
+                com.mithaq.app.notification.MithaqFirebaseMessagingService.ensureMessageChannels(
+                    manager,
+                    android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+                )
+            }
         }
 
         // Debug-only Firebase fallback for local demo builds.
@@ -227,7 +227,13 @@ private fun HomeDashboardContent(
     val hasQuestionnaire = currentUser.questionnaireAnswers.isNotEmpty()
     val isVerified = currentUser.verificationStatus == "VERIFIED" || currentUser.verificationStatus == "PENDING"
     val completion = listOf(hasPhoto, hasGuardian, hasQuestionnaire, isVerified).count { it } * 25
-    val nextPrayer = remember(currentUser.country) { nextPrayerSummary(currentUser.country, isArabic) }
+    val nextPrayer = remember(
+        currentUser.country,
+        currentUser.adhanLocationLat,
+        currentUser.adhanLocationLng,
+        currentUser.adhanCalculationMethod,
+        isArabic
+    ) { nextPrayerSummary(currentUser, isArabic) }
 
     Column(
         modifier = Modifier
@@ -548,10 +554,18 @@ private fun AccountActionRow(
     }
 }
 
-private fun nextPrayerSummary(country: String, isArabic: Boolean): String {
+private fun nextPrayerSummary(currentUser: UserProfile, isArabic: Boolean): String {
     return runCatching {
         val now = java.util.Date()
-        val times = com.mithaq.app.util.PrayerManager.getDailyPrayerTimes(country)
+        val times = if (currentUser.adhanLocationLat != 0.0 || currentUser.adhanLocationLng != 0.0) {
+            com.mithaq.app.util.PrayerManager.getDailyPrayerTimes(
+                latitude = currentUser.adhanLocationLat,
+                longitude = currentUser.adhanLocationLng,
+                calculationMethod = currentUser.adhanCalculationMethod.ifBlank { "MUSLIM_WORLD_LEAGUE" }
+            )
+        } else {
+            com.mithaq.app.util.PrayerManager.getDailyPrayerTimes(currentUser.country)
+        }
         val prayers = listOf(
             (if (isArabic) "الفجر" else "Fajr") to times.fajr,
             (if (isArabic) "الظهر" else "Dhuhr") to times.dhuhr,
@@ -682,6 +696,26 @@ fun MithaqAppNavigation(
     val authState by authViewModel.authState.collectAsState()
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
 
+    LaunchedEffect(
+        currentUserProfile?.uid,
+        currentUserProfile?.isAdhanEnabled,
+        currentUserProfile?.adhanLocationLat,
+        currentUserProfile?.adhanLocationLng,
+        currentUserProfile?.adhanCalculationMethod,
+        currentUserProfile?.adhanSoundPattern
+    ) {
+        val profile = currentUserProfile ?: return@LaunchedEffect
+        if (profile.isAdhanEnabled && (profile.adhanLocationLat != 0.0 || profile.adhanLocationLng != 0.0)) {
+            com.mithaq.app.util.AdhanScheduler.scheduleNextAdhan(
+                context = context,
+                lat = profile.adhanLocationLat,
+                lng = profile.adhanLocationLng,
+                calculationMethod = profile.adhanCalculationMethod.ifBlank { "MUSLIM_WORLD_LEAGUE" },
+                soundPattern = profile.adhanSoundPattern.ifBlank { "TAKBEER" }
+            )
+        }
+    }
+
     LaunchedEffect(authState) {
         val authenticated = authState as? AuthState.Authenticated ?: return@LaunchedEffect
         if (currentScreen == "splash" || currentScreen == "entry") {
@@ -692,11 +726,29 @@ fun MithaqAppNavigation(
     }
 
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, currentUserId) {
+    DisposableEffect(
+        lifecycleOwner,
+        currentUserId,
+        currentUserProfile?.isAdhanEnabled,
+        currentUserProfile?.adhanLocationLat,
+        currentUserProfile?.adhanLocationLng,
+        currentUserProfile?.adhanCalculationMethod,
+        currentUserProfile?.adhanSoundPattern
+    ) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 if (currentUserId.isNotEmpty()) {
                     authViewModel.updateOnlineStatus()
+                }
+                val profile = currentUserProfile
+                if (profile != null && profile.isAdhanEnabled && (profile.adhanLocationLat != 0.0 || profile.adhanLocationLng != 0.0)) {
+                    com.mithaq.app.util.AdhanScheduler.scheduleNextAdhan(
+                        context = context,
+                        lat = profile.adhanLocationLat,
+                        lng = profile.adhanLocationLng,
+                        calculationMethod = profile.adhanCalculationMethod.ifBlank { "MUSLIM_WORLD_LEAGUE" },
+                        soundPattern = profile.adhanSoundPattern.ifBlank { "TAKBEER" }
+                    )
                 }
             }
         }

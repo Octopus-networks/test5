@@ -55,18 +55,6 @@ object AdhanScheduler {
         val resolvedSoundPattern = soundPattern
             ?: prefs.getString("adhan_sound_pattern", "TAKBEER")
             ?: "TAKBEER"
-        prefs.edit()
-            .putBoolean("isAdhanEnabled", true)
-            .putFloat("adhan_lat", lat.toFloat())
-            .putFloat("adhan_lng", lng.toFloat())
-            .putFloat("adhanLocationLat", lat.toFloat())
-            .putFloat("adhanLocationLng", lng.toFloat())
-            .putString("adhan_calculation_method", resolvedCalculationMethod)
-            .putString("adhan_sound_pattern", resolvedSoundPattern)
-            .putString("adhanCalculationMethod", resolvedCalculationMethod)
-            .putString("adhanSoundPattern", resolvedSoundPattern)
-            .apply()
-
         val today = DateComponents.from(Date())
         val parameters = calculationParametersFor(resolvedCalculationMethod)
 
@@ -85,6 +73,20 @@ object AdhanScheduler {
 
         val nextPrayer = nextAdhan.first
         val nextPrayerTime = nextAdhan.second
+        prefs.edit()
+            .putBoolean("isAdhanEnabled", true)
+            .putFloat("adhan_lat", lat.toFloat())
+            .putFloat("adhan_lng", lng.toFloat())
+            .putFloat("adhanLocationLat", lat.toFloat())
+            .putFloat("adhanLocationLng", lng.toFloat())
+            .putString("adhan_calculation_method", resolvedCalculationMethod)
+            .putString("adhan_sound_pattern", resolvedSoundPattern)
+            .putString("adhanCalculationMethod", resolvedCalculationMethod)
+            .putString("adhanSoundPattern", resolvedSoundPattern)
+            .putLong("nextAdhanAt", nextPrayerTime.time)
+            .putString("nextAdhanPrayer", nextPrayer.name)
+            .apply()
+
         val intent = Intent(context, AdhanReceiver::class.java).apply {
             action = AdhanReceiver.ACTION_ADHAN_ALARM
             putExtra("PRAYER_NAME", nextPrayer.name)
@@ -156,7 +158,7 @@ object AdhanScheduler {
             .firstOrNull { (_, prayerTime) -> prayerTime.after(now) }
     }
 
-    private fun calculationParametersFor(method: String): CalculationParameters {
+    fun calculationParametersFor(method: String): CalculationParameters {
         val enumName = when (method.uppercase(Locale.ROOT)) {
             "ISNA" -> "NORTH_AMERICA"
             "GULF" -> "DUBAI"

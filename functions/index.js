@@ -161,18 +161,58 @@ async function userName(uid) {
   }
 }
 
-async function createNotification({ senderUid, recipientUid, title, body }) {
+async function createNotification({ senderUid, recipientUid, title, body, type = "general" }) {
   if (!senderUid || !recipientUid || senderUid === recipientUid) {
     return;
   }
-  await db.collection("notifications").add({
+  const notificationRef = await db.collection("notifications").add({
     senderUid,
     recipientUid,
     title,
     body,
+    type,
     status: "PENDING",
     timestamp: admin.firestore.FieldValue.serverTimestamp(),
   });
+
+  try {
+    const recipientSnap = await db.collection("users").doc(recipientUid).get();
+    const token = recipientSnap.exists ? recipientSnap.get("fcmToken") : null;
+    if (typeof token !== "string" || token.trim().length === 0) {
+      return;
+    }
+
+    await admin.messaging().send({
+      token,
+      notification: { title, body },
+      data: {
+        notificationId: notificationRef.id,
+        senderUid,
+        recipientUid,
+        type,
+        title,
+        body,
+      },
+      android: {
+        priority: "high",
+        notification: {
+          channelId: "mithaq_urgent_channel_v1",
+          sound: "default",
+        },
+      },
+    });
+
+    await notificationRef.update({
+      status: "PUSH_SENT",
+      pushedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Failed to send FCM notification", {
+      notificationId: notificationRef.id,
+      recipientUid,
+      error: error && error.message ? error.message : error,
+    });
+  }
 }
 
 exports.onLikeCreated = onDocumentCreated(
@@ -188,6 +228,7 @@ exports.onLikeCreated = onDocumentCreated(
       recipientUid: like.toUid,
       title: "Mithaq - New interest",
       body: `${senderName} liked your profile.`,
+      type: "like",
     });
   }
 );
@@ -209,6 +250,7 @@ exports.onChatMessageCreated = onDocumentCreated(
       recipientUid,
       title: "Mithaq - New message",
       body: content ? `${senderName}: ${content}` : `${senderName} sent you a message.`,
+      type: "chat_message",
     });
   }
 );

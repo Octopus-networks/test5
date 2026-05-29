@@ -398,8 +398,8 @@ class AuthViewModel(
                             isAdhanEnabled = isAdhanEnabled,
                             adhanLocationLat = adhanLocationLat,
                             adhanLocationLng = adhanLocationLng,
-                            adhanCalculationMethod = "MUSLIM_WORLD_LEAGUE",
-                            adhanSoundPattern = "TAKBEER",
+                            adhanCalculationMethod = adhanCalculationMethod,
+                            adhanSoundPattern = adhanSoundPattern,
                             fajrPrayedToday = fajrPrayedToday, fajrWeeklyCount = fajrWeeklyCount, fajrMonthlyCount = fajrMonthlyCount,
                             dhuhrPrayedToday = dhuhrPrayedToday, dhuhrWeeklyCount = dhuhrWeeklyCount, dhuhrMonthlyCount = dhuhrMonthlyCount,
                             asrPrayedToday = asrPrayedToday, asrWeeklyCount = asrWeeklyCount, asrMonthlyCount = asrMonthlyCount,
@@ -1107,6 +1107,11 @@ class AuthViewModel(
                     val finalProfile = profile.copy(seriousnessScore = calculateSeriousnessScore(profile))
                     _currentUserProfile.value = finalProfile
                     userDao?.insertUser(finalProfile.toCached())
+                    context?.getSharedPreferences("mithaq_prefs", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
+                        putString("uid", finalProfile.uid)
+                        putString("name", finalProfile.name)
+                        apply()
+                    }
 
                     try {
                         val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()

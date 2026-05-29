@@ -34,7 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.mithaq.app.model.UserProfile
 import com.mithaq.app.ui.auth.AuthViewModel
 import com.mithaq.app.util.AdhanScheduler
@@ -689,8 +691,17 @@ private data class AdhanCoordinates(
 
 private suspend fun resolveAdhanCoordinates(context: Context, currentUser: UserProfile): AdhanCoordinates {
     if (hasLocationPermission(context)) {
+        val locationClient = LocationServices.getFusedLocationProviderClient(context)
+        val freshLocation = runCatching {
+            val tokenSource = CancellationTokenSource()
+            locationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, tokenSource.token).await()
+        }.getOrNull()
+        if (freshLocation != null && (freshLocation.latitude != 0.0 || freshLocation.longitude != 0.0)) {
+            return AdhanCoordinates(freshLocation.latitude, freshLocation.longitude)
+        }
+
         val location = runCatching {
-            LocationServices.getFusedLocationProviderClient(context).lastLocation.await()
+            locationClient.lastLocation.await()
         }.getOrNull()
         if (location != null && (location.latitude != 0.0 || location.longitude != 0.0)) {
             return AdhanCoordinates(location.latitude, location.longitude)

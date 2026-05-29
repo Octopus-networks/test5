@@ -1,12 +1,15 @@
 package com.mithaq.app.notification
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.mithaq.app.MainActivity
@@ -44,6 +47,12 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
         private val notificationIdCounter = java.util.concurrent.atomic.AtomicInteger((System.currentTimeMillis() % 100000).toInt())
 
         fun showLocalNotification(context: Context, title: String, body: String) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                return
+            }
+
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
@@ -56,22 +65,7 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val soundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channelName = "Mithaq Official Alerts"
-                val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = "Urgent alerts for messages and interactions"
-                    enableLights(true)
-                    enableVibration(true)
-                    setShowBadge(true)
-                    setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC)
-                    val attributes = android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                    setSound(soundUri, attributes)
-                }
-                notificationManager.createNotificationChannel(channel)
-            }
+            ensureMessageChannels(notificationManager, soundUri)
 
             val notificationBuilder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_email)
@@ -87,6 +81,47 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
 
             notificationManager.notify(notificationIdCounter.incrementAndGet(), notificationBuilder.build())
+        }
+
+        fun ensureMessageChannels(notificationManager: NotificationManager, soundUri: android.net.Uri? = null) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+            val attributes = android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
+            val urgentChannel = NotificationChannel(
+                "mithaq_urgent_channel_v1",
+                "Mithaq Official Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Urgent alerts for messages and interactions"
+                enableLights(true)
+                enableVibration(true)
+                setShowBadge(true)
+                setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC)
+                if (soundUri != null) {
+                    setSound(soundUri, attributes)
+                }
+            }
+
+            val defaultChannel = NotificationChannel(
+                "mithaq_alerts_channel_v4",
+                "Mithaq Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Default alerts for Mithaq"
+                enableLights(true)
+                enableVibration(true)
+                setShowBadge(true)
+                if (soundUri != null) {
+                    setSound(soundUri, attributes)
+                }
+            }
+
+            notificationManager.createNotificationChannel(urgentChannel)
+            notificationManager.createNotificationChannel(defaultChannel)
         }
     }
 }

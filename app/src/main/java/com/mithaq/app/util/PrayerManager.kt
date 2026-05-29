@@ -1,14 +1,11 @@
 package com.mithaq.app.util
 
-import com.batoulapps.adhan.CalculationMethod
-import com.batoulapps.adhan.CalculationParameters
 import com.batoulapps.adhan.Coordinates
 import com.batoulapps.adhan.Madhab
 import com.batoulapps.adhan.PrayerTimes
 import com.batoulapps.adhan.data.DateComponents
 import java.util.Calendar
 import java.util.Date
-import java.util.TimeZone
 
 data class DailyPrayerTimes(
     val fajr: Date,
@@ -51,12 +48,21 @@ object PrayerManager {
 
     fun getDailyPrayerTimes(countryName: String, date: Date = Date()): DailyPrayerTimes {
         val coordinates = getCoordinatesForCountry(countryName)
+        return getDailyPrayerTimes(coordinates.latitude, coordinates.longitude, date)
+    }
+
+    fun getDailyPrayerTimes(
+        latitude: Double,
+        longitude: Double,
+        date: Date = Date(),
+        calculationMethod: String = "MUSLIM_WORLD_LEAGUE"
+    ): DailyPrayerTimes {
+        val coordinates = Coordinates(latitude, longitude)
         val cal = Calendar.getInstance()
         cal.time = date
         val dateComponents = DateComponents.from(date)
-        
-        // Use standard Muslim World League method for calculation
-        val parameters = CalculationMethod.MUSLIM_WORLD_LEAGUE.parameters
+
+        val parameters = AdhanScheduler.calculationParametersFor(calculationMethod)
         parameters.madhab = Madhab.SHAFI
 
         val prayerTimes = PrayerTimes(coordinates, dateComponents, parameters)
