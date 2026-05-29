@@ -1,5 +1,6 @@
 package com.mithaq.app.ui.onboarding
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,9 +10,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,18 +37,52 @@ import com.mithaq.app.ui.onboarding.components.MithaqQuestionScaffold
 @Composable
 fun QuestionScreen(
     viewModel: OnboardingViewModel = remember { OnboardingViewModel() },
+    onExitRequested: () -> Unit = {},
     onComplete: (Map<String, OnboardingAnswer>) -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val step = state.currentStep
+    var showExitConfirm by remember { mutableStateOf(false) }
 
     if (state.isComplete) {
-        OnboardingSummary(
-            answers = state.answers,
-            steps = state.steps,
-            onFinish = { onComplete(state.answers) }
-        )
+        LaunchedEffect(Unit) {
+            onComplete(state.answers)
+        }
+        Text("Completing profile setup...")
         return
+    }
+
+    fun handleBack() {
+        if (state.canGoBack) {
+            viewModel.goBack()
+        } else {
+            showExitConfirm = true
+        }
+    }
+
+    BackHandler {
+        handleBack()
+    }
+
+    if (showExitConfirm) {
+        AlertDialog(
+            onDismissRequest = { showExitConfirm = false },
+            title = { Text("Leave profile setup?") },
+            text = { Text("Your answers are only saved in this session for now.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitConfirm = false
+                    onExitRequested()
+                }) {
+                    Text("Leave")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitConfirm = false }) {
+                    Text("Stay")
+                }
+            }
+        )
     }
 
     if (step == null) {
@@ -61,10 +99,10 @@ fun QuestionScreen(
         title = step.title,
         helperText = step.helperText,
         validationMessage = state.validationMessage,
-        canGoBack = state.canGoBack,
+        canGoBack = true,
         canContinue = canContinue,
         showSkip = step.isOptional,
-        onBack = viewModel::goBack,
+        onBack = ::handleBack,
         onContinue = viewModel::continueToNext,
         onSkip = viewModel::skipOptional
     ) {

@@ -42,6 +42,7 @@ import com.google.firebase.appcheck.AppCheckProviderFactory
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.mithaq.app.model.*
+import com.mithaq.app.domain.model.OnboardingAnswer
 import com.mithaq.app.navigation.AuthGate
 import com.mithaq.app.navigation.Routes
 import com.mithaq.app.ui.auth.AuthState
@@ -79,6 +80,7 @@ import com.mithaq.app.ui.limit.PremiumStoreScreen
 import com.mithaq.app.ui.match.QuestionnaireScreen
 import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
 import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
+import com.mithaq.app.ui.onboarding.QuestionScreen
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
 import com.mithaq.app.security.SecureScreen
@@ -231,6 +233,79 @@ class MainActivity : FragmentActivity() {
             clazz.getMethod("getInstance").invoke(null) as? AppCheckProviderFactory
         } catch (e: Exception) {
             null
+        }
+    }
+}
+
+@Composable
+private fun OnboardingTemporaryCompletionScreen(
+    answeredCount: Int,
+    completionPercent: Int,
+    onContinueHome: () -> Unit
+) {
+    androidx.activity.compose.BackHandler {
+        // Keep users on the completion screen until they choose where to go next.
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(54.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Profile setup started",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Your answers are stored locally for this test flow only.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(22.dp))
+                Text(
+                    text = "Answered questions: $answeredCount",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Completion: $completionPercent%",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = onContinueHome,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Continue to Home", fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
@@ -722,11 +797,32 @@ fun MithaqAppNavigation(
 
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
     val authState by authViewModel.authState.collectAsState()
+    val onboardingPrefs = remember {
+        context.getSharedPreferences("mithaq_onboarding_engine_v2", android.content.Context.MODE_PRIVATE)
+    }
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
+    var onboardingAnsweredCount by remember { mutableStateOf(0) }
+    var onboardingCompletionPercent by remember { mutableStateOf(0) }
     val publicRoutes = remember {
         setOf(Routes.Splash, Routes.Entry, Routes.Login, Routes.Register, Routes.VerifyEmail, Routes.ForgotPassword)
     }
     val launchIntentData = deepLinkData
+
+    fun isLocalOnboardingComplete(userId: String): Boolean {
+        return onboardingPrefs.getBoolean("completed_$userId", false)
+    }
+
+    fun answerHasContent(answer: OnboardingAnswer): Boolean {
+        return answer.selectedOptionIds.isNotEmpty() || answer.text.isNotBlank() || answer.number != null
+    }
+
+    fun routeVerifiedUser(userId: String) {
+        currentUserId = userId
+        com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
+        val completed = isLocalOnboardingComplete(userId)
+        hasDismissedOnboarding = completed
+        currentScreen = if (completed) Routes.Home else Routes.OnboardingQuestion
+    }
 
     LaunchedEffect(launchIntentData, deepLinkNonce) {
         when {
@@ -736,8 +832,7 @@ fun MithaqAppNavigation(
                     if (verified) {
                         val uid = (authViewModel.authState.value as? AuthState.Authenticated)?.userId
                         if (uid != null) {
-                            currentUserId = uid
-                            currentScreen = Routes.Home
+                            routeVerifiedUser(uid)
                         }
                     }
                 }
@@ -773,8 +868,7 @@ fun MithaqAppNavigation(
             is AuthState.Authenticated -> {
                 currentUserId = state.userId
                 if (currentScreen in setOf(Routes.Splash, Routes.Entry, Routes.Login, Routes.Register, Routes.VerifyEmail)) {
-                    com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-                    currentScreen = AuthGate.routeFor(state)
+                    routeVerifiedUser(state.userId)
                 }
             }
             is AuthState.EmailVerificationRequired -> {
@@ -904,9 +998,7 @@ fun MithaqAppNavigation(
                 onComplete = {
                     when (val state = authState) {
                         is AuthState.Authenticated -> {
-                            currentUserId = state.userId
-                            com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-                            currentScreen = Routes.Home
+                            routeVerifiedUser(state.userId)
                         }
                         is AuthState.EmailVerificationRequired -> currentScreen = Routes.VerifyEmail
                         else -> currentScreen = Routes.Entry
@@ -927,13 +1019,40 @@ fun MithaqAppNavigation(
                 onNavigateToRegister = { currentScreen = Routes.Register },
                 onForgotPassword = { currentScreen = Routes.ForgotPassword },
                 onLoginSuccess = { uid ->
-                    currentUserId = uid
-                    com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-                    currentScreen = Routes.Home
+                    routeVerifiedUser(uid)
                 },
                 viewModel = authViewModel,
                 isArabic = isArabic,
                 onLanguageChange = onLanguageChange
+            )
+        }
+        Routes.OnboardingQuestion -> {
+            QuestionScreen(
+                onExitRequested = {
+                    currentScreen = Routes.Home
+                },
+                onComplete = { answers ->
+                    val answered = answers.values.count(::answerHasContent)
+                    onboardingAnsweredCount = answered
+                    onboardingCompletionPercent = ((answered.toFloat() / 8f) * 100f).toInt().coerceIn(0, 100)
+                    if (currentUserId.isNotBlank()) {
+                        onboardingPrefs.edit()
+                            .putBoolean("completed_$currentUserId", true)
+                            .apply()
+                    }
+                    hasDismissedOnboarding = true
+                    currentScreen = Routes.OnboardingComplete
+                }
+            )
+        }
+        Routes.OnboardingComplete -> {
+            OnboardingTemporaryCompletionScreen(
+                answeredCount = onboardingAnsweredCount,
+                completionPercent = onboardingCompletionPercent,
+                onContinueHome = {
+                    hasDismissedOnboarding = true
+                    currentScreen = Routes.Home
+                }
             )
         }
         Routes.ForgotPassword -> {
@@ -947,9 +1066,7 @@ fun MithaqAppNavigation(
             RegisterScreen(
                 onNavigateToLogin = { currentScreen = Routes.Login },
                 onRegisterSuccess = { uid ->
-                    currentUserId = uid
-                    com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-                    currentScreen = Routes.Home
+                    routeVerifiedUser(uid)
                 },
                 viewModel = authViewModel,
                 isArabic = isArabic,
@@ -963,9 +1080,7 @@ fun MithaqAppNavigation(
                 viewModel = authViewModel,
                 isArabic = isArabic,
                 onVerified = { uid ->
-                    currentUserId = uid
-                    com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-                    currentScreen = Routes.Home
+                    routeVerifiedUser(uid)
                 },
                 onChangeEmail = {
                     currentUserId = ""
@@ -1029,6 +1144,7 @@ fun MithaqAppNavigation(
                             !hasDismissedOnboarding
 
                     if (shouldShowWizard) {
+                        // TODO: Old onboarding will be replaced after the new question engine is fully tested.
                         OnboardingWizardScreen(
                             authViewModel = authViewModel,
                             guardianViewModel = guardianViewModel,

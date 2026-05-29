@@ -12,6 +12,7 @@ object Routes {
     const val ResetEmailSent = "reset_email_sent"
     const val AccountType = "account_type"
     const val OnboardingQuestion = "onboarding_question"
+    const val OnboardingComplete = "onboarding_complete"
     const val DescriptionHub = "description_hub"
     const val PrivacyEducation = "privacy_education"
     const val PhotoUpload = "photo_upload"
