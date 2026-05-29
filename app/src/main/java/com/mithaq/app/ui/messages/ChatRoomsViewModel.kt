@@ -43,6 +43,9 @@ class ChatRoomsViewModel(
                 )
             },
             onError = { message ->
+                roomsRegistration?.remove()
+                roomsRegistration = null
+                listeningUserId = null
                 _state.value = _state.value.copy(
                     isLoading = false,
                     errorMessage = message

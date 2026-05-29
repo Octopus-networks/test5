@@ -10,10 +10,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
@@ -36,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -139,6 +144,16 @@ fun MithaqMessagesScreen(
                 modifier = Modifier.padding(horizontal = 18.dp)
             )
         }
+    }
+}
+
+private fun ChatMessage.stableMessageKey(): String {
+    return messageId.ifBlank {
+        listOf(
+            chatId,
+            senderId,
+            createdAt?.time ?: updatedAt?.time ?: text.hashCode()
+        ).joinToString("_")
     }
 }
 
@@ -286,10 +301,17 @@ private fun ChatScreen(
     var draft by remember(room.chatId) { mutableStateOf("") }
     var showReportDialog by remember(room.chatId) { mutableStateOf(false) }
     var showBlockDialog by remember(room.chatId) { mutableStateOf(false) }
-    val messageScrollState = rememberScrollState()
+    var hasAutoScrolledInitial by remember(room.chatId) { mutableStateOf(false) }
+    val messageListState = rememberLazyListState()
     val otherUserId = room.participantIds.firstOrNull { it != currentUserId }.orEmpty()
     val summary = room.participantPublicSummaries[otherUserId] ?: ChatParticipantSummary(userId = otherUserId)
     val canSend = room.status == "active" && !safetyState.isBlocked && !state.isSending && !safetyState.isCheckingBlock
+    val isNearBottom by remember {
+        derivedStateOf {
+            val lastVisibleIndex = messageListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            lastVisibleIndex >= state.messages.lastIndex - 2
+        }
+    }
 
     LaunchedEffect(room.chatId, currentUserId, otherUserId) {
         viewModel.listenToMessages(room.chatId)
@@ -298,15 +320,23 @@ private fun ChatScreen(
     DisposableEffect(room.chatId) {
         onDispose { viewModel.stopListening() }
     }
-    LaunchedEffect(state.messages.size) {
+    LaunchedEffect(state.messages.size, state.messages.lastOrNull()?.messageId) {
         if (state.messages.isNotEmpty()) {
-            messageScrollState.animateScrollTo(messageScrollState.maxValue)
+            val lastMessage = state.messages.last()
+            val shouldScroll = !hasAutoScrolledInitial ||
+                isNearBottom ||
+                lastMessage.senderId == currentUserId
+            if (shouldScroll) {
+                messageListState.animateScrollToItem(state.messages.lastIndex)
+                hasAutoScrolledInitial = true
+            }
         }
     }
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
             .padding(18.dp)
     ) {
         TextButton(onClick = onBack) {
@@ -374,6 +404,12 @@ private fun ChatScreen(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+            OutlinedButton(
+                onClick = { viewModel.listenToMessages(room.chatId) },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text(if (isArabic) "Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©" else "Retry")
+            }
             Spacer(modifier = Modifier.height(12.dp))
         }
 
@@ -404,14 +440,17 @@ private fun ChatScreen(
                 }
             }
             else -> {
-                Column(
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(messageScrollState),
+                        .weight(1f),
+                    state = messageListState,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    state.messages.forEach { message ->
+                    items(
+                        items = state.messages,
+                        key = { message -> message.stableMessageKey() }
+                    ) { message ->
                         ChatMessageBubble(
                             message = message,
                             isMine = message.senderId == currentUserId
@@ -446,6 +485,15 @@ private fun ChatScreen(
             ) {
                 Icon(Icons.Filled.Send, contentDescription = null)
             }
+        }
+        if (draft.length >= 850) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${draft.length}/1000",
+                modifier = Modifier.align(Alignment.End),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 

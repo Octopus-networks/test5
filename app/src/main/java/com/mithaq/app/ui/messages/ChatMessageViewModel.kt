@@ -46,6 +46,9 @@ class ChatMessageViewModel(
                 )
             },
             onError = { message ->
+                messagesRegistration?.remove()
+                messagesRegistration = null
+                listeningChatId = null
                 _state.value = _state.value.copy(
                     isLoading = false,
                     errorMessage = message
