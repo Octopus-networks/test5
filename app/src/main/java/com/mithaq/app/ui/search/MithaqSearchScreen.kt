@@ -28,14 +28,19 @@ import com.mithaq.app.ui.home.DiscoverUiState
 import com.mithaq.app.ui.home.DiscoverViewModel
 import com.mithaq.app.ui.home.MithaqPublicProfileCard
 import com.mithaq.app.ui.home.PublicProfileFilterRow
+import com.mithaq.app.ui.requests.InterestRequestUiState
+import com.mithaq.app.ui.requests.InterestRequestViewModel
 
 @Composable
 fun MithaqSearchScreen(
+    currentUserId: String,
     isArabic: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: DiscoverViewModel = viewModel(key = "mithaq_public_search")
+    viewModel: DiscoverViewModel = viewModel(key = "mithaq_public_search"),
+    interestRequestViewModel: InterestRequestViewModel
 ) {
     val state by viewModel.state.collectAsState()
+    val interestState by interestRequestViewModel.state.collectAsState()
 
     Column(
         modifier = modifier
@@ -75,6 +80,11 @@ fun MithaqSearchScreen(
         SearchResultsContent(
             state = state,
             isArabic = isArabic,
+            currentUserId = currentUserId,
+            interestState = interestState,
+            onSendInterest = { toUserId ->
+                interestRequestViewModel.sendInterest(currentUserId, toUserId)
+            },
             onRetry = viewModel::loadProfiles
         )
     }
@@ -84,6 +94,9 @@ fun MithaqSearchScreen(
 private fun SearchResultsContent(
     state: DiscoverUiState,
     isArabic: Boolean,
+    currentUserId: String,
+    interestState: InterestRequestUiState,
+    onSendInterest: (String) -> Unit,
     onRetry: () -> Unit
 ) {
     when {
@@ -128,6 +141,9 @@ private fun SearchResultsContent(
                 MithaqPublicProfileCard(
                     profile = profile,
                     isArabic = isArabic,
+                    currentUserId = currentUserId,
+                    interestState = interestState,
+                    onSendInterest = onSendInterest,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }

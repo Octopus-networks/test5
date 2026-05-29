@@ -54,14 +54,19 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.domain.model.PublicProfile
 import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.requests.InterestRequestUiState
+import com.mithaq.app.ui.requests.InterestRequestViewModel
 
 @Composable
 fun MithaqDiscoverScreen(
+    currentUserId: String,
     isArabic: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: DiscoverViewModel = viewModel(key = "mithaq_discover_home")
+    viewModel: DiscoverViewModel = viewModel(key = "mithaq_discover_home"),
+    interestRequestViewModel: InterestRequestViewModel
 ) {
     val state by viewModel.state.collectAsState()
+    val interestState by interestRequestViewModel.state.collectAsState()
 
     Column(
         modifier = modifier
@@ -98,14 +103,22 @@ fun MithaqDiscoverScreen(
             )
         }
         Spacer(modifier = Modifier.height(18.dp))
+        InterestRequestMessage(state = interestState)
+        if (interestState.message != null || interestState.errorMessage != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
         DiscoverProfileContent(
             state = state,
             isArabic = isArabic,
+            currentUserId = currentUserId,
+            interestState = interestState,
+            onSendInterest = { toUserId ->
+                interestRequestViewModel.sendInterest(currentUserId, toUserId)
+            },
             onRetry = viewModel::loadProfiles
         )
     }
 }
-
 @Composable
 fun PublicProfileFilterRow(
     isArabic: Boolean,
@@ -136,9 +149,40 @@ fun PublicProfileFilterRow(
 }
 
 @Composable
+private fun InterestRequestMessage(state: InterestRequestUiState) {
+    val message = state.errorMessage ?: state.message ?: return
+    val isError = state.errorMessage != null
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isError) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.primaryContainer
+            }
+        )
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(14.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isError) {
+                MaterialTheme.colorScheme.onErrorContainer
+            } else {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            }
+        )
+    }
+}
+
+@Composable
 private fun DiscoverProfileContent(
     state: DiscoverUiState,
     isArabic: Boolean,
+    currentUserId: String,
+    interestState: InterestRequestUiState,
+    onSendInterest: (String) -> Unit,
     onRetry: () -> Unit
 ) {
     when {
@@ -183,6 +227,9 @@ private fun DiscoverProfileContent(
                 MithaqPublicProfileCard(
                     profile = profile,
                     isArabic = isArabic,
+                    currentUserId = currentUserId,
+                    interestState = interestState,
+                    onSendInterest = onSendInterest,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
@@ -194,7 +241,10 @@ private fun DiscoverProfileContent(
 fun MithaqPublicProfileCard(
     profile: PublicProfile,
     isArabic: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    currentUserId: String = "",
+    interestState: InterestRequestUiState = InterestRequestUiState(),
+    onSendInterest: (String) -> Unit = {}
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -278,7 +328,11 @@ fun MithaqPublicProfileCard(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Button(
-                    onClick = {},
+                    onClick = { onSendInterest(profile.userId) },
+                    enabled = currentUserId.isNotBlank() &&
+                            profile.userId != currentUserId &&
+                            profile.userId !in interestState.sentPendingToUserIds &&
+                            profile.userId !in interestState.sendingToUserIds,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -287,7 +341,12 @@ fun MithaqPublicProfileCard(
                 ) {
                     Icon(Icons.Filled.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(if (isArabic) "إرسال اهتمام" else "Send interest")
+                    val buttonText = when {
+                        profile.userId in interestState.sendingToUserIds -> if (isArabic) "\u062c\u0627\u0631\u064a \u0627\u0644\u0625\u0631\u0633\u0627\u0644" else "Sending..."
+                        profile.userId in interestState.sentPendingToUserIds -> if (isArabic) "\u062a\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644" else "Sent"
+                        else -> if (isArabic) "\u0625\u0631\u0633\u0627\u0644 \u0627\u0647\u062a\u0645\u0627\u0645" else "Send interest"
+                    }
+                    Text(buttonText)
                 }
                 OutlinedButton(
                     onClick = {},

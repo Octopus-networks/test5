@@ -56,6 +56,8 @@ For stronger production security, move public profile mirroring to trusted backe
 
 Phase 5 connects Home/Discover and Search to `publicProfiles` through `DiscoverViewModel -> PublicProfileRepository -> Firestore`. These screens must not read `profiles/{userId}` directly. Filtering is performed over the sanitized public fields only, and near-me filtering remains a placeholder until safe city/GPS matching is implemented.
 
+Phase 6.1 introduces `interestRequests/{requestId}` for serious interest requests only. This flow must not create chats, photo requests, or expose private profile data. Request cards should use `publicProfiles` summaries only.
+
 ## Example Pattern
 
 ```js
@@ -84,6 +86,31 @@ match /publicProfiles/{userId} {
   // Prefer backend/admin writes in production.
   allow write: if isVerifiedEmailUser() &&
     request.auth.uid == userId;
+}
+
+match /interestRequests/{requestId} {
+  allow create: if isVerifiedEmailUser() &&
+    request.resource.data.fromUserId == request.auth.uid &&
+    request.resource.data.toUserId is string &&
+    request.resource.data.toUserId != request.auth.uid &&
+    request.resource.data.status == "pending";
+
+  allow read: if isVerifiedEmailUser() &&
+    (resource.data.fromUserId == request.auth.uid ||
+     resource.data.toUserId == request.auth.uid);
+
+  allow update: if isVerifiedEmailUser() && (
+    (
+      resource.data.toUserId == request.auth.uid &&
+      resource.data.status == "pending" &&
+      request.resource.data.status in ["accepted", "declined"]
+    ) ||
+    (
+      resource.data.fromUserId == request.auth.uid &&
+      resource.data.status == "pending" &&
+      request.resource.data.status == "cancelled"
+    )
+  );
 }
 ```
 

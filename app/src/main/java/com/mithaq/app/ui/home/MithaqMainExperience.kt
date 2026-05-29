@@ -15,6 +15,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,8 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.mithaq.app.ui.messages.MithaqMessagesScreen
 import com.mithaq.app.ui.profile.MithaqProfileHubScreen
+import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.MithaqRequestsScreen
 import com.mithaq.app.ui.search.MithaqSearchScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 private enum class MithaqMainTab {
     Home,
@@ -52,11 +55,17 @@ private val mainNavItems = listOf(
 
 @Composable
 fun MithaqMainExperience(
+    currentUserId: String,
     isArabic: Boolean,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(MithaqMainTab.Home) }
+    val interestRequestViewModel: InterestRequestViewModel = viewModel(key = "mithaq_interest_requests")
+
+    LaunchedEffect(currentUserId) {
+        interestRequestViewModel.loadForUser(currentUserId)
+    }
 
     Scaffold(
         modifier = modifier,
@@ -93,9 +102,24 @@ fun MithaqMainExperience(
     ) { innerPadding: PaddingValues ->
         val screenModifier = Modifier.padding(innerPadding)
         when (selectedTab) {
-            MithaqMainTab.Home -> MithaqDiscoverScreen(isArabic = isArabic, modifier = screenModifier)
-            MithaqMainTab.Search -> MithaqSearchScreen(isArabic = isArabic, modifier = screenModifier)
-            MithaqMainTab.Requests -> MithaqRequestsScreen(isArabic = isArabic, modifier = screenModifier)
+            MithaqMainTab.Home -> MithaqDiscoverScreen(
+                currentUserId = currentUserId,
+                isArabic = isArabic,
+                interestRequestViewModel = interestRequestViewModel,
+                modifier = screenModifier
+            )
+            MithaqMainTab.Search -> MithaqSearchScreen(
+                currentUserId = currentUserId,
+                isArabic = isArabic,
+                interestRequestViewModel = interestRequestViewModel,
+                modifier = screenModifier
+            )
+            MithaqMainTab.Requests -> MithaqRequestsScreen(
+                currentUserId = currentUserId,
+                isArabic = isArabic,
+                interestRequestViewModel = interestRequestViewModel,
+                modifier = screenModifier
+            )
             MithaqMainTab.Messages -> MithaqMessagesScreen(isArabic = isArabic, modifier = screenModifier)
             MithaqMainTab.Profile -> MithaqProfileHubScreen(
                 isArabic = isArabic,

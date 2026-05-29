@@ -1104,6 +1104,7 @@ fun MithaqAppNavigation(
                 )
             } else if (hasDismissedOnboarding) {
                 MithaqMainExperience(
+                    currentUserId = currentUserId,
                     isArabic = isArabic,
                     onSignOut = {
                         authViewModel.signOut()
@@ -1164,6 +1165,7 @@ fun MithaqAppNavigation(
                         )
                     } else {
                     MithaqMainExperience(
+                        currentUserId = currentUserId,
                         isArabic = isArabic,
                         onSignOut = {
                             authViewModel.signOut()
