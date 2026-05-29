@@ -70,6 +70,14 @@ Phase 7.5 hardens chat readiness before messages. Chat rooms should always have 
 
 Phase 8 introduces basic text messages under `chats/{chatId}/messages/{messageId}`. Only verified chat participants should read or write messages, the parent chat must be `active`, `senderId` must equal `request.auth.uid`, `chatId` must match the parent path, `type` must be `text`, and text must be non-empty with a maximum of 1000 characters. Attachments, image messages, voice messages, files, stickers, edits, deletes, and forwarding are not enabled in this phase. `lastMessagePreview` should be a safe truncated text preview only.
 
+Phase 8.5 introduces basic chat safety foundations:
+
+- `reports/{reportId}` stores user reports for moderation review. Verified users may create reports only where `reporterUserId == request.auth.uid`. Normal users should not read the global reports collection; admin/moderator review rules are needed before an admin console consumes this data.
+- `blocks/{blockId}` stores user block records. Verified users may create, read, and delete only their own block records where `blockerUserId == request.auth.uid`. Block documents should contain only ids and optional chat context, not private profile data.
+- Message sending should be denied when either participant has blocked the other. The client now checks this before sending, but production rules may need a helper structure or Cloud Function enforcement because cross-document block checks can become complex.
+- Existing messages remain visible after a block, but new messages should be disabled for both participants until the block state changes.
+- Reports and blocks do not expose private profiles, photo URLs, guardian data, or raw prayer data.
+
 ## Example Pattern
 
 ```js
@@ -218,6 +226,34 @@ match /chats/{chatId} {
     // Blocked or archived chats should prevent new messages, and attachments
     // should stay disabled until attachment moderation exists.
   }
+}
+
+match /reports/{reportId} {
+  allow create: if isVerifiedEmailUser() &&
+    request.resource.data.reporterUserId == request.auth.uid &&
+    request.resource.data.reportedUserId is string &&
+    request.resource.data.reportedUserId != request.auth.uid &&
+    request.resource.data.reason is string &&
+    request.resource.data.reason.size() > 0 &&
+    request.resource.data.details is string &&
+    request.resource.data.details.size() <= 500 &&
+    request.resource.data.status == "open";
+
+  // Normal users should not read all reports. Add role-based moderator/admin
+  // access before building a moderation dashboard.
+  allow read, update, delete: if false;
+}
+
+match /blocks/{blockId} {
+  allow create: if isVerifiedEmailUser() &&
+    request.resource.data.blockerUserId == request.auth.uid &&
+    request.resource.data.blockedUserId is string &&
+    request.resource.data.blockedUserId != request.auth.uid;
+
+  allow read, delete: if isVerifiedEmailUser() &&
+    resource.data.blockerUserId == request.auth.uid;
+
+  allow update: if false;
 }
 ```
 

@@ -10,7 +10,8 @@ import kotlinx.coroutines.tasks.await
 class ChatMessageRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val chatRepository: ChatRepository = ChatRepository(firestore, auth)
+    private val chatRepository: ChatRepository = ChatRepository(firestore, auth),
+    private val blockRepository: BlockRepository = BlockRepository(firestore, auth)
 ) {
     suspend fun getMessages(chatId: String): List<ChatMessage> {
         val userId = auth.currentUser?.uid.orEmpty()
@@ -90,7 +91,9 @@ class ChatMessageRepository(
         val user = auth.currentUser
         if (user?.uid != userId || !user.isEmailVerified) return false
         val room = chatRepository.getChatRoom(chatId) ?: return false
-        return room.status == "active" && userId in room.participantIds
+        if (room.status != "active" || userId !in room.participantIds) return false
+        val otherUserId = room.participantIds.firstOrNull { it != userId } ?: return false
+        return !blockRepository.isBlockedBetweenUsers(userId, otherUserId)
     }
 
     private suspend fun validateUserCanRead(chatId: String, userId: String): Boolean {
@@ -107,7 +110,7 @@ class ChatMessageRepository(
         if (text.isBlank()) return "Message cannot be empty."
         if (text.length > 1000) return "Message must be 1000 characters or less."
         if (!validateUserCanSend(chatId, senderId)) {
-            return "You can send messages only in active approved chats."
+            return "Messaging is unavailable for this conversation."
         }
         return null
     }

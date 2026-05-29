@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -276,15 +277,21 @@ private fun ChatScreen(
     isArabic: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ChatMessageViewModel = viewModel(key = "mithaq_messages_${room.chatId}")
+    viewModel: ChatMessageViewModel = viewModel(key = "mithaq_messages_${room.chatId}"),
+    safetyViewModel: ChatSafetyViewModel = viewModel(key = "mithaq_chat_safety_${room.chatId}")
 ) {
     val state by viewModel.state.collectAsState()
+    val safetyState by safetyViewModel.state.collectAsState()
     var draft by remember(room.chatId) { mutableStateOf("") }
+    var showReportDialog by remember(room.chatId) { mutableStateOf(false) }
+    var showBlockDialog by remember(room.chatId) { mutableStateOf(false) }
     val otherUserId = room.participantIds.firstOrNull { it != currentUserId }.orEmpty()
     val summary = room.participantPublicSummaries[otherUserId] ?: ChatParticipantSummary(userId = otherUserId)
+    val canSend = room.status == "active" && !safetyState.isBlocked && !state.isSending && !safetyState.isCheckingBlock
 
-    LaunchedEffect(room.chatId) {
+    LaunchedEffect(room.chatId, currentUserId, otherUserId) {
         viewModel.loadMessages(room.chatId)
+        safetyViewModel.loadBlockState(currentUserId, otherUserId)
     }
 
     Column(
@@ -309,7 +316,41 @@ private fun ChatScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = { showReportDialog = true },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (isArabic) "Ø¥Ø¨Ù„Ø§Øº" else "Report")
+            }
+            OutlinedButton(
+                onClick = { showBlockDialog = true },
+                modifier = Modifier.weight(1f),
+                enabled = !safetyState.isBlocked && !safetyState.isBlocking
+            ) {
+                Text(if (isArabic) "Ø­Ø¸Ø±" else "Block")
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        safetyState.message?.let { message ->
+            InfoCard(text = message, isError = false)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        safetyState.errorMessage?.let { error ->
+            InfoCard(text = error, isError = true)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        if (safetyState.isBlocked) {
+            InfoCard(
+                text = if (isArabic) "Ø§Ù„ØªØ±Ø§Ø³Ù„ ØºÙŠØ± Ù…ØªØ§Ø­ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©." else "Messaging is unavailable for this conversation.",
+                isError = false
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
         state.errorMessage?.let { error ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -381,7 +422,7 @@ private fun ChatScreen(
                 onValueChange = { if (it.length <= 1000) draft = it },
                 modifier = Modifier.weight(1f),
                 placeholder = { Text(if (isArabic) "اكتب رسالة" else "Write a message") },
-                enabled = !state.isSending && room.status == "active",
+                enabled = canSend,
                 singleLine = false,
                 maxLines = 4
             )
@@ -391,12 +432,153 @@ private fun ChatScreen(
                     draft = ""
                     viewModel.sendTextMessage(room.chatId, currentUserId, text)
                 },
-                enabled = draft.isNotBlank() && !state.isSending && room.status == "active"
+                enabled = draft.isNotBlank() && canSend
             ) {
                 Icon(Icons.Filled.Send, contentDescription = null)
             }
         }
     }
+
+    if (showReportDialog) {
+        ReportUserDialog(
+            isSubmitting = safetyState.isSubmittingReport,
+            onDismiss = {
+                showReportDialog = false
+                safetyViewModel.clearMessages()
+            },
+            onSubmit = { reason, details ->
+                safetyViewModel.reportUser(currentUserId, otherUserId, room.chatId, reason, details)
+                showReportDialog = false
+            }
+        )
+    }
+
+    if (showBlockDialog) {
+        AlertDialog(
+            onDismissRequest = { showBlockDialog = false },
+            title = { Text("Block this member?") },
+            text = { Text("They will not be able to send you messages in this conversation.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        safetyViewModel.blockUser(currentUserId, otherUserId, room.chatId)
+                        showBlockDialog = false
+                    },
+                    enabled = !safetyState.isBlocking
+                ) {
+                    Text("Block")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlockDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun InfoCard(
+    text: String,
+    isError: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isError) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.primaryContainer
+            }
+        )
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(12.dp),
+            color = if (isError) {
+                MaterialTheme.colorScheme.onErrorContainer
+            } else {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            },
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
+private fun ReportUserDialog(
+    isSubmitting: Boolean,
+    onDismiss: () -> Unit,
+    onSubmit: (String, String) -> Unit
+) {
+    val reasons = listOf(
+        "Inappropriate message",
+        "Harassment",
+        "Fake profile",
+        "Privacy concern",
+        "Other"
+    )
+    var selectedReason by remember { mutableStateOf(reasons.first()) }
+    var details by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Report member") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Choose a reason and add optional details.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                reasons.forEach { reason ->
+                    OutlinedButton(
+                        onClick = { selectedReason = reason },
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = if (selectedReason == reason) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.28f)
+                            }
+                        )
+                    ) {
+                        Text(reason)
+                    }
+                }
+                TextField(
+                    value = details,
+                    onValueChange = { details = it.take(500) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Optional details") },
+                    minLines = 3,
+                    maxLines = 5
+                )
+                Text(
+                    text = "${details.length}/500",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSubmit(selectedReason, details) },
+                enabled = !isSubmitting && selectedReason.isNotBlank()
+            ) {
+                Text("Submit report")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
