@@ -44,7 +44,7 @@
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="mithaq_alerts_channel_v4" />
+            android:value="mithaq_messages_channel_v2" />
 
         <service
             android:name=".notification.MithaqFirebaseMessagingService"

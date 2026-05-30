@@ -61,7 +61,7 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            val channelId = "mithaq_urgent_channel_v1"
+            val channelId = MESSAGE_CHANNEL_ID
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val soundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
 
@@ -92,8 +92,8 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 .build()
 
             val urgentChannel = NotificationChannel(
-                "mithaq_urgent_channel_v1",
-                "Mithaq Official Alerts",
+                MESSAGE_CHANNEL_ID,
+                "Mithaq Messages",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Urgent alerts for messages and interactions"
@@ -123,5 +123,7 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(urgentChannel)
             notificationManager.createNotificationChannel(defaultChannel)
         }
+
+        const val MESSAGE_CHANNEL_ID = "mithaq_messages_channel_v2"
     }
 }

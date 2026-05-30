@@ -80,6 +80,10 @@ Phase 8.5 introduces basic chat safety foundations:
 
 Phase 8.6 adds realtime Firestore listeners for active chat rooms and text messages. Listener access must still be protected by the same Firestore rules as normal reads: verified users may listen only to `chats/{chatId}` documents where their uid is in `participantIds`, and only to `chats/{chatId}/messages/{messageId}` under chats where they are participants. Realtime updates do not relax the text-only message limits, participant checks, block checks, or private-profile boundaries.
 
+Phase 8.8 queues a `notifications/{notificationId}` document when a participant sends a text message. This document should be created only by the sender, only for the other participant in an existing chat room, and only with a `PENDING` status. The notification document should contain routing metadata such as `chatId`, `messageId`, sender uid, recipient uid, title, and a short safe preview. It must not contain private profile maps, photo URLs, guardian contact details, or full chat exports. For instant background delivery in production, prefer a Cloud Function that observes new chat messages or queued notifications and sends FCM data notifications through the Admin SDK.
+
+Admin membership changes may temporarily fall back from Cloud Functions to direct Firestore updates for `isPremium`, `subscriptionPlan`, `premiumExpiry`, `isWaliAccount`, and `isAdmin`. Rules must allow only role-based admins to perform those writes, and production should prefer backend/admin writes with audit logs.
+
 ## Example Pattern
 
 ```js

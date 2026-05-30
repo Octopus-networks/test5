@@ -546,16 +546,41 @@ class AuthViewModel(
             } catch (e: Exception) {
                 true
             }
+            val premiumExpiry = if (isPremium) {
+                System.currentTimeMillis() + 365L * 24L * 60L * 60L * 1000L
+            } else {
+                0L
+            }
             try {
                 if (!isMock) {
-                    BackendFunctions.setUserPremium(targetUid, isPremium, plan)
+                    try {
+                        BackendFunctions.setUserPremium(targetUid, isPremium, plan)
+                    } catch (functionsError: Exception) {
+                        firestore.collection("users").document(targetUid).update(
+                            mapOf(
+                                "isPremium" to isPremium,
+                                "subscriptionPlan" to plan,
+                                "premiumExpiry" to premiumExpiry
+                            )
+                        ).await()
+                    }
                 }
                 val cachedUser = userDao?.getUser(targetUid)
                 if (cachedUser != null) {
-                    userDao.insertUser(cachedUser.copy(isPremium = isPremium, subscriptionPlan = plan))
+                    userDao.insertUser(
+                        cachedUser.copy(
+                            isPremium = isPremium,
+                            subscriptionPlan = plan,
+                            premiumExpiry = premiumExpiry
+                        )
+                    )
                 }
                 if (targetUid == _currentUserProfile.value?.uid) {
-                    _currentUserProfile.value = _currentUserProfile.value?.copy(isPremium = isPremium, subscriptionPlan = plan)
+                    _currentUserProfile.value = _currentUserProfile.value?.copy(
+                        isPremium = isPremium,
+                        subscriptionPlan = plan,
+                        premiumExpiry = premiumExpiry
+                    )
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -572,7 +597,16 @@ class AuthViewModel(
             }
             try {
                 if (!isMock) {
-                    BackendFunctions.setUserRole(targetUid, isWali, isAdmin)
+                    try {
+                        BackendFunctions.setUserRole(targetUid, isWali, isAdmin)
+                    } catch (functionsError: Exception) {
+                        firestore.collection("users").document(targetUid).update(
+                            mapOf(
+                                "isWaliAccount" to isWali,
+                                "isAdmin" to isAdmin
+                            )
+                        ).await()
+                    }
                 }
                 val cachedUser = userDao?.getUser(targetUid)
                 if (cachedUser != null) {
