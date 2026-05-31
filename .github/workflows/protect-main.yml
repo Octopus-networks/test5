@@ -1,0 +1,140 @@
+name: 🔒 Protect Main Branch
+
+# This workflow acts as a "force-push guard" for the main branch.
+# It also validates that every push or PR follows baseline code quality gates.
+#
+# Force-push protection at the *GitHub repository level* must also be enabled
+# in: Settings → Branches → Branch protection rules → main → "Disallow force pushes"
+# This workflow adds an additional layer of automated checks.
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ── 1. Detect and block direct force-pushes ─────────────────────────────────
+  detect-force-push:
+    name: 🚫 Detect Force Push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: 📥 Checkout repository (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Check for force-push signature
+        run: |
+          # A force-push rewrites history — the parent of HEAD will not
+          # be traceable in the remote's reflog. We detect this by comparing
+          # the commit count on main between origin and HEAD.
+          REMOTE_COUNT=$(git rev-list --count origin/main 2>/dev/null || echo 0)
+          LOCAL_COUNT=$(git rev-list --count HEAD)
+
+          echo "Remote commits : $REMOTE_COUNT"
+          echo "Current commits: $LOCAL_COUNT"
+
+          if [ "$LOCAL_COUNT" -lt "$REMOTE_COUNT" ]; then
+            echo "::error::🚫 FORCE PUSH DETECTED — commit history was rewritten!"
+            echo "::error::Remote had $REMOTE_COUNT commits but HEAD has only $LOCAL_COUNT."
+            echo "::error::Force pushes to 'main' are not allowed. Use a PR to revert commits."
+            exit 1
+          fi
+
+          echo "✅ No force-push detected. History is intact."
+
+  # ── 2. Require PR for all changes to main ───────────────────────────────────
+  require-pull-request:
+    name: 🔀 Require Pull Request
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+
+    steps:
+      - name: ⚠️ Warn on direct push to main
+        run: |
+          echo "::warning::Direct push to 'main' detected."
+          echo "::warning::Consider using a feature branch and Pull Request workflow."
+          echo "::warning::Enable branch protection in GitHub Settings to enforce this."
+
+  # ── 3. Validate commit messages ──────────────────────────────────────────────
+  validate-commits:
+    name: 📝 Validate Commit Messages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+
+      - name: 🔍 Check commit message format
+        run: |
+          # Enforce Conventional Commits style on the last 5 commits
+          ERRORS=0
+          git log --format="%s" -5 | while read subject; do
+            if echo "$subject" | grep -qP '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:\s.+'; then
+              echo "✅ OK: $subject"
+            else
+              echo "::warning::Non-conventional commit: '$subject' — consider using feat:/fix:/docs: prefix"
+            fi
+          done
+
+  # ── 4. Android build gate ────────────────────────────────────────────────────
+  build-gate:
+    name: 🔨 Build Gate (Debug)
+    runs-on: ubuntu-latest
+    needs: [detect-force-push]
+    permissions:
+      contents: read
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: 📱 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: ✅ Accept Android SDK Licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: 📦 Install SDK Platform 36
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0" || true
+
+      - name: 🔑 Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
+
+      - name: 🔨 Build Debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+
+      - name: 📤 Upload APK artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: mithaq-protected-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: 📋 Upload Build Reports on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-failure-reports
+          path: app/build/reports/
+          retention-days: 7

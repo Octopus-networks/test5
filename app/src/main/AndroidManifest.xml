@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     
     <!-- Permissions for Adhan & Prayer Times -->
@@ -83,9 +84,23 @@
             </intent-filter>
         </activity>
 
-                <receiver
+        <receiver
             android:name=".receiver.AdhanReceiver"
-            android:exported="true">
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.mithaq.app.action.ADHAN_ALARM" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+             BootReceiver: يُستدعى تلقائياً عند إعادة تشغيل الجهاز.
+             يُعيد جدولة منبهات الأذان ومزامنة الإشعارات دون الحاجة لفتح التطبيق.
+             ملاحظة: لا يعمل بعد Force Stop — هذا قيد مقصود من Android.
+        -->
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:exported="false"
+            android:directBootAware="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />

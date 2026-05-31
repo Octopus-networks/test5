@@ -142,6 +142,11 @@ class MainActivity : FragmentActivity() {
         }
         installAppCheck()
 
+        // ── Force Stop Recovery ──────────────────────────────────────────────
+        // If the user Force Stopped the app, WorkManager and Adhan alarms are
+        // cleared. We silently restore them here every time the app opens.
+        ensureBackgroundServicesRunning()
+
         setContent {
             var isArabic by remember { mutableStateOf(false) }
             var isDarkMode by remember { mutableStateOf(false) }
@@ -239,7 +244,60 @@ class MainActivity : FragmentActivity() {
             null
         }
     }
+
+    /**
+     * ensureBackgroundServicesRunning
+     *
+     * يُعيد تشغيل الخدمات الخلفية الضرورية في حالة توقفها بسبب Force Stop أو
+     * أي سبب آخر. يُستدعى تلقائياً في كل مرة يُفتح فيها التطبيق.
+     *
+     * الخدمات التي يستعيدها:
+     *  1. WorkManager (مزامنة الإشعارات كل 15 دقيقة)
+     *  2. منبهات الأذان — إذا كانت مفعلة ولم تكن مجدولة
+     */
+    private fun ensureBackgroundServicesRunning() {
+        try {
+            val prefs = getSharedPreferences("mithaq_prefs", MODE_PRIVATE)
+            val authPrefs = getSharedPreferences("mithaq_mock_auth", MODE_PRIVATE)
+
+            // ── 1. Restart WorkManager if needed ─────────────────────────────
+            val uid = authPrefs.getString("uid", null)
+                ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+
+            if (uid != null) {
+                // Persist UID so BootReceiver can find it after device reboot
+                prefs.edit().putString("last_logged_in_uid", uid).apply()
+                // Re-enqueue WorkManager (KEEP policy = safe to call multiple times)
+                com.mithaq.app.notification.NotificationSyncWorker.schedule(this)
+                android.util.Log.d("MainActivity", "WorkManager ensured for uid=$uid")
+            }
+
+            // ── 2. Reschedule Adhan if enabled but potentially cleared ────────
+            val isAdhanEnabled = prefs.getBoolean("isAdhanEnabled", false)
+            val lat = prefs.getFloat("adhan_lat",
+                prefs.getFloat("adhanLocationLat", 0.0f)
+            ).toDouble()
+            val lng = prefs.getFloat("adhan_lng",
+                prefs.getFloat("adhanLocationLng", 0.0f)
+            ).toDouble()
+            val calculationMethod = prefs.getString(
+                "adhan_calculation_method", "MUSLIM_WORLD_LEAGUE"
+            )
+            val soundPattern = prefs.getString("adhan_sound_pattern", "TAKBEER")
+
+            if (isAdhanEnabled && (lat != 0.0 || lng != 0.0)) {
+                com.mithaq.app.util.AdhanScheduler.scheduleNextAdhan(
+                    this, lat, lng, calculationMethod, soundPattern
+                )
+                android.util.Log.d("MainActivity", "Adhan alarms ensured at ($lat, $lng)")
+            }
+        } catch (e: Exception) {
+            // Non-critical — silently swallow any errors
+            android.util.Log.w("MainActivity", "ensureBackgroundServicesRunning failed: ${e.message}")
+        }
+    }
 }
+
 
 @Composable
 private fun OnboardingTemporaryCompletionScreen(
