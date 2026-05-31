@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+env:
+  # Opt in early to GitHub-hosted JavaScript actions running on Node.js 24.
+  # This removes the Node.js 20 deprecation warning before GitHub flips the default.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: android-ci-${{ github.ref }}
   cancel-in-progress: true
