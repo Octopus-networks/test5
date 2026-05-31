@@ -1,38 +1,41 @@
-# Mithaq — تطبيق الزواج الإسلامي
+# Mithaq — Islamic Marriage App
 
 <div align="center">
 
 <!-- ── Language & Platform ─────────────────────────────────────────────── -->
-![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
-![Android](https://img.shields.io/badge/Android-Min%20API%2024-3DDC84?style=for-the-badge&logo=android&logoColor=white)
-![Java](https://img.shields.io/badge/JDK-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
+![Android](https://img.shields.io/badge/Android-API%2024--36-3DDC84?style=for-the-badge&logo=android&logoColor=white)
+![JDK](https://img.shields.io/badge/JDK-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 
 <!-- ── UI & Architecture ────────────────────────────────────────────────── -->
-![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Compose%20BOM-2026.03.01-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)
+![Material 3](https://img.shields.io/badge/Material%203-UI-757575?style=for-the-badge&logo=materialdesign&logoColor=white)
 ![Architecture](https://img.shields.io/badge/Architecture-MVVM%20%2B%20Clean-FF6F00?style=for-the-badge&logo=android&logoColor=white)
-![RTL](https://img.shields.io/badge/Layout-RTL%20Arabic-009688?style=for-the-badge&logo=googletranslate&logoColor=white)
+![RTL](https://img.shields.io/badge/Layout-RTL%20Ready-009688?style=for-the-badge&logo=googletranslate&logoColor=white)
 
 <!-- ── Backend & Services ──────────────────────────────────────────────── -->
-![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20FCM-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
-![Cloud Functions](https://img.shields.io/badge/Cloud%20Functions-Node.js%2018-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
-![Room](https://img.shields.io/badge/Room-Local%20Cache-6200EE?style=for-the-badge&logo=sqlite&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase%20BOM-33.1.0-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![Firebase Services](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20Storage%20%7C%20FCM%20%7C%20Functions-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![Cloud Functions](https://img.shields.io/badge/Cloud%20Functions-Node.js%2020-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
+![Room](https://img.shields.io/badge/Room-2.8.4-6200EE?style=for-the-badge&logo=sqlite&logoColor=white)
 
 <!-- ── AI & ML ──────────────────────────────────────────────────────────── -->
-![Gemini](https://img.shields.io/badge/Gemini%20AI-Matchmaking-8E24AA?style=for-the-badge&logo=google&logoColor=white)
-![ML Kit](https://img.shields.io/badge/ML%20Kit-Face%20Detection-34A853?style=for-the-badge&logo=google&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini%20SDK-0.9.0-8E24AA?style=for-the-badge&logo=google&logoColor=white)
+![ML Kit](https://img.shields.io/badge/ML%20Kit%20Face%20Detection-17.1.0-34A853?style=for-the-badge&logo=google&logoColor=white)
 
 <!-- ── Security ────────────────────────────────────────────────────────── -->
 ![App Check](https://img.shields.io/badge/App%20Check-Play%20Integrity-EA4335?style=for-the-badge&logo=googlechrome&logoColor=white)
-![Biometric](https://img.shields.io/badge/Biometric-Lock-607D8B?style=for-the-badge&logo=android&logoColor=white)
+![Biometric](https://img.shields.io/badge/Biometric-1.1.0-607D8B?style=for-the-badge&logo=android&logoColor=white)
 
 <!-- ── Build & CI ──────────────────────────────────────────────────────── -->
-![Build](https://img.shields.io/badge/Build-Gradle%208-02303A?style=for-the-badge&logo=gradle&logoColor=white)
+![Gradle](https://img.shields.io/badge/Gradle-9.4.1-02303A?style=for-the-badge&logo=gradle&logoColor=white)
+![Android Gradle Plugin](https://img.shields.io/badge/AGP-9.2.1-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Branch Protection](https://img.shields.io/badge/Branch-Protected%20%7C%20No%20Force%20Push-red?style=for-the-badge&logo=git&logoColor=white)
 
-<!-- ── APK Size ─────────────────────────────────────────────────────────── -->
-![Release APK](https://img.shields.io/badge/Release%20APK-13.2%20MB-success?style=for-the-badge&logo=android&logoColor=white)
-![Version](https://img.shields.io/badge/Version-2.0.0-blue?style=for-the-badge)
+<!-- ── App Metadata ────────────────────────────────────────────────────── -->
+![Debug APK](https://img.shields.io/badge/Debug%20APK-29.3%20MB-success?style=for-the-badge&logo=android&logoColor=white)
+![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-Proprietary-lightgrey?style=for-the-badge)
 
 </div>
