@@ -16,6 +16,11 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    function isVerifiedEmailUser() {
+      return isAuthenticated() &&
+        request.auth.token.email_verified == true;
+    }
+
     function changedOnly(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
@@ -155,6 +160,39 @@ service cloud.firestore {
         );
     }
 
+    function hasAcceptedInterest(uidA, uidB) {
+      return exists(/databases/$(database)/documents/interestRequests/$(uidA + "_" + uidB)) &&
+        get(/databases/$(database)/documents/interestRequests/$(uidA + "_" + uidB)).data.status == "accepted" ||
+        exists(/databases/$(database)/documents/interestRequests/$(uidB + "_" + uidA)) &&
+        get(/databases/$(database)/documents/interestRequests/$(uidB + "_" + uidA)).data.status == "accepted";
+    }
+
+    function approvedChatRequestFor(uidA, uidB, requestId) {
+      return requestId is string &&
+        exists(/databases/$(database)/documents/chatRequests/$(requestId)) &&
+        get(/databases/$(database)/documents/chatRequests/$(requestId)).data.status == "approved" &&
+        (
+          (
+            get(/databases/$(database)/documents/chatRequests/$(requestId)).data.fromUserId == uidA &&
+            get(/databases/$(database)/documents/chatRequests/$(requestId)).data.toUserId == uidB
+          ) ||
+          (
+            get(/databases/$(database)/documents/chatRequests/$(requestId)).data.fromUserId == uidB &&
+            get(/databases/$(database)/documents/chatRequests/$(requestId)).data.toUserId == uidA
+          )
+        );
+    }
+
+    function chatData(chatId) {
+      return get(/databases/$(database)/documents/chats/$(chatId)).data;
+    }
+
+    function isChatParticipant(chatId) {
+      return isVerifiedEmailUser() &&
+        exists(/databases/$(database)/documents/chats/$(chatId)) &&
+        request.auth.uid in chatData(chatId).participantIds;
+    }
+
     match /users/{userId} {
       allow read: if isAuthenticated();
 
@@ -185,6 +223,272 @@ service cloud.firestore {
       match /chatLimits/{limitId} {
         allow read: if isOwner(userId) || isAdmin();
         allow write: if false;
+      }
+    }
+
+    match /profiles/{userId} {
+      allow read: if (isVerifiedEmailUser() && request.auth.uid == userId) || isAdmin();
+      allow create, update: if isVerifiedEmailUser() &&
+        request.auth.uid == userId &&
+        request.resource.data.keys().hasOnly([
+          "onboardingCompleted",
+          "onboardingStep",
+          "profileCompletionPercent",
+          "basicInfo",
+          "personalStatus",
+          "religiousPractice",
+          "marriageIntent",
+          "updatedAt"
+        ]);
+      allow delete: if false;
+    }
+
+    match /publicProfiles/{userId} {
+      allow read: if isVerifiedEmailUser() || isAdmin();
+      allow create, update: if isVerifiedEmailUser() &&
+        request.auth.uid == userId &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasOnly([
+          "userId",
+          "displayName",
+          "age",
+          "city",
+          "country",
+          "accountType",
+          "maritalStatus",
+          "marriageTimeline",
+          "prayerHabitPublicLabel",
+          "prayerRoutineShared",
+          "localTimeEnabled",
+          "hasGuardian",
+          "isEmailVerified",
+          "isIdentityVerified",
+          "photoPrivacyMode",
+          "profileCompletionPercent",
+          "lastActiveAt",
+          "updatedAt"
+        ]) &&
+        request.resource.data.isEmailVerified == true &&
+        !(request.resource.data.keys().hasAny([
+          "income",
+          "health",
+          "fertility",
+          "weight",
+          "guardianEmail",
+          "guardianPhone",
+          "privatePhotoUrl",
+          "photoUrl",
+          "rawPrayerLogs"
+        ]));
+      allow delete: if false;
+    }
+
+    match /interestRequests/{requestId} {
+      allow read: if isVerifiedEmailUser() &&
+        (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid || isAdmin());
+      allow create: if isVerifiedEmailUser() &&
+        request.resource.data.fromUserId == request.auth.uid &&
+        request.resource.data.toUserId is string &&
+        request.resource.data.toUserId != request.auth.uid &&
+        requestId == request.auth.uid + "_" + request.resource.data.toUserId &&
+        request.resource.data.status == "pending" &&
+        request.resource.data.keys().hasOnly([
+          "requestId",
+          "fromUserId",
+          "toUserId",
+          "fromDisplayName",
+          "toDisplayName",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]);
+      allow update: if isVerifiedEmailUser() && (
+        (
+          resource.data.fromUserId == request.auth.uid &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId &&
+          request.resource.data.status in ["pending", "cancelled"] &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "fromDisplayName",
+            "toDisplayName",
+            "status",
+            "createdAt",
+            "updatedAt"
+          ])
+        ) ||
+        (
+          resource.data.toUserId == request.auth.uid &&
+          resource.data.status == "pending" &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId &&
+          request.resource.data.status in ["accepted", "declined"] &&
+          changedOnly(["status", "updatedAt"])
+        )
+      );
+      allow delete: if false;
+    }
+
+    match /photoRequests/{requestId} {
+      allow read: if isVerifiedEmailUser() &&
+        (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid || isAdmin());
+      allow create: if isVerifiedEmailUser() &&
+        request.resource.data.fromUserId == request.auth.uid &&
+        request.resource.data.toUserId is string &&
+        request.resource.data.toUserId != request.auth.uid &&
+        requestId == request.auth.uid + "_" + request.resource.data.toUserId &&
+        request.resource.data.status == "pending" &&
+        hasAcceptedInterest(request.auth.uid, request.resource.data.toUserId) &&
+        request.resource.data.keys().hasOnly([
+          "requestId",
+          "fromUserId",
+          "toUserId",
+          "status",
+          "relatedInterestRequestId",
+          "createdAt",
+          "updatedAt"
+        ]);
+      allow update: if isVerifiedEmailUser() && (
+        (
+          resource.data.fromUserId == request.auth.uid &&
+          resource.data.status == "pending" &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId &&
+          request.resource.data.status == "cancelled" &&
+          changedOnly(["status", "updatedAt"])
+        ) ||
+        (
+          resource.data.toUserId == request.auth.uid &&
+          resource.data.status == "pending" &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId &&
+          request.resource.data.status in ["approved", "declined"] &&
+          changedOnly(["status", "updatedAt"])
+        )
+      );
+      allow delete: if false;
+    }
+
+    match /chatRequests/{requestId} {
+      allow read: if isVerifiedEmailUser() &&
+        (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid || isAdmin());
+      allow create: if isVerifiedEmailUser() &&
+        request.resource.data.fromUserId == request.auth.uid &&
+        request.resource.data.toUserId is string &&
+        request.resource.data.toUserId != request.auth.uid &&
+        requestId == request.auth.uid + "_" + request.resource.data.toUserId &&
+        request.resource.data.status == "pending" &&
+        hasAcceptedInterest(request.auth.uid, request.resource.data.toUserId) &&
+        request.resource.data.requiresGuardianApproval == false &&
+        request.resource.data.guardianApprovalStatus == "not_required" &&
+        request.resource.data.keys().hasOnly([
+          "requestId",
+          "fromUserId",
+          "toUserId",
+          "status",
+          "relatedInterestRequestId",
+          "requiresGuardianApproval",
+          "guardianApprovalStatus",
+          "createdAt",
+          "updatedAt"
+        ]);
+      allow update: if isVerifiedEmailUser() && (
+        (
+          resource.data.fromUserId == request.auth.uid &&
+          resource.data.status == "pending" &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId &&
+          request.resource.data.status == "cancelled" &&
+          changedOnly(["status", "updatedAt"])
+        ) ||
+        (
+          resource.data.toUserId == request.auth.uid &&
+          resource.data.status in ["pending", "approved"] &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId &&
+          request.resource.data.status in ["pending", "approved", "declined"] &&
+          changedOnly(["status", "updatedAt"])
+        ) ||
+        (
+          (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid) &&
+          resource.data.status == "approved" &&
+          request.resource.data.status == resource.data.status &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId &&
+          request.resource.data.createdChatId is string &&
+          changedOnly(["createdChatId", "updatedAt"])
+        )
+      );
+      allow delete: if false;
+    }
+
+    match /chats/{chatId} {
+      allow read: if isChatParticipant(chatId) || isAdmin();
+      allow create: if isVerifiedEmailUser() &&
+        request.resource.data.chatId == chatId &&
+        request.resource.data.participantIds is list &&
+        request.resource.data.participantIds.size() == 2 &&
+        request.resource.data.participantIds[0] is string &&
+        request.resource.data.participantIds[1] is string &&
+        request.resource.data.participantIds[0] != request.resource.data.participantIds[1] &&
+        request.auth.uid in request.resource.data.participantIds &&
+        request.resource.data.status == "active" &&
+        request.resource.data.guardianApprovalStatus == "not_required" &&
+        approvedChatRequestFor(
+          request.resource.data.participantIds[0],
+          request.resource.data.participantIds[1],
+          request.resource.data.createdFromChatRequestId
+        ) &&
+        request.resource.data.keys().hasOnly([
+          "chatId",
+          "participantIds",
+          "participantPublicSummaries",
+          "createdFromChatRequestId",
+          "createdFromInterestRequestId",
+          "status",
+          "guardianApprovalStatus",
+          "lastMessagePreview",
+          "lastMessageAt",
+          "createdAt",
+          "updatedAt"
+        ]);
+      allow update: if isChatParticipant(chatId) &&
+        request.resource.data.participantIds == resource.data.participantIds &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.createdFromChatRequestId == resource.data.createdFromChatRequestId &&
+        changedOnly(["lastMessagePreview", "lastMessageAt", "updatedAt"]);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isChatParticipant(chatId) || isAdmin();
+        allow create: if isChatParticipant(chatId) &&
+          chatData(chatId).status == "active" &&
+          request.resource.data.keys().hasOnly([
+            "messageId",
+            "chatId",
+            "senderId",
+            "text",
+            "type",
+            "status",
+            "createdAt",
+            "updatedAt",
+            "editedAt",
+            "deletedAt"
+          ]) &&
+          request.resource.data.messageId == messageId &&
+          request.resource.data.chatId == chatId &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 1000 &&
+          request.resource.data.type == "text" &&
+          request.resource.data.status == "sent";
+        allow update: if isChatParticipant(chatId) &&
+          resource.data.senderId == request.auth.uid &&
+          request.resource.data.senderId == resource.data.senderId &&
+          request.resource.data.chatId == resource.data.chatId &&
+          changedOnly(["status", "updatedAt"]) &&
+          request.resource.data.status == "sent";
+        allow delete: if false;
       }
     }
 
