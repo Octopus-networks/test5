@@ -57,9 +57,11 @@ fun LoginScreen(
     var localError by remember { mutableStateOf<String?>(null) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
-    val webClientId = "82166798906-fcmuj2511hr81qohhrfrv0udke7nm8vf.apps.googleusercontent.com"
+    val webClientId = remember {
+        context.getString(com.mithaq.app.R.string.default_web_client_id)
+    }
 
-    val gso = remember {
+    val gso = remember(webClientId) {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(webClientId)
             .requestEmail()
