@@ -1,27 +1,37 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper to check if a user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper to check if a user is writing their own storage data
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Helper to check if user has Admin role in Firestore
     function isAdmin() {
       return isAuthenticated() &&
         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    // Profiles storage rules
+    function canReadProfileMedia(imageId) {
+      return isAdmin() ||
+        imageId.matches(request.auth.uid + '(_additional_[0-9]+)?\\.jpg');
+    }
+
+    function canReadVoiceIntro(voiceId) {
+      return isAdmin() || voiceId == request.auth.uid + '.mp4';
+    }
+
+    function validVerificationDocument(documentId) {
+      return documentId in ['id_card.jpg', 'selfie.jpg', 'selfie_video.mp4'];
+    }
+
     match /profiles/{imageId} {
-      // Any authenticated user can view other members' profiles
-      allow read: if isAuthenticated();
-      // Only the profile owner can upload or change their photo
+      // Sensitive profile media is not public-by-authentication anymore.
+      // The owner/admin can read legacy paths; approved-viewer access should move
+      // to a dedicated private media flow before production.
+      allow read: if isAuthenticated() && canReadProfileMedia(imageId);
       allow create, update: if isAuthenticated() &&
         imageId.matches(request.auth.uid + '(_additional_[0-9]+)?\\.jpg') &&
         request.resource.size < 5 * 1024 * 1024 &&
@@ -29,11 +39,10 @@ service firebase.storage {
       allow delete: if false;
     }
 
-    // Voice Introductions storage rules
     match /voices/{voiceId} {
-      // Any authenticated user can listen to voice introductions
-      allow read: if isAuthenticated();
-      // Only the profile owner can upload or update their voice introduction
+      // Voice introductions may reveal identity; keep them owner/admin-only until
+      // an explicit approved-list access model is implemented.
+      allow read: if isAuthenticated() && canReadVoiceIntro(voiceId);
       allow create, update: if isAuthenticated() &&
         voiceId == request.auth.uid + '.mp4' &&
         request.resource.size < 15 * 1024 * 1024 &&
@@ -41,15 +50,17 @@ service firebase.storage {
       allow delete: if false;
     }
 
-    // Identity Verification Document rules (Sensitive IDs and Live Selfies)
     match /verification/{userId}/{documentId} {
-      // Only Admins can download and review identity verification documents
       allow read: if isAdmin();
-      // Only the user themselves can upload their verification documents
-      allow create, update: if isOwner(userId) &&
+      allow create: if isOwner(userId) &&
+        validVerificationDocument(documentId) &&
         request.resource.size < 20 * 1024 * 1024 &&
-        (request.resource.contentType.matches('image/.*') ||
-         request.resource.contentType.matches('video/.*'));
+        (
+          request.resource.contentType.matches('image/.*') ||
+          request.resource.contentType.matches('video/.*')
+        );
+      // Do not allow clients to replace verification evidence after submission.
+      allow update: if false;
       allow delete: if false;
     }
   }

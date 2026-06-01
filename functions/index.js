@@ -219,15 +219,49 @@ exports.onLikeCreated = onDocumentCreated(
   { document: "likes/{likeId}", region },
   async (event) => {
     const like = event.data && event.data.data();
-    if (!like || !like.fromUid || !like.toUid) {
+    if (!like || !like.fromUid || !like.toUid || like.fromUid === like.toUid) {
       return;
     }
-    const senderName = await userName(like.fromUid);
+
+    const inverseId = `${like.toUid}_${like.fromUid}`;
+    const inverseRef = db.collection("likes").doc(inverseId);
+    const currentRef = event.data.ref;
+    const inverseSnap = await inverseRef.get();
+    const isMutual = inverseSnap.exists && inverseSnap.get("fromUid") === like.toUid && inverseSnap.get("toUid") === like.fromUid;
+
+    if (isMutual) {
+      await db.runTransaction(async (transaction) => {
+        const freshInverse = await transaction.get(inverseRef);
+        const freshCurrent = await transaction.get(currentRef);
+        if (!freshInverse.exists || !freshCurrent.exists) {
+          return;
+        }
+        transaction.update(currentRef, { isMutual: true });
+        transaction.update(inverseRef, { isMutual: true });
+      });
+
+      await createNotification({
+        senderUid: like.fromUid,
+        recipientUid: like.toUid,
+        title: "Mithaq - Mutual interest",
+        body: "You have a new mutual interest.",
+        type: "mutual_like",
+      });
+      await createNotification({
+        senderUid: like.toUid,
+        recipientUid: like.fromUid,
+        title: "Mithaq - Mutual interest",
+        body: "You have a new mutual interest.",
+        type: "mutual_like",
+      });
+      return;
+    }
+
     await createNotification({
       senderUid: like.fromUid,
       recipientUid: like.toUid,
       title: "Mithaq - New interest",
-      body: `${senderName} liked your profile.`,
+      body: "Someone liked your profile.",
       type: "like",
     });
   }
@@ -249,7 +283,7 @@ exports.onChatMessageCreated = onDocumentCreated(
       senderUid: message.senderId,
       recipientUid,
       title: "Mithaq - New message",
-      body: content ? `${senderName}: ${content}` : `${senderName} sent you a message.`,
+      body: "You have a new message.",
       type: "chat_message",
     });
   }
