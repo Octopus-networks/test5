@@ -33,13 +33,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mithaq.app.R
 import com.mithaq.app.domain.model.ChatRequest
 import com.mithaq.app.domain.model.InterestRequest
 import com.mithaq.app.domain.model.PhotoRequest
 import com.mithaq.app.domain.model.PublicProfile
 import com.mithaq.app.ui.components.MithaqEmptyState
+
+@Composable
+private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
+    stringResource(id = if (isArabic) arabicResId else englishResId)
 
 @Composable
 fun MithaqRequestsScreen(
@@ -50,11 +56,12 @@ fun MithaqRequestsScreen(
     chatRequestViewModel: ChatRequestViewModel,
     modifier: Modifier = Modifier
 ) {
-    val tabs = if (isArabic) {
-        listOf("طلبات الاهتمام", "طلبات الصور", "طلبات المحادثة", "طلبات الولي")
-    } else {
-        listOf("Interest requests", "Photo requests", "Chat requests", "Guardian requests")
-    }
+    val tabs = listOf(
+        localizedString(isArabic, R.string.requests_tab_interest, R.string.requests_tab_interest_ar),
+        localizedString(isArabic, R.string.requests_tab_photo, R.string.requests_tab_photo_ar),
+        localizedString(isArabic, R.string.requests_tab_chat, R.string.requests_tab_chat_ar),
+        localizedString(isArabic, R.string.requests_tab_guardian, R.string.requests_tab_guardian_ar)
+    )
     var selectedTab by remember { mutableIntStateOf(0) }
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
@@ -68,15 +75,14 @@ fun MithaqRequestsScreen(
     ) {
         Column(modifier = Modifier.padding(horizontal = 18.dp)) {
             Text(
-                text = if (isArabic) "الطلبات" else "Requests",
+                text = localizedString(isArabic, R.string.requests_title, R.string.requests_title_ar),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = if (isArabic) "كل طلب واضح ومفصول حتى يبقى التواصل محترمًا."
-                else "Each request type is separated so contact stays clear and respectful.",
+                text = localizedString(isArabic, R.string.requests_subtitle, R.string.requests_subtitle_ar),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -135,9 +141,8 @@ fun MithaqRequestsScreen(
                 }
             )
             else -> MithaqEmptyState(
-                title = if (isArabic) "لا توجد ${tabs[selectedTab]} الآن" else "No ${tabs[selectedTab].lowercase()} yet",
-                message = if (isArabic) "عندما تصلك طلبات جديدة ستظهر هنا مع خطوات واضحة."
-                else "New requests will appear here with clear next steps.",
+                title = localizedString(isArabic, R.string.requests_empty_title, R.string.requests_empty_title_ar),
+                message = localizedString(isArabic, R.string.requests_empty_message, R.string.requests_empty_message_ar),
                 icon = Icons.Filled.Favorite,
                 modifier = Modifier.padding(horizontal = 18.dp)
             )
@@ -167,10 +172,10 @@ private fun InterestRequestsTab(
         }
         state.errorMessage != null -> {
             MithaqEmptyState(
-                title = if (isArabic) "تعذر تحميل طلبات الاهتمام" else "Could not load interest requests",
+                title = localizedString(isArabic, R.string.requests_interest_load_error, R.string.requests_interest_load_error_ar),
                 message = state.errorMessage,
                 icon = Icons.Filled.Refresh,
-                actionLabel = if (isArabic) "إعادة المحاولة" else "Retry",
+                actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry,
                 modifier = Modifier.padding(horizontal = 18.dp)
             )
@@ -188,12 +193,11 @@ private fun InterestRequestsTab(
                     )
                 }
 
-                InterestSectionTitle(if (isArabic) "طلبات واردة معلقة" else "Received pending")
+                InterestSectionTitle(localizedString(isArabic, R.string.requests_received_pending, R.string.requests_received_pending_ar))
                 if (state.receivedPendingRequests.isEmpty()) {
                     MithaqEmptyState(
-                        title = if (isArabic) "لا توجد طلبات اهتمام واردة" else "No received interest requests",
-                        message = if (isArabic) "عندما يرسل لك عضو اهتمامًا جادًا سيظهر هنا."
-                        else "When someone sends a serious interest request, it will appear here.",
+                        title = localizedString(isArabic, R.string.requests_no_received_interest, R.string.requests_no_received_interest_ar),
+                        message = localizedString(isArabic, R.string.requests_no_received_interest_message, R.string.requests_no_received_interest_message_ar),
                         icon = Icons.Filled.Favorite
                     )
                 } else {
@@ -209,12 +213,11 @@ private fun InterestRequestsTab(
                     }
                 }
 
-                InterestSectionTitle(if (isArabic) "طلبات أرسلتها" else "Sent requests")
+                InterestSectionTitle(localizedString(isArabic, R.string.requests_sent, R.string.requests_sent_ar))
                 if (state.sentRequests.isEmpty()) {
                     MithaqEmptyState(
-                        title = if (isArabic) "لا توجد طلبات مرسلة" else "No sent interest requests",
-                        message = if (isArabic) "عند إرسال اهتمام سيظهر هنا مع حالته."
-                        else "Sent interest requests will appear here with their status.",
+                        title = localizedString(isArabic, R.string.requests_no_sent_interest, R.string.requests_no_sent_interest_ar),
+                        message = localizedString(isArabic, R.string.requests_no_sent_interest_message, R.string.requests_no_sent_interest_message_ar),
                         icon = Icons.Filled.Favorite
                     )
                 } else {
@@ -229,12 +232,11 @@ private fun InterestRequestsTab(
                     }
                 }
 
-                InterestSectionTitle(if (isArabic) "سجل الطلبات الواردة" else "Received history")
+                InterestSectionTitle(localizedString(isArabic, R.string.requests_received_history, R.string.requests_received_history_ar))
                 if (state.receivedHistoryRequests.isEmpty()) {
                     MithaqEmptyState(
-                        title = if (isArabic) "لا يوجد سجل طلبات" else "No request history",
-                        message = if (isArabic) "الطلبات المقبولة أو المرفوضة ستظهر هنا."
-                        else "Accepted or declined received requests will appear here.",
+                        title = localizedString(isArabic, R.string.requests_no_history, R.string.requests_no_history_ar),
+                        message = localizedString(isArabic, R.string.requests_history_message, R.string.requests_history_message_ar),
                         icon = Icons.Filled.Favorite
                     )
                 } else {
@@ -273,10 +275,10 @@ private fun PhotoRequestsTab(
         }
         state.errorMessage != null -> {
             MithaqEmptyState(
-                title = if (isArabic) "تعذر تحميل طلبات الصور" else "Could not load photo requests",
+                title = localizedString(isArabic, R.string.requests_photo_load_error, R.string.requests_photo_load_error_ar),
                 message = state.errorMessage,
                 icon = Icons.Filled.Refresh,
-                actionLabel = if (isArabic) "إعادة المحاولة" else "Retry",
+                actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry,
                 modifier = Modifier.padding(horizontal = 18.dp)
             )
@@ -294,12 +296,11 @@ private fun PhotoRequestsTab(
                     )
                 }
 
-                InterestSectionTitle(if (isArabic) "طلبات صور واردة معلقة" else "Received pending")
+                InterestSectionTitle(localizedString(isArabic, R.string.requests_photo_received_pending, R.string.requests_photo_received_pending_ar))
                 if (state.receivedPendingRequests.isEmpty()) {
                     MithaqEmptyState(
-                        title = if (isArabic) "لا توجد طلبات صور واردة" else "No received photo requests",
-                        message = if (isArabic) "طلبات عرض الصور ستظهر هنا دون كشف أي روابط صور خاصة."
-                        else "Photo access requests will appear here without exposing private photo links.",
+                        title = localizedString(isArabic, R.string.requests_no_received_photo, R.string.requests_no_received_photo_ar),
+                        message = localizedString(isArabic, R.string.requests_no_received_photo_message, R.string.requests_no_received_photo_message_ar),
                         icon = Icons.Filled.Favorite
                     )
                 } else {
@@ -315,12 +316,11 @@ private fun PhotoRequestsTab(
                     }
                 }
 
-                InterestSectionTitle(if (isArabic) "طلبات صور أرسلتها" else "Sent photo requests")
+                InterestSectionTitle(localizedString(isArabic, R.string.requests_sent_photo, R.string.requests_sent_photo_ar))
                 if (state.sentRequests.isEmpty()) {
                     MithaqEmptyState(
-                        title = if (isArabic) "لا توجد طلبات صور مرسلة" else "No sent photo requests",
-                        message = if (isArabic) "عند طلب عرض صورة عضو بعد اهتمام مقبول سيظهر الطلب هنا."
-                        else "When you request photo access after accepted interest, it will appear here.",
+                        title = localizedString(isArabic, R.string.requests_no_sent_photo, R.string.requests_no_sent_photo_ar),
+                        message = localizedString(isArabic, R.string.requests_no_sent_photo_message, R.string.requests_no_sent_photo_message_ar),
                         icon = Icons.Filled.Favorite
                     )
                 } else {
@@ -335,12 +335,11 @@ private fun PhotoRequestsTab(
                     }
                 }
 
-                InterestSectionTitle(if (isArabic) "سجل طلبات الصور الواردة" else "Received photo history")
+                InterestSectionTitle(localizedString(isArabic, R.string.requests_photo_history, R.string.requests_photo_history_ar))
                 if (state.receivedHistoryRequests.isEmpty()) {
                     MithaqEmptyState(
-                        title = if (isArabic) "لا يوجد سجل طلبات صور" else "No photo request history",
-                        message = if (isArabic) "الطلبات الموافق عليها أو المرفوضة ستظهر هنا."
-                        else "Approved or declined received photo requests will appear here.",
+                        title = localizedString(isArabic, R.string.requests_no_photo_history, R.string.requests_no_photo_history_ar),
+                        message = localizedString(isArabic, R.string.requests_photo_history_message, R.string.requests_photo_history_message_ar),
                         icon = Icons.Filled.Favorite
                     )
                 } else {
@@ -379,10 +378,10 @@ private fun ChatRequestsTab(
         }
         state.errorMessage != null -> {
             MithaqEmptyState(
-                title = if (isArabic) "تعذر تحميل طلبات التواصل" else "Could not load chat requests",
+                title = localizedString(isArabic, R.string.requests_chat_load_error, R.string.requests_chat_load_error_ar),
                 message = state.errorMessage,
                 icon = Icons.Filled.Refresh,
-                actionLabel = if (isArabic) "إعادة المحاولة" else "Retry",
+                actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry,
                 modifier = Modifier.padding(horizontal = 18.dp)
             )
@@ -400,12 +399,11 @@ private fun ChatRequestsTab(
                     )
                 }
 
-                InterestSectionTitle(if (isArabic) "طلبات تواصل واردة معلقة" else "Received pending")
+                InterestSectionTitle(localizedString(isArabic, R.string.requests_chat_received_pending, R.string.requests_chat_received_pending_ar))
                 if (state.receivedPendingRequests.isEmpty()) {
                     MithaqEmptyState(
-                        title = if (isArabic) "لا توجد طلبات تواصل واردة" else "No received chat requests",
-                        message = if (isArabic) "تبدأ المحادثة بعد الموافقة فقط."
-                        else "Respectful conversation starts only after approval.",
+                        title = localizedString(isArabic, R.string.requests_no_received_chat, R.string.requests_no_received_chat_ar),
+                        message = localizedString(isArabic, R.string.requests_no_received_chat_message, R.string.requests_no_received_chat_message_ar),
                         icon = Icons.Filled.Favorite
                     )
                 } else {
@@ -421,12 +419,11 @@ private fun ChatRequestsTab(
                     }
                 }
 
-                InterestSectionTitle(if (isArabic) "طلبات تواصل أرسلتها" else "Sent chat requests")
+                InterestSectionTitle(localizedString(isArabic, R.string.requests_sent_chat, R.string.requests_sent_chat_ar))
                 if (state.sentRequests.isEmpty()) {
                     MithaqEmptyState(
-                        title = if (isArabic) "لا توجد طلبات تواصل مرسلة" else "No sent chat requests",
-                        message = if (isArabic) "عند طلب تواصل بعد اهتمام مقبول سيظهر الطلب هنا."
-                        else "When you request chat after accepted interest, it will appear here.",
+                        title = localizedString(isArabic, R.string.requests_no_sent_chat, R.string.requests_no_sent_chat_ar),
+                        message = localizedString(isArabic, R.string.requests_no_sent_chat_message, R.string.requests_no_sent_chat_message_ar),
                         icon = Icons.Filled.Favorite
                     )
                 } else {
@@ -441,12 +438,11 @@ private fun ChatRequestsTab(
                     }
                 }
 
-                InterestSectionTitle(if (isArabic) "سجل طلبات التواصل الواردة" else "Received chat history")
+                InterestSectionTitle(localizedString(isArabic, R.string.requests_chat_history, R.string.requests_chat_history_ar))
                 if (state.receivedHistoryRequests.isEmpty()) {
                     MithaqEmptyState(
-                        title = if (isArabic) "لا يوجد سجل طلبات تواصل" else "No chat request history",
-                        message = if (isArabic) "الطلبات المقبولة أو المرفوضة ستظهر هنا."
-                        else "Approved or declined received chat requests will appear here.",
+                        title = localizedString(isArabic, R.string.requests_no_chat_history, R.string.requests_no_chat_history_ar),
+                        message = localizedString(isArabic, R.string.requests_chat_history_message, R.string.requests_chat_history_message_ar),
                         icon = Icons.Filled.Favorite
                     )
                 } else {
@@ -483,11 +479,11 @@ private fun InterestRequestCard(
     onDecline: () -> Unit
 ) {
     val displayName = publicProfile?.displayName ?: request.fromDisplayName
-    val safeName = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" }
+    val safeName = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) }
     val location = publicProfile.locationLabel()
 
     InterestStatusCard(
-        title = if (isArabic) "طلب اهتمام جديد" else "New interest request",
+        title = localizedString(isArabic, R.string.request_new_interest, R.string.request_new_interest_ar),
         name = safeName,
         location = location,
         status = request.status,
@@ -499,14 +495,14 @@ private fun InterestRequestCard(
                 enabled = !isResponding,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(if (isArabic) "قبول" else "Accept")
+                Text(localizedString(isArabic, R.string.request_accept, R.string.request_accept_ar))
             }
             OutlinedButton(
                 onClick = onDecline,
                 enabled = !isResponding,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(if (isArabic) "رفض" else "Decline")
+                Text(localizedString(isArabic, R.string.request_decline, R.string.request_decline_ar))
             }
         }
     }
@@ -522,8 +518,8 @@ private fun SentInterestRequestCard(
 ) {
     val displayName = recipientProfile?.displayName ?: request.toDisplayName
     InterestStatusCard(
-        title = if (isArabic) "طلب مرسل" else "Sent request",
-        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        title = localizedString(isArabic, R.string.request_sent, R.string.request_sent_ar),
+        name = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) },
         location = recipientProfile.locationLabel(),
         status = request.status,
         isArabic = isArabic
@@ -534,7 +530,7 @@ private fun SentInterestRequestCard(
                 enabled = !isCancelling,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (isArabic) "إلغاء الطلب" else "Cancel request")
+                Text(localizedString(isArabic, R.string.request_cancel, R.string.request_cancel_ar))
             }
         }
     }
@@ -548,8 +544,8 @@ private fun InterestHistoryCard(
 ) {
     val displayName = publicProfile?.displayName ?: request.fromDisplayName
     InterestStatusCard(
-        title = if (isArabic) "طلب وارد" else "Received request",
-        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        title = localizedString(isArabic, R.string.request_received, R.string.request_received_ar),
+        name = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) },
         location = publicProfile.locationLabel(),
         status = request.status,
         isArabic = isArabic
@@ -567,15 +563,14 @@ private fun PhotoRequestCard(
 ) {
     val displayName = publicProfile?.displayName.orEmpty()
     InterestStatusCard(
-        title = if (isArabic) "طلب عرض صورة" else "Photo access request",
-        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        title = localizedString(isArabic, R.string.request_photo_access, R.string.request_photo_access_ar),
+        name = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) },
         location = publicProfile.locationLabel(),
         status = request.status,
         isArabic = isArabic
     ) {
         Text(
-            text = if (isArabic) "الموافقة تغير حالة الطلب فقط ولا تعرض روابط الصور الخاصة في هذه المرحلة."
-            else "Approval only updates request status; private photo URLs are not shown in this phase.",
+            text = localizedString(isArabic, R.string.request_photo_approval_note, R.string.request_photo_approval_note_ar),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -586,14 +581,14 @@ private fun PhotoRequestCard(
                 enabled = !isResponding,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(if (isArabic) "موافقة" else "Approve")
+                Text(localizedString(isArabic, R.string.request_approve, R.string.request_approve_ar))
             }
             OutlinedButton(
                 onClick = onDecline,
                 enabled = !isResponding,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(if (isArabic) "رفض" else "Decline")
+                Text(localizedString(isArabic, R.string.request_decline, R.string.request_decline_ar))
             }
         }
     }
@@ -609,8 +604,8 @@ private fun SentPhotoRequestCard(
 ) {
     val displayName = recipientProfile?.displayName.orEmpty()
     InterestStatusCard(
-        title = if (isArabic) "طلب صورة مرسل" else "Sent photo request",
-        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        title = localizedString(isArabic, R.string.request_sent_photo, R.string.request_sent_photo_ar),
+        name = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) },
         location = recipientProfile.locationLabel(),
         status = request.status,
         isArabic = isArabic
@@ -621,7 +616,7 @@ private fun SentPhotoRequestCard(
                 enabled = !isCancelling,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (isArabic) "إلغاء طلب الصورة" else "Cancel photo request")
+                Text(localizedString(isArabic, R.string.request_cancel_photo, R.string.request_cancel_photo_ar))
             }
         }
     }
@@ -635,8 +630,8 @@ private fun PhotoHistoryCard(
 ) {
     val displayName = publicProfile?.displayName.orEmpty()
     InterestStatusCard(
-        title = if (isArabic) "طلب صورة وارد" else "Received photo request",
-        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        title = localizedString(isArabic, R.string.request_received_photo, R.string.request_received_photo_ar),
+        name = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) },
         location = publicProfile.locationLabel(),
         status = request.status,
         isArabic = isArabic
@@ -654,15 +649,14 @@ private fun ChatRequestCard(
 ) {
     val displayName = publicProfile?.displayName.orEmpty()
     InterestStatusCard(
-        title = if (isArabic) "طلب تواصل" else "Chat request",
-        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        title = localizedString(isArabic, R.string.request_chat, R.string.request_chat_ar),
+        name = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) },
         location = publicProfile.locationLabel(),
         status = request.status,
         isArabic = isArabic
     ) {
         Text(
-            text = if (isArabic) "تبدأ المحادثة بعد الموافقة فقط. لن يتم إنشاء رسائل في هذه المرحلة."
-            else "Respectful conversation starts only after approval. No messages are created in this phase.",
+            text = localizedString(isArabic, R.string.request_chat_approval_note, R.string.request_chat_approval_note_ar),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -673,14 +667,14 @@ private fun ChatRequestCard(
                 enabled = !isResponding,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(if (isArabic) "موافقة" else "Approve")
+                Text(localizedString(isArabic, R.string.request_approve, R.string.request_approve_ar))
             }
             OutlinedButton(
                 onClick = onDecline,
                 enabled = !isResponding,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(if (isArabic) "رفض" else "Decline")
+                Text(localizedString(isArabic, R.string.request_decline, R.string.request_decline_ar))
             }
         }
     }
@@ -696,8 +690,8 @@ private fun SentChatRequestCard(
 ) {
     val displayName = recipientProfile?.displayName.orEmpty()
     InterestStatusCard(
-        title = if (isArabic) "طلب تواصل مرسل" else "Sent chat request",
-        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        title = localizedString(isArabic, R.string.request_sent_chat, R.string.request_sent_chat_ar),
+        name = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) },
         location = recipientProfile.locationLabel(),
         status = request.status,
         isArabic = isArabic
@@ -708,7 +702,7 @@ private fun SentChatRequestCard(
                 enabled = !isCancelling,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (isArabic) "إلغاء طلب التواصل" else "Cancel chat request")
+                Text(localizedString(isArabic, R.string.request_cancel_chat, R.string.request_cancel_chat_ar))
             }
         }
     }
@@ -722,8 +716,8 @@ private fun ChatHistoryCard(
 ) {
     val displayName = publicProfile?.displayName.orEmpty()
     InterestStatusCard(
-        title = if (isArabic) "طلب تواصل وارد" else "Received chat request",
-        name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" },
+        title = localizedString(isArabic, R.string.request_received_chat, R.string.request_received_chat_ar),
+        name = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) },
         location = publicProfile.locationLabel(),
         status = request.status,
         isArabic = isArabic
@@ -785,13 +779,14 @@ private fun PublicProfile?.locationLabel(): String {
         .joinToString(", ")
 }
 
+@Composable
 private fun statusLabel(status: String, isArabic: Boolean): String {
     return when (status) {
-        "pending" -> if (isArabic) "معلق" else "Pending"
-        "accepted" -> if (isArabic) "مقبول" else "Accepted"
-        "approved" -> if (isArabic) "تمت الموافقة" else "Approved"
-        "declined" -> if (isArabic) "مرفوض" else "Declined"
-        "cancelled" -> if (isArabic) "ملغي" else "Cancelled"
+        "pending" -> localizedString(isArabic, R.string.request_status_pending, R.string.request_status_pending_ar)
+        "accepted" -> localizedString(isArabic, R.string.request_status_accepted, R.string.request_status_accepted_ar)
+        "approved" -> localizedString(isArabic, R.string.request_status_approved, R.string.request_status_approved_ar)
+        "declined" -> localizedString(isArabic, R.string.request_status_declined, R.string.request_status_declined_ar)
+        "cancelled" -> localizedString(isArabic, R.string.request_status_cancelled, R.string.request_status_cancelled_ar)
         else -> status
     }
 }

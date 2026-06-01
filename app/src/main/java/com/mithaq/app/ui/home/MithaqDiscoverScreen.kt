@@ -49,8 +49,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mithaq.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.domain.model.PublicProfile
 import com.mithaq.app.ui.components.MithaqEmptyState
@@ -60,6 +62,10 @@ import com.mithaq.app.ui.requests.InterestRequestUiState
 import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.PhotoRequestUiState
 import com.mithaq.app.ui.requests.PhotoRequestViewModel
+
+@Composable
+private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
+    stringResource(id = if (isArabic) arabicResId else englishResId)
 
 @Composable
 fun MithaqDiscoverScreen(
@@ -83,15 +89,14 @@ fun MithaqDiscoverScreen(
             .padding(horizontal = 18.dp, vertical = 18.dp)
     ) {
         Text(
-            text = if (isArabic) "اكتشف توافقًا جادًا" else "Discover serious matches",
+            text = localizedString(isArabic, R.string.discover_title, R.string.discover_title_ar),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = if (isArabic) "بطاقات منظمة من البيانات العامة الآمنة فقط."
-            else "Organized cards built only from safe public profile data.",
+            text = localizedString(isArabic, R.string.discover_subtitle, R.string.discover_subtitle_ar),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -104,8 +109,7 @@ fun MithaqDiscoverScreen(
         if (state.isNearMePlaceholder) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = if (isArabic) "فلتر القرب سيستخدم المدينة أو GPS لاحقًا بدون عرض مسافة دقيقة الآن."
-                else "Near me will use city or GPS later; no exact distance is shown yet.",
+                text = localizedString(isArabic, R.string.discover_location_note, R.string.discover_location_note_ar),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -282,27 +286,24 @@ private fun DiscoverProfileContent(
         }
         state.errorMessage != null -> {
             MithaqEmptyState(
-                title = if (isArabic) "تعذر تحميل الملفات العامة" else "Could not load public profiles",
-                message = if (isArabic) "تحقق من الاتصال وحاول مرة أخرى."
-                else "Please check your connection and try again.",
+                title = localizedString(isArabic, R.string.discover_load_error_title, R.string.discover_load_error_title_ar),
+                message = localizedString(isArabic, R.string.discover_load_error_message, R.string.discover_load_error_message_ar),
                 icon = Icons.Filled.Refresh,
-                actionLabel = if (isArabic) "إعادة المحاولة" else "Retry",
+                actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry
             )
         }
         state.isEmpty -> {
             MithaqEmptyState(
-                title = if (isArabic) "لا توجد ملفات عامة بعد" else "No public profiles yet",
-                message = if (isArabic) "ستظهر هنا الملفات المكتملة التي اختارت الظهور في البحث."
-                else "Completed public discovery profiles will appear here.",
+                title = localizedString(isArabic, R.string.discover_no_profiles_title, R.string.discover_no_profiles_title_ar),
+                message = localizedString(isArabic, R.string.discover_no_profiles_message, R.string.discover_no_profiles_message_ar),
                 icon = Icons.Filled.Search
             )
         }
         state.hasNoFilterResults -> {
             MithaqEmptyState(
-                title = if (isArabic) "لا توجد نتائج لهذا الفلتر" else "No results for this filter",
-                message = if (isArabic) "جرب فلترًا آخر أو عد إلى المقترحات."
-                else "Try another filter or return to recommended profiles.",
+                title = localizedString(isArabic, R.string.discover_no_filter_results_title, R.string.discover_no_filter_results_title_ar),
+                message = localizedString(isArabic, R.string.discover_no_filter_results_message, R.string.discover_no_filter_results_message_ar),
                 icon = Icons.Filled.Search
             )
         }
@@ -391,18 +392,18 @@ fun MithaqPublicProfileCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (profile.isIdentityVerified) {
-                    ProfileSignalChip(if (isArabic) "هوية موثقة" else "Identity verified", Icons.Filled.CheckCircle)
+                    ProfileSignalChip(localizedString(isArabic, R.string.discover_identity_verified, R.string.discover_identity_verified_ar), Icons.Filled.CheckCircle)
                 } else if (profile.isEmailVerified) {
-                    ProfileSignalChip(if (isArabic) "بريد موثق" else "Email verified", Icons.Filled.CheckCircle)
+                    ProfileSignalChip(localizedString(isArabic, R.string.discover_email_verified, R.string.discover_email_verified_ar), Icons.Filled.CheckCircle)
                 }
                 if (profile.hasGuardian) {
-                    ProfileSignalChip(if (isArabic) "ولي مضاف" else "Guardian added", Icons.Filled.Person)
+                    ProfileSignalChip(localizedString(isArabic, R.string.discover_guardian_added, R.string.discover_guardian_added_ar), Icons.Filled.Person)
                 }
                 if (profile.prayerRoutineShared) {
-                    ProfileSignalChip(if (isArabic) "نمط الصلاة ظاهر" else "Prayer shared", Icons.Filled.Lock)
+                    ProfileSignalChip(localizedString(isArabic, R.string.discover_prayer_shared, R.string.discover_prayer_shared_ar), Icons.Filled.Lock)
                 }
                 if (profile.localTimeEnabled) {
-                    ProfileSignalChip(if (isArabic) "التوقيت المحلي ظاهر" else "Local time shared", Icons.Filled.Search)
+                    ProfileSignalChip(localizedString(isArabic, R.string.discover_local_time_shared, R.string.discover_local_time_shared_ar), Icons.Filled.Search)
                 }
                 if (profile.accountType.isNotBlank()) {
                     ProfileSignalChip(profile.accountType, Icons.Filled.Person)
@@ -436,11 +437,11 @@ fun MithaqPublicProfileCard(
                     Icon(Icons.Filled.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     val buttonText = when {
-                        profile.userId in interestState.sendingToUserIds -> if (isArabic) "\u062c\u0627\u0631\u064a \u0627\u0644\u0625\u0631\u0633\u0627\u0644" else "Sending..."
-                        requestStatus == "pending" -> if (isArabic) "\u062a\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644" else "Sent"
-                        requestStatus == "accepted" -> if (isArabic) "\u062a\u0645 \u0627\u0644\u0642\u0628\u0648\u0644" else "Accepted"
-                        requestStatus == "declined" -> if (isArabic) "\u062a\u0645 \u0631\u0641\u0636 \u0627\u0644\u0627\u0647\u062a\u0645\u0627\u0645" else "Interest declined"
-                        else -> if (isArabic) "\u0625\u0631\u0633\u0627\u0644 \u0627\u0647\u062a\u0645\u0627\u0645" else "Send interest"
+                        profile.userId in interestState.sendingToUserIds -> localizedString(isArabic, R.string.discover_sending, R.string.discover_sending_ar)
+                        requestStatus == "pending" -> localizedString(isArabic, R.string.discover_sent, R.string.discover_sent_ar)
+                        requestStatus == "accepted" -> localizedString(isArabic, R.string.discover_accepted, R.string.discover_accepted_ar)
+                        requestStatus == "declined" -> localizedString(isArabic, R.string.discover_interest_declined, R.string.discover_interest_declined_ar)
+                        else -> localizedString(isArabic, R.string.discover_send_interest, R.string.discover_send_interest_ar)
                     }
                     Text(buttonText)
                 }
@@ -463,14 +464,14 @@ fun MithaqPublicProfileCard(
                     Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     val photoButtonText = when {
-                        profile.userId in photoState.requestingToUserIds -> if (isArabic) "جاري الطلب" else "Requesting..."
-                        photoStatus == "pending" -> if (isArabic) "تم طلب الصورة" else "Photo requested"
-                        photoStatus == "approved" -> if (isArabic) "تمت الموافقة" else "Photo access approved"
-                        photoStatus == "declined" -> if (isArabic) "رفض طلب الصورة" else "Photo request declined"
-                        !photoModeAllowsRequest && normalizedPhotoMode == "matched_users_only" -> if (isArabic) "للمتوافقين فقط" else "Matched only"
-                        !photoModeAllowsRequest -> if (isArabic) "الصور خاصة" else "Photos private"
-                        !hasAcceptedInterest -> if (isArabic) "الاهتمام أولا" else "Interest first"
-                        else -> if (isArabic) "طلب عرض الصورة" else "Request photo access"
+                        profile.userId in photoState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
+                        photoStatus == "pending" -> localizedString(isArabic, R.string.discover_photo_requested, R.string.discover_photo_requested_ar)
+                        photoStatus == "approved" -> localizedString(isArabic, R.string.discover_photo_approved, R.string.discover_photo_approved_ar)
+                        photoStatus == "declined" -> localizedString(isArabic, R.string.discover_photo_declined, R.string.discover_photo_declined_ar)
+                        !photoModeAllowsRequest && normalizedPhotoMode == "matched_users_only" -> localizedString(isArabic, R.string.discover_matched_only, R.string.discover_matched_only_ar)
+                        !photoModeAllowsRequest -> localizedString(isArabic, R.string.discover_photos_private, R.string.discover_photos_private_ar)
+                        !hasAcceptedInterest -> localizedString(isArabic, R.string.discover_interest_first, R.string.discover_interest_first_ar)
+                        else -> localizedString(isArabic, R.string.discover_request_photo, R.string.discover_request_photo_ar)
                     }
                     Text(photoButtonText)
                 }
@@ -491,12 +492,12 @@ fun MithaqPublicProfileCard(
                 Icon(Icons.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 val chatButtonText = when {
-                    profile.userId in chatState.requestingToUserIds -> if (isArabic) "جاري الطلب" else "Requesting..."
-                    chatStatus == "pending" -> if (isArabic) "تم طلب التواصل" else "Chat requested"
-                    chatStatus == "approved" -> if (isArabic) "تم قبول التواصل" else "Chat approved"
-                    chatStatus == "declined" -> if (isArabic) "تم رفض التواصل" else "Chat request declined"
-                    !hasAcceptedInterestForChat -> if (isArabic) "الاهتمام أولا" else "Interest first"
-                    else -> if (isArabic) "طلب تواصل" else "Request chat"
+                    profile.userId in chatState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
+                    chatStatus == "pending" -> localizedString(isArabic, R.string.discover_chat_requested, R.string.discover_chat_requested_ar)
+                    chatStatus == "approved" -> localizedString(isArabic, R.string.discover_chat_approved, R.string.discover_chat_approved_ar)
+                    chatStatus == "declined" -> localizedString(isArabic, R.string.discover_chat_declined, R.string.discover_chat_declined_ar)
+                    !hasAcceptedInterestForChat -> localizedString(isArabic, R.string.discover_interest_first, R.string.discover_interest_first_ar)
+                    else -> localizedString(isArabic, R.string.discover_request_chat, R.string.discover_request_chat_ar)
                 }
                 Text(chatButtonText)
             }
@@ -511,10 +512,10 @@ private fun PhotoPrivacyPlaceholder(
 ) {
     val normalizedMode = mode.ifBlank { "blurred_by_default" }
     val label = when (normalizedMode) {
-        "hidden" -> if (isArabic) "الصورة مخفية" else "Photo hidden"
-        "approved_users_only" -> if (isArabic) "الصورة بالموافقة فقط" else "Photo by approval only"
-        "matched_users_only" -> if (isArabic) "الصورة للتوافقات فقط" else "Photo for matches only"
-        else -> if (isArabic) "الصورة مموهة افتراضيًا" else "Photo blurred by default"
+        "hidden" -> localizedString(isArabic, R.string.discover_photo_hidden, R.string.discover_photo_hidden_ar)
+        "approved_users_only" -> localizedString(isArabic, R.string.discover_photo_by_approval, R.string.discover_photo_by_approval_ar)
+        "matched_users_only" -> localizedString(isArabic, R.string.discover_photo_for_matches, R.string.discover_photo_for_matches_ar)
+        else -> localizedString(isArabic, R.string.discover_photo_blurred, R.string.discover_photo_blurred_ar)
     }
     val icon = when (normalizedMode) {
         "approved_users_only" -> Icons.Filled.Visibility
@@ -586,27 +587,30 @@ private fun ProfileSignalChip(
     )
 }
 
+@Composable
 fun PublicProfileFilter.label(isArabic: Boolean): String {
     return when (this) {
-        PublicProfileFilter.Recommended -> if (isArabic) "مقترح" else "Recommended"
-        PublicProfileFilter.NearMe -> if (isArabic) "بالقرب مني" else "Near me"
-        PublicProfileFilter.Verified -> if (isArabic) "موثق" else "Verified"
-        PublicProfileFilter.WithGuardian -> if (isArabic) "مع ولي" else "With guardian"
-        PublicProfileFilter.RecentlyActive -> if (isArabic) "نشط حديثًا" else "Recently active"
-        PublicProfileFilter.PrayerRoutineShared -> if (isArabic) "يشارك نمط الصلاة" else "Prayer routine shared"
-        PublicProfileFilter.NewMembers -> if (isArabic) "أعضاء جدد" else "New members"
+        PublicProfileFilter.Recommended -> localizedString(isArabic, R.string.discover_filter_recommended, R.string.discover_filter_recommended_ar)
+        PublicProfileFilter.NearMe -> localizedString(isArabic, R.string.discover_filter_near_me, R.string.discover_filter_near_me_ar)
+        PublicProfileFilter.Verified -> localizedString(isArabic, R.string.discover_filter_verified, R.string.discover_filter_verified_ar)
+        PublicProfileFilter.WithGuardian -> localizedString(isArabic, R.string.discover_filter_with_guardian, R.string.discover_filter_with_guardian_ar)
+        PublicProfileFilter.RecentlyActive -> localizedString(isArabic, R.string.discover_filter_recently_active, R.string.discover_filter_recently_active_ar)
+        PublicProfileFilter.PrayerRoutineShared -> localizedString(isArabic, R.string.discover_filter_prayer_shared, R.string.discover_filter_prayer_shared_ar)
+        PublicProfileFilter.NewMembers -> localizedString(isArabic, R.string.discover_new_members, R.string.discover_new_members_ar)
     }
 }
 
+@Composable
 private fun PublicProfile.displayTitle(isArabic: Boolean): String {
-    val name = displayName.ifBlank { if (isArabic) "عضو ميثاق" else "Mithaq member" }
+    val name = displayName.ifBlank { localizedString(isArabic, R.string.discover_member_fallback, R.string.discover_member_fallback_ar) }
     val ageLabel = age?.toString()
     return if (ageLabel == null) name else "$name, $ageLabel"
 }
 
+@Composable
 private fun PublicProfile.locationLabel(isArabic: Boolean): String {
     val parts = listOf(city, country).map { it.trim() }.filter { it.isNotBlank() }
     return parts.joinToString(", ").ifBlank {
-        if (isArabic) "الموقع غير ظاهر" else "Location not shared"
+        localizedString(isArabic, R.string.discover_location_not_shared, R.string.discover_location_not_shared_ar)
     }
 }

@@ -33,28 +33,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mithaq.app.R
 
 private data class ProfileHubItem(
-    val englishTitle: String,
-    val arabicTitle: String,
-    val englishSubtitle: String,
-    val arabicSubtitle: String,
+    val titleResId: Int,
+    val titleArabicResId: Int,
+    val subtitleResId: Int,
+    val subtitleArabicResId: Int,
     val icon: ImageVector
 )
 
 private val profileItems = listOf(
-    ProfileHubItem("My profile", "ملفي الشخصي", "Review profile completion and public details.", "راجع اكتمال الملف والبيانات الظاهرة.", Icons.Filled.Person),
-    ProfileHubItem("Privacy settings", "إعدادات الخصوصية", "Control who can see sensitive fields.", "تحكم في من يرى البيانات الحساسة.", Icons.Filled.Lock),
-    ProfileHubItem("Photo privacy", "خصوصية الصور", "Manage blurred and approved photo access.", "إدارة الصور المموهة والموافقات.", Icons.Filled.Visibility),
-    ProfileHubItem("Guardian / Wali", "الولي", "Invite or manage guardian permissions.", "إضافة أو إدارة صلاحيات الولي.", Icons.Filled.CheckCircle),
-    ProfileHubItem("Prayer settings", "إعدادات الصلاة", "Manage prayer time visibility and reminders.", "إدارة مواقيت الصلاة والظهور والتذكير.", Icons.Filled.Settings),
-    ProfileHubItem("Notifications", "الإشعارات", "Choose important alerts only.", "اختر التنبيهات المهمة فقط.", Icons.Filled.Info),
-    ProfileHubItem("Language", "اللغة", "Arabic and English ready.", "جاهز للعربية والإنجليزية.", Icons.Filled.Settings),
-    ProfileHubItem("Account security", "أمان الحساب", "Email verification and safe account actions.", "توثيق البريد وإجراءات الحساب الآمنة.", Icons.Filled.Lock),
-    ProfileHubItem("Help and support", "المساعدة والدعم", "Get help with account or safety concerns.", "احصل على مساعدة للحساب أو السلامة.", Icons.Filled.Info)
+    ProfileHubItem(R.string.profile_hub_my_profile_title, R.string.profile_hub_my_profile_title_ar, R.string.profile_hub_my_profile_subtitle, R.string.profile_hub_my_profile_subtitle_ar, Icons.Filled.Person),
+    ProfileHubItem(R.string.profile_hub_privacy_title, R.string.profile_hub_privacy_title_ar, R.string.profile_hub_privacy_subtitle, R.string.profile_hub_privacy_subtitle_ar, Icons.Filled.Lock),
+    ProfileHubItem(R.string.profile_hub_photo_privacy_title, R.string.profile_hub_photo_privacy_title_ar, R.string.profile_hub_photo_privacy_subtitle, R.string.profile_hub_photo_privacy_subtitle_ar, Icons.Filled.Visibility),
+    ProfileHubItem(R.string.profile_hub_guardian_title, R.string.profile_hub_guardian_title_ar, R.string.profile_hub_guardian_subtitle, R.string.profile_hub_guardian_subtitle_ar, Icons.Filled.CheckCircle),
+    ProfileHubItem(R.string.profile_hub_prayer_title, R.string.profile_hub_prayer_title_ar, R.string.profile_hub_prayer_subtitle, R.string.profile_hub_prayer_subtitle_ar, Icons.Filled.Settings),
+    ProfileHubItem(R.string.profile_hub_notifications_title, R.string.profile_hub_notifications_title_ar, R.string.profile_hub_notifications_subtitle, R.string.profile_hub_notifications_subtitle_ar, Icons.Filled.Info),
+    ProfileHubItem(R.string.profile_hub_language_title, R.string.profile_hub_language_title_ar, R.string.profile_hub_language_subtitle, R.string.profile_hub_language_subtitle_ar, Icons.Filled.Settings),
+    ProfileHubItem(R.string.profile_hub_security_title, R.string.profile_hub_security_title_ar, R.string.profile_hub_security_subtitle, R.string.profile_hub_security_subtitle_ar, Icons.Filled.Lock),
+    ProfileHubItem(R.string.profile_hub_support_title, R.string.profile_hub_support_title_ar, R.string.profile_hub_support_subtitle, R.string.profile_hub_support_subtitle_ar, Icons.Filled.Info)
 )
+
+@Composable
+private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
+    stringResource(id = if (isArabic) arabicResId else englishResId)
 
 @Composable
 fun MithaqProfileHubScreen(
@@ -69,15 +75,14 @@ fun MithaqProfileHubScreen(
             .padding(18.dp)
     ) {
         Text(
-            text = if (isArabic) "حسابي" else "Profile",
+            text = localizedString(isArabic, R.string.profile_hub_title, R.string.profile_hub_title_ar),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = if (isArabic) "مركز منظم للخصوصية، الولي، الصلاة، وأمان الحساب."
-            else "A calm hub for privacy, guardian, prayer, and account safety.",
+            text = localizedString(isArabic, R.string.profile_hub_subtitle, R.string.profile_hub_subtitle_ar),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -92,7 +97,7 @@ fun MithaqProfileHubScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = if (isArabic) "تسجيل الخروج" else "Sign out",
+                text = localizedString(isArabic, R.string.common_sign_out, R.string.common_sign_out_ar),
                 color = MaterialTheme.colorScheme.error
             )
         }
@@ -131,14 +136,14 @@ private fun ProfileHubRow(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isArabic) item.arabicTitle else item.englishTitle,
+                    text = localizedString(isArabic, item.titleResId, item.titleArabicResId),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = if (isArabic) item.arabicSubtitle else item.englishSubtitle,
+                    text = localizedString(isArabic, item.subtitleResId, item.subtitleArabicResId),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -23,9 +23,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.mithaq.app.R
 import com.mithaq.app.domain.model.OnboardingAnswer
 import com.mithaq.app.domain.model.OnboardingStep
 import com.mithaq.app.domain.model.QuestionOption
@@ -51,7 +53,7 @@ fun QuestionScreen(
         LaunchedEffect(state.answeredQuestions, state.profileCompletionPercent) {
             onComplete(state.answeredQuestions, state.profileCompletionPercent)
         }
-        Text("Completing profile setup...")
+        Text(stringResource(id = R.string.onboarding_completing))
         return
     }
 
@@ -71,26 +73,26 @@ fun QuestionScreen(
     if (showExitConfirm) {
         AlertDialog(
             onDismissRequest = { showExitConfirm = false },
-            title = { Text("Leave profile setup?") },
-            text = { Text("Your answers are only saved in this session for now.") },
+            title = { Text(stringResource(id = R.string.onboarding_leave_title)) },
+            text = { Text(stringResource(id = R.string.onboarding_leave_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showExitConfirm = false
                     onExitRequested()
                 }) {
-                    Text("Leave")
+                    Text(stringResource(id = R.string.onboarding_leave))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showExitConfirm = false }) {
-                    Text("Stay")
+                    Text(stringResource(id = R.string.onboarding_stay))
                 }
             }
         )
     }
 
     if (step == null) {
-        Text("No onboarding questions available.")
+        Text(stringResource(id = R.string.onboarding_no_questions))
         return
     }
 
@@ -117,7 +119,7 @@ fun QuestionScreen(
             ) {
                 CircularProgressIndicator()
                 Text(
-                    text = "Saving your profile setup...",
+                    text = stringResource(id = R.string.onboarding_saving),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -166,7 +168,7 @@ private fun QuestionContent(
         QuestionType.TextInput -> MithaqInputField(
             value = answer?.text.orEmpty(),
             onValueChange = onTextChanged,
-            placeholder = "Type your answer"
+            placeholder = stringResource(id = R.string.onboarding_type_answer)
         )
 
         QuestionType.NumberInput -> MithaqInputField(
@@ -174,14 +176,14 @@ private fun QuestionContent(
             onValueChange = { value ->
                 if (value.all { it.isDigit() }) onTextChanged(value)
             },
-            placeholder = "Enter a number",
+            placeholder = stringResource(id = R.string.onboarding_enter_number),
             keyboardType = KeyboardType.Number
         )
 
         QuestionType.LongTextInput -> MithaqInputField(
             value = answer?.text.orEmpty(),
             onValueChange = onTextChanged,
-            placeholder = "Write your answer",
+            placeholder = stringResource(id = R.string.onboarding_write_answer),
             singleLine = false,
             minLines = 5
         )
@@ -232,7 +234,7 @@ private fun SearchableOptionList(
         MithaqInputField(
             value = query,
             onValueChange = { query = it },
-            placeholder = "Search"
+            placeholder = stringResource(id = R.string.onboarding_search)
         )
         filtered.forEach { option ->
             MithaqOptionCard(
@@ -251,7 +253,7 @@ private fun SummaryQuestion(answer: OnboardingAnswer?) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Text(
-            text = answer?.text?.takeIf { it.isNotBlank() } ?: "Review your answers before continuing.",
+            text = answer?.text?.takeIf { it.isNotBlank() } ?: stringResource(id = R.string.onboarding_review_answers),
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodyLarge
         )
@@ -271,7 +273,7 @@ private fun OnboardingSummary(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Profile answers complete",
+            text = stringResource(id = R.string.onboarding_answers_complete),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
@@ -281,7 +283,7 @@ private fun OnboardingSummary(
         }
         Spacer(modifier = Modifier.height(8.dp))
         MithaqPrimaryButton(
-            text = "Finish",
+            text = stringResource(id = R.string.onboarding_finish),
             onClick = onFinish,
             modifier = Modifier.fillMaxWidth()
         )
@@ -298,7 +300,7 @@ private fun SummaryRow(
     val value = when {
         selectedLabels.isNotEmpty() -> selectedLabels.joinToString()
         !answer?.text.isNullOrBlank() -> answer?.text.orEmpty()
-        else -> "Not answered"
+        else -> stringResource(id = R.string.onboarding_review_answers)
     }
 
     Card(
