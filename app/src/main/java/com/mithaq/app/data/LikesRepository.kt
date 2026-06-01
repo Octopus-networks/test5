@@ -111,42 +111,21 @@ class LikesRepository(private val context: Context) {
                 val isMutual = db.runTransaction { transaction ->
                     val inverseSnap = transaction.get(db.collection("likes").document(inverseDocId))
                     val exists = inverseSnap.exists()
-                    
+
                     val likeData = hashMapOf(
                         "fromUid" to fromUid,
                         "toUid" to toUid,
-                        "isMutual" to exists,
+                        // Clients are never allowed to grant mutual state. A Cloud Function
+                        // promotes both like documents after verifying the inverse like.
+                        "isMutual" to false,
                         "timestamp" to System.currentTimeMillis()
                     )
                     transaction.set(db.collection("likes").document(likeDocId), likeData)
-                    
-                    if (exists) {
-                        transaction.update(db.collection("likes").document(inverseDocId), "isMutual", true)
-                    }
                     exists
                 }.await()
 
-                // Fetch the liker's display name for the notification message
-                val fromName = getUserDisplayName(fromUid)
-
-                if (isMutual) {
-                    createLiveChatRoom(fromUid, toUid)
-                    // Notify BOTH parties of the mutual match
-                    val mutualTitle = "ميثاق - تطابق متبادل! 🎉"
-                    val mutualBodyToUid = "لقد تطابقت مع $fromName! يمكنك الآن بدء المحادثة."
-                    val mutualBodyFromUid = "لقد تطابقت معك يمكنكما الآن التحدث!"
-                    sendFirestoreNotification(fromUid, toUid, mutualTitle, mutualBodyToUid)
-                    sendFirestoreNotification(fromUid, fromUid, mutualTitle, mutualBodyFromUid)
-                } else {
-                    // Notify recipient that someone liked their profile
-                    sendFirestoreNotification(
-                        senderUid = fromUid,
-                        recipientUid = toUid,
-                        title = "ميثاق - إعجاب جديد ❤️",
-                        body = "أعجب $fromName بملفك الشخصي!"
-                    )
-                }
-
+                // Notifications and mutual-state promotion are server-owned. The local
+                // return value only lets the UI show an optimistic "mutual" hint.
                 return isMutual
             } catch (e: Exception) {
                 e.printStackTrace()
