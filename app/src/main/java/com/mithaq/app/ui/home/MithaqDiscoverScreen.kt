@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -511,54 +512,47 @@ private fun PhotoPrivacyPlaceholder(
     isArabic: Boolean
 ) {
     val normalizedMode = mode.ifBlank { "blurred_by_default" }
-    val label = when (normalizedMode) {
-        "hidden" -> localizedString(isArabic, R.string.discover_photo_hidden, R.string.discover_photo_hidden_ar)
-        "approved_users_only" -> localizedString(isArabic, R.string.discover_photo_by_approval, R.string.discover_photo_by_approval_ar)
-        "matched_users_only" -> localizedString(isArabic, R.string.discover_photo_for_matches, R.string.discover_photo_for_matches_ar)
-        else -> localizedString(isArabic, R.string.discover_photo_blurred, R.string.discover_photo_blurred_ar)
+    val caption = when (normalizedMode) {
+        "hidden" -> if (isArabic) "صور خاصة" else "PRIVATE PHOTOS"
+        "approved_users_only" -> if (isArabic) "اطلب الإذن للعرض" else "REQUEST TO VIEW"
+        "matched_users_only" -> if (isArabic) "تظهر بعد التطابق" else "MATCH TO VIEW"
+        else -> if (isArabic) "صورة محمية" else "PHOTO PROTECTED"
     }
     val icon = when (normalizedMode) {
-        "approved_users_only" -> Icons.Filled.Visibility
         "matched_users_only" -> Icons.Filled.Favorite
-        else -> Icons.Filled.Lock
+        "hidden" -> Icons.Filled.Lock
+        else -> Icons.Filled.Shield
     }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1.22f)
+            .aspectRatio(1.1f)
             .clip(RoundedCornerShape(20.dp))
             .background(
-                Brush.linearGradient(
+                Brush.verticalGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f),
                         MaterialTheme.colorScheme.surfaceVariant,
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.34f)
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.background
                     )
                 )
             ),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(92.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.45f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(38.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                text = caption,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -580,8 +574,8 @@ private fun ProfileSignalChip(
             )
         },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.58f),
-            labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+            labelColor = MaterialTheme.colorScheme.secondary,
             leadingIconContentColor = MaterialTheme.colorScheme.secondary
         )
     )
