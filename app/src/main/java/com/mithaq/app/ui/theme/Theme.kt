@@ -13,34 +13,37 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
 
-// Curated Dark Color Scheme for Mithaq Premium (Midnight Forest Base)
+// Stitch "Sacred Covenant" dark scheme: Soft Gold primary, Emerald trust secondary,
+// Deep Charcoal surfaces, warm outlines.
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryEmeraldLight,
+    primary = AccentGold,
     onPrimary = BackgroundDark,
-    primaryContainer = PrimaryEmeraldDark,
-    onPrimaryContainer = TextPrimaryDark,
-    secondary = AccentGold,
+    primaryContainer = AccentGoldDeep,
+    onPrimaryContainer = Color(0xFF554300),
+    secondary = PrimaryEmeraldLight,
     onSecondary = BackgroundDark,
-    secondaryContainer = SurfaceVariantDark,
-    onSecondaryContainer = AccentGoldLight,
+    secondaryContainer = PrimaryEmeraldDark,
+    onSecondaryContainer = PrimaryEmeraldLight,
     background = BackgroundDark,
     onBackground = TextPrimaryDark,
-    surface = SurfaceDark,
+    surface = BackgroundDark,
     onSurface = TextPrimaryDark,
     surfaceVariant = SurfaceVariantDark,
     onSurfaceVariant = TextSecondaryDark,
+    outline = OutlineWarm,
+    outlineVariant = OutlineWarmVariant,
     error = ErrorRed,
     onError = Color.White
 )
 
 // Curated Light Color Scheme for Mithaq Premium (Eggshell/Ivory Base)
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryEmeraldDark,
-    onPrimary = BackgroundLight,
+    primary = AccentGoldDeep,
+    onPrimary = Color.White,
     primaryContainer = SurfaceVariantLight,
     onPrimaryContainer = TextPrimaryLight,
-    secondary = AccentGold,
-    onSecondary = Color.Black,
+    secondary = PrimaryEmerald,
+    onSecondary = Color.White,
     secondaryContainer = SurfaceVariantLight,
     onSecondaryContainer = AccentGold,
     background = BackgroundLight,

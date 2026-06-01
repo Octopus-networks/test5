@@ -17,8 +17,9 @@ import androidx.compose.ui.unit.sp
 // Cairo Font Family: Clean, readable font recommended for Arabic body texts and UI elements.
 val CairoFontFamily = FontFamily.SansSerif
 
-// Amiri Font Family: Classically-styled Naskh font for Islamic headings, Quran verses, and titles.
-val AmiriFontFamily = FontFamily.Serif
+// Headings use a geometric sans (Manrope-style) per the Sacred Covenant identity.
+// Falls back to the system sans until Manrope/Hanken .ttf files are bundled in res/font.
+val AmiriFontFamily = FontFamily.SansSerif
 
 // Outfit Font Family: Modern, geometric geometric-sans font for Latin texts.
 val OutfitFontFamily = FontFamily.SansSerif
