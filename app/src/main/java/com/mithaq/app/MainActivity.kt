@@ -304,6 +304,7 @@ class MainActivity : FragmentActivity() {
 private fun OnboardingTemporaryCompletionScreen(
     answeredCount: Int,
     completionPercent: Int,
+    isArabic: Boolean,
     onContinueHome: () -> Unit
 ) {
     androidx.activity.compose.BackHandler {
@@ -1104,6 +1105,7 @@ fun MithaqAppNavigation(
             OnboardingTemporaryCompletionScreen(
                 answeredCount = onboardingAnsweredCount,
                 completionPercent = onboardingCompletionPercent,
+                isArabic = isArabic,
                 onContinueHome = {
                     hasDismissedOnboarding = true
                     currentScreen = Routes.Home
