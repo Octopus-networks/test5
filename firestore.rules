@@ -622,6 +622,46 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userUid == request.auth.uid;
     }
 
+    // Phase 11: secure photo metadata. Owner-only writes; an approved photo request lets
+    // a verified viewer read non-hidden metadata. Actual image bytes are gated separately
+    // by Storage security rules. No download URLs are ever stored here.
+    match /userPhotos/{userId}/photos/{photoId} {
+      function approvedPhotoRequest() {
+        return exists(/databases/$(database)/documents/photoRequests/$(request.auth.uid + "_" + userId)) &&
+          get(/databases/$(database)/documents/photoRequests/$(request.auth.uid + "_" + userId)).data.status == "approved";
+      }
+
+      allow read: if isVerifiedEmailUser() && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        (approvedPhotoRequest() && resource.data.visibility != "hidden")
+      );
+
+      allow create, update: if isVerifiedEmailUser() &&
+        request.auth.uid == userId && (
+          (
+            // Full (re)upload by the owner. Status always resets to pending_review;
+            // clients can never self-approve a photo.
+            request.resource.data.userId == request.auth.uid &&
+            request.resource.data.photoId == photoId &&
+            request.resource.data.storagePath == ("user_photos/" + request.auth.uid + "/" + photoId + ".jpg") &&
+            request.resource.data.type in ["main", "extra"] &&
+            request.resource.data.status == "pending_review" &&
+            request.resource.data.visibility in ["hidden", "blurred_by_default", "approved_users_only", "matched_users_only"] &&
+            request.resource.data.keys().hasOnly([
+              "photoId", "userId", "storagePath", "type", "status", "visibility", "createdAt", "updatedAt"
+            ])
+          ) ||
+          (
+            // Owner adjusts only the privacy of an existing photo.
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visibility", "updatedAt"]) &&
+            request.resource.data.visibility in ["hidden", "blurred_by_default", "approved_users_only", "matched_users_only"]
+          )
+        );
+
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

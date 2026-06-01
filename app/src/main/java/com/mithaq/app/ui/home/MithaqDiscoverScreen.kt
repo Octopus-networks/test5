@@ -346,10 +346,22 @@ fun MithaqPublicProfileCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            PhotoPrivacyPlaceholder(
-                mode = profile.photoPrivacyMode,
-                isArabic = isArabic
-            )
+            // Phase 11: show the real photo only when this viewer holds an approved photo
+            // request for the owner. Otherwise keep the privacy-aware placeholder.
+            // SecurePhotoView re-checks access and Storage rules remain the real boundary.
+            if (photoState.sentStatusByUserId[profile.userId] == "approved") {
+                com.mithaq.app.ui.photo.SecurePhotoView(
+                    ownerId = profile.userId,
+                    photoPrivacyMode = profile.photoPrivacyMode,
+                    isArabic = isArabic,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                PhotoPrivacyPlaceholder(
+                    mode = profile.photoPrivacyMode,
+                    isArabic = isArabic
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

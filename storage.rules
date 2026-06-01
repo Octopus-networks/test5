@@ -27,6 +27,12 @@ service firebase.storage {
       return documentId in ['id_card.jpg', 'selfie.jpg', 'selfie_video.mp4'];
     }
 
+    function approvedPhotoRequest(ownerId) {
+      return isAuthenticated() &&
+        firestore.exists(/databases/(default)/documents/photoRequests/$(request.auth.uid + '_' + ownerId)) &&
+        firestore.get(/databases/(default)/documents/photoRequests/$(request.auth.uid + '_' + ownerId)).data.status == 'approved';
+    }
+
     match /profiles/{imageId} {
       // Sensitive profile media is not public-by-authentication anymore.
       // The owner/admin can read legacy paths; approved-viewer access should move
@@ -61,6 +67,17 @@ service firebase.storage {
         );
       // Do not allow clients to replace verification evidence after submission.
       allow update: if false;
+      allow delete: if false;
+    }
+
+    // Phase 11: secure user photos. Owner writes their own; reads are limited to the
+    // owner, an admin, or a viewer holding an approved photo request for this owner.
+    // Private photo bytes are never public and never served via a stored URL.
+    match /user_photos/{userId}/{photoId} {
+      allow read: if isOwner(userId) || isAdmin() || approvedPhotoRequest(userId);
+      allow create, update: if isOwner(userId) &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
       allow delete: if false;
     }
   }
