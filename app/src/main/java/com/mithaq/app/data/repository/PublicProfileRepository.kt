@@ -50,23 +50,29 @@ class PublicProfileRepository(
     suspend fun getDiscoverProfiles(limit: Long = 20): List<PublicProfile> {
         val currentUserId = auth.currentUser?.uid.orEmpty()
         val blockedByCurrentUser = blockRepository.getBlockedUserIds(currentUserId)
-        return firestore.collection("publicProfiles")
+        val profiles = firestore.collection("publicProfiles")
             .whereEqualTo("isEmailVerified", true)
             .limit(limit)
             .get()
             .await()
             .documents
             .map { it.toPublicProfile() }
-            .filter { profile ->
-                profile.userId.isNotBlank() &&
-                    profile.userId != currentUserId &&
-                    profile.userId !in blockedByCurrentUser &&
-                    !blockRepository.isBlockedBetweenUsers(currentUserId, profile.userId)
+
+        val visibleProfiles = mutableListOf<PublicProfile>()
+        for (profile in profiles) {
+            if (profile.userId.isBlank() || profile.userId == currentUserId || profile.userId in blockedByCurrentUser) {
+                continue
             }
-            .sortedWith(
-                compareByDescending<PublicProfile> { it.lastActiveAt }
-                    .thenByDescending { it.updatedAt }
-            )
+            if (blockRepository.isBlockedBetweenUsers(currentUserId, profile.userId)) {
+                continue
+            }
+            visibleProfiles += profile
+        }
+
+        return visibleProfiles.sortedWith(
+            compareByDescending<PublicProfile> { it.lastActiveAt }
+                .thenByDescending { it.updatedAt }
+        )
     }
 
     suspend fun getPublicProfile(userId: String): PublicProfile? {

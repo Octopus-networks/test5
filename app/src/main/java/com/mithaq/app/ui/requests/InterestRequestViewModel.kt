@@ -50,16 +50,18 @@ class InterestRequestViewModel(
                 val profileIds = (sent.map { it.toUserId } + received.map { it.fromUserId })
                     .filter { it.isNotBlank() }
                     .distinct()
-                val blockedUserIds = profileIds
-                    .filter { blockRepository.isBlockedBetweenUsers(userId, it) }
-                    .toSet()
-                val summaries = profileIds
-                    .mapNotNull { request ->
-                        publicProfileRepository.getPublicProfile(request)?.let { profile ->
-                            request to profile
-                        }
+                val blockedUserIds = mutableSetOf<String>()
+                for (profileId in profileIds) {
+                    if (blockRepository.isBlockedBetweenUsers(userId, profileId)) {
+                        blockedUserIds += profileId
                     }
-                    .toMap()
+                }
+                val summaries = mutableMapOf<String, PublicProfile>()
+                for (profileId in profileIds) {
+                    publicProfileRepository.getPublicProfile(profileId)?.let { profile ->
+                        summaries[profileId] = profile
+                    }
+                }
                 _state.value = _state.value.copy(
                     isLoadingRequests = false,
                     sentPendingToUserIds = sent

@@ -46,12 +46,18 @@ class ChatRequestViewModel(
                 val profileIds = (sent.map { it.toUserId } + received.map { it.fromUserId })
                     .filter { it.isNotBlank() }
                     .distinct()
-                val blockedUserIds = profileIds
-                    .filter { blockRepository.isBlockedBetweenUsers(userId, it) }
-                    .toSet()
-                val profiles = profileIds.mapNotNull { id ->
-                    publicProfileRepository.getPublicProfile(id)?.let { id to it }
-                }.toMap()
+                val blockedUserIds = mutableSetOf<String>()
+                for (profileId in profileIds) {
+                    if (blockRepository.isBlockedBetweenUsers(userId, profileId)) {
+                        blockedUserIds += profileId
+                    }
+                }
+                val profiles = mutableMapOf<String, PublicProfile>()
+                for (profileId in profileIds) {
+                    publicProfileRepository.getPublicProfile(profileId)?.let { profile ->
+                        profiles[profileId] = profile
+                    }
+                }
                 _state.value = _state.value.copy(
                     isLoadingRequests = false,
                     sentStatusByUserId = sent.associate { it.toUserId to it.status },

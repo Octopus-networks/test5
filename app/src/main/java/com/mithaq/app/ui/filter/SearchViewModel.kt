@@ -256,32 +256,34 @@ class SearchViewModel(
                     .get()
                     .await()
 
-                val profiles = snapshot.documents.mapNotNull { doc ->
+                val profiles = mutableListOf<UserProfile>()
+                for (doc in snapshot.documents) {
                     try {
                         val uid = doc.getString("userId") ?: doc.id
-                        if (uid.isBlank() || uid == currentUser.uid || uid in blockedUserIds ||
-                            blockRepository.isBlockedBetweenUsers(currentUser.uid, uid)
-                        ) {
-                            null
-                        } else {
-                            val city = doc.getString("city") ?: ""
-                            val country = doc.getString("country") ?: ""
-                            UserProfile(
-                                uid = uid,
-                                name = doc.getString("displayName") ?: "",
-                                age = doc.getLong("age")?.toInt() ?: 18,
-                                city = city,
-                                country = country,
-                                timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(country, null),
-                                verificationStatus = if (doc.getBoolean("isIdentityVerified") == true) "VERIFIED" else "NONE",
-                                guardianStatus = if (doc.getBoolean("hasGuardian") == true) "VERIFIED" else null,
-                                blurPictures = (doc.getString("photoPrivacyMode") ?: "blurred_by_default") != "visible",
-                                maritalStatus = doc.getString("maritalStatus") ?: "single",
-                                weddingTimeline = doc.getString("marriageTimeline") ?: ""
-                            )
+                        if (uid.isBlank() || uid == currentUser.uid || uid in blockedUserIds) {
+                            continue
                         }
+                        if (blockRepository.isBlockedBetweenUsers(currentUser.uid, uid)) {
+                            continue
+                        }
+
+                        val city = doc.getString("city") ?: ""
+                        val country = doc.getString("country") ?: ""
+                        profiles += UserProfile(
+                            uid = uid,
+                            name = doc.getString("displayName") ?: "",
+                            age = doc.getLong("age")?.toInt() ?: 18,
+                            city = city,
+                            country = country,
+                            timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(country, null),
+                            verificationStatus = if (doc.getBoolean("isIdentityVerified") == true) "VERIFIED" else "NONE",
+                            guardianStatus = if (doc.getBoolean("hasGuardian") == true) "VERIFIED" else null,
+                            blurPictures = (doc.getString("photoPrivacyMode") ?: "blurred_by_default") != "visible",
+                            maritalStatus = doc.getString("maritalStatus") ?: "single",
+                            weddingTimeline = doc.getString("marriageTimeline") ?: ""
+                        )
                     } catch (e: Exception) {
-                        null
+                        // Skip malformed public-profile projections without reading private profile data.
                     }
                 }
 
