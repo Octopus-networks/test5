@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -29,6 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
+import com.mithaq.app.ui.photo.MyPhotosScreen
 
 private data class ProfileHubItem(
     val titleResId: Int,
@@ -68,6 +74,15 @@ fun MithaqProfileHubScreen(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showMyPhotos by remember { mutableStateOf(false) }
+    if (showMyPhotos) {
+        MyPhotosScreen(
+            isArabic = isArabic,
+            onBack = { showMyPhotos = false },
+            modifier = modifier
+        )
+        return
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -87,6 +102,8 @@ fun MithaqProfileHubScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(18.dp))
+        MyPhotosEntryCard(isArabic = isArabic, onClick = { showMyPhotos = true })
+        Spacer(modifier = Modifier.height(10.dp))
         profileItems.forEach { item ->
             ProfileHubRow(item = item, isArabic = isArabic)
             Spacer(modifier = Modifier.height(10.dp))
@@ -144,6 +161,55 @@ private fun ProfileHubRow(
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = localizedString(isArabic, item.subtitleResId, item.subtitleArabicResId),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MyPhotosEntryCard(isArabic: Boolean, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Image,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isArabic) "صوري" else "My Photos",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = if (isArabic) {
+                        "ارفع وأدِر صورك الخاصة بأمان"
+                    } else {
+                        "Upload and manage your private photos securely"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
