@@ -1,0 +1,134 @@
+name: Deploy Firebase
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - firebase.json
+      - .firebaserc
+      - firestore.rules
+      - firestore.indexes.json
+      - storage.rules
+      - functions/**
+      - scripts/verify_security_rules.py
+      - .github/workflows/firebase-deploy.yml
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Firebase target to deploy
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - rules
+          - firestore
+          - storage
+          - functions
+      dry_run:
+        description: Validate only; do not deploy
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: firebase-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_ID: mithaq-matchmaking
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  deploy:
+    name: Deploy Firebase project
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: functions/package.json
+
+      - name: Install Firebase Functions dependencies
+        run: npm install
+        working-directory: functions
+
+      - name: Validate Firebase security rules
+        run: |
+          if [ -f scripts/verify_security_rules.py ]; then
+            python3 scripts/verify_security_rules.py
+          else
+            echo "scripts/verify_security_rules.py not found; skipping static rules guard"
+          fi
+
+      - name: Validate Cloud Functions syntax
+        run: npm run lint --prefix functions
+
+      - name: Authenticate to Google Cloud
+        if: ${{ !inputs.dry_run }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+
+      - name: Resolve deploy target
+        id: deploy_target
+        shell: bash
+        run: |
+          TARGET="${{ inputs.target }}"
+          if [ -z "$TARGET" ]; then
+            TARGET="all"
+          fi
+
+          case "$TARGET" in
+            all)
+              ONLY="firestore:rules,storage,functions"
+              ;;
+            rules)
+              ONLY="firestore:rules,storage"
+              ;;
+            firestore)
+              ONLY="firestore:rules"
+              ;;
+            storage)
+              ONLY="storage"
+              ;;
+            functions)
+              ONLY="functions"
+              ;;
+            *)
+              echo "Unknown target: $TARGET" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "only=$ONLY" >> "$GITHUB_OUTPUT"
+          echo "Resolved Firebase deploy target: $ONLY"
+
+      - name: Validate deploy command
+        if: ${{ inputs.dry_run }}
+        run: |
+          npx --yes firebase-tools@latest deploy \
+            --only "${{ steps.deploy_target.outputs.only }}" \
+            --project "$PROJECT_ID" \
+            --non-interactive \
+            --dry-run
+
+      - name: Deploy Firebase
+        if: ${{ !inputs.dry_run }}
+        run: |
+          npx --yes firebase-tools@latest deploy \
+            --only "${{ steps.deploy_target.outputs.only }}" \
+            --project "$PROJECT_ID" \
+            --non-interactive
