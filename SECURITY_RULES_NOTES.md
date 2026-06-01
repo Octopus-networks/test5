@@ -18,7 +18,7 @@ function isVerifiedEmailUser() {
 - Home, onboarding, search, matches, requests, chat, guardian, prayer settings, photo upload, verification, and admin data should require verified email.
 - `profiles/{userId}` should be treated as private profile data: owner-only reads/writes plus role-based admin/backend access.
 - `publicProfiles/{userId}` should contain sanitized discovery data only and may be readable by verified users.
-- `publicProfiles/{userId}` should be writable only by the owner during the current client-side mirror phase, or preferably by backend/admin logic in production.
+- `publicProfiles/{userId}` is server-owned in Phase 10. Android clients must not create, update, or delete public mirror documents directly; Cloud Functions/Admin SDK mirrors `profiles/{userId}` through a strict allowlist.
 - Raw prayer logs should remain private to the owner and privileged server/admin flows only.
 - Guardian details such as phone, email, relationship notes, and permissions should remain private and must not be copied into public discovery documents.
 - Chat data and message contents should remain private to room members, authorized wali access, and role-based admin moderation flows only.
@@ -28,18 +28,22 @@ function isVerifiedEmailUser() {
 
 ## Public Discovery Mirror
 
-Phase 4.5 introduces `publicProfiles/{userId}` as a sanitized mirror for Discover/Home/Search. The client currently creates this document after onboarding from approved public fields only:
+Phase 4.5 introduced `publicProfiles/{userId}` as a sanitized mirror for Discover/Home/Search. Phase 10 moves this mirror out of Android and into Cloud Functions. The client now saves onboarding data only to `profiles/{userId}`; `mirrorPublicProfile` observes that private profile document and writes the public mirror with a strict allowlist:
 
+- user id
 - display name
 - age
 - city/country
 - account type
 - marital status
 - marriage timeline
-- verification badges/status placeholders
-- guardian presence boolean
+- public prayer label/share flag only
+- local time sharing flag
+- guardian presence boolean only
+- email/identity verification booleans
 - photo privacy mode
 - profile completion percent
+- last active/update timestamps
 
 It must not include sensitive raw data:
 
@@ -52,7 +56,9 @@ It must not include sensitive raw data:
 - chat data
 - hidden visibility settings
 
-For stronger production security, move public profile mirroring to trusted backend logic such as Cloud Functions or an admin service. Client-side sanitization improves app behavior now, but server-side mirroring is the stronger boundary.
+Cloud Functions deletes `publicProfiles/{userId}` when `profiles/{userId}` is deleted. That is the least risky default because deleted private profiles disappear from discovery instead of leaving stale public data behind.
+
+Existing users can be backfilled with `npm run backfill:publicProfiles --prefix functions`. The script uses the same sanitizer helper as the live trigger and is safe to rerun.
 
 Phase 5 connects Home/Discover and Search to `publicProfiles` through `DiscoverViewModel -> PublicProfileRepository -> Firestore`. These screens must not read `profiles/{userId}` directly. Filtering is performed over the sanitized public fields only, and near-me filtering remains a placeholder until safe city/GPS matching is implemented.
 
@@ -117,10 +123,8 @@ match /profiles/{userId} {
 match /publicProfiles/{userId} {
   allow read: if isVerifiedEmailUser();
 
-  // Current client-side mirror phase only.
-  // Prefer backend/admin writes in production.
-  allow write: if isVerifiedEmailUser() &&
-    request.auth.uid == userId;
+  // Phase 10: server/Admin SDK writes only via Cloud Functions.
+  allow create, update, delete: if false;
 }
 
 match /interestRequests/{requestId} {

@@ -6,7 +6,9 @@
   },
   "main": "index.js",
   "scripts": {
-    "lint": "node --check index.js",
+    "lint": "node --check index.js && node --check publicProfileMirror.js && node --check scripts/backfillPublicProfiles.js && node --check scripts/testPublicProfileMirror.js",
+    "test": "node scripts/testPublicProfileMirror.js",
+    "backfill:publicProfiles": "node scripts/backfillPublicProfiles.js",
     "serve": "firebase emulators:start --only functions,firestore,auth,storage",
     "deploy": "firebase deploy --only functions"
   },

@@ -1,8 +1,9 @@
 "use strict";
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
+const { buildPublicProfileFromPrivateProfile } = require("./publicProfileMirror");
 
 admin.initializeApp();
 
@@ -151,6 +152,40 @@ exports.deleteUserProfile = onCall(secureCallable, async (request) => {
   await db.collection("adminAuditLogs").add(auditPayload(request, "deleteUserProfile", targetUid));
   return { ok: true };
 });
+
+async function isEmailVerified(uid) {
+  try {
+    const userRecord = await admin.auth().getUser(uid);
+    return userRecord.emailVerified === true;
+  } catch (error) {
+    console.warn("Could not read Auth user while mirroring public profile", {
+      uid,
+      error: error && error.message ? error.message : error,
+    });
+    return false;
+  }
+}
+
+exports.mirrorPublicProfile = onDocumentWritten(
+  { document: "profiles/{userId}", region },
+  async (event) => {
+    const userId = event.params.userId;
+    const publicRef = db.collection("publicProfiles").doc(userId);
+
+    if (!event.data || !event.data.after.exists) {
+      await publicRef.delete();
+      return;
+    }
+
+    const profileData = event.data.after.data() || {};
+    const publicProfile = buildPublicProfileFromPrivateProfile(userId, profileData, {
+      isEmailVerified: await isEmailVerified(userId),
+      serverTimestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await publicRef.set(publicProfile, { merge: false });
+  }
+);
 
 async function userName(uid) {
   try {
