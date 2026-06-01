@@ -416,13 +416,13 @@ fun MithaqPublicProfileCard(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
+            val isBlockedProfile = profile.userId in interestState.blockedUserIds ||
+                    profile.userId in photoState.blockedUserIds ||
+                    profile.userId in chatState.blockedUserIds
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val isBlockedProfile = profile.userId in interestState.blockedUserIds ||
-                        profile.userId in photoState.blockedUserIds ||
-                        profile.userId in chatState.blockedUserIds
                 val requestStatus = interestState.sentStatusByUserId[profile.userId]
                 val canSendInterest = currentUserId.isNotBlank() &&
                         profile.userId != currentUserId &&
