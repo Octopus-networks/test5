@@ -404,4 +404,8 @@
     <string name="request_status_declined_ar">مرفوض</string>
     <string name="request_status_cancelled">ملغي</string>
     <string name="request_status_cancelled_ar">ملغي</string>
+    <string name="request_blocked_action_unavailable">الإجراءات معطلة لأن أحدكما حظر الآخر.</string>
+    <string name="request_blocked_action_unavailable_ar">الإجراءات معطلة لأن أحدكما حظر الآخر.</string>
+    <string name="request_blocked_short">محظور</string>
+    <string name="request_blocked_short_ar">محظور</string>
 </resources>

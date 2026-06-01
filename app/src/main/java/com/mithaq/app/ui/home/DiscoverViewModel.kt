@@ -70,7 +70,7 @@ class DiscoverViewModel(
         _state.value = _state.value.copy(isLoading = true, errorMessage = null)
         viewModelScope.launch {
             try {
-                val profiles = repository.getDiscoverProfiles()
+                val profiles = repository.getDiscoverProfiles(viewerUserId = currentUserId)
                 val visiblePhotoUrls = mutableMapOf<String, String>()
                 if (currentUserId.isNotBlank()) {
                     for (profile in profiles) {

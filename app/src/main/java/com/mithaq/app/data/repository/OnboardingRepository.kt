@@ -72,6 +72,12 @@ class OnboardingRepository(
             "marriageIntent" to mapOf(
                 "timeline" to selected("marriage_timeline", answers)
             ),
+            "publicSettings" to mapOf(
+                "hasGuardian" to false,
+                "prayerRoutineShared" to selected("prayer_habit", answers).isNotBlank(),
+                "prayerHabitPublicLabel" to selected("prayer_habit", answers),
+                "photoPrivacyMode" to "blurred_by_default"
+            ),
             "updatedAt" to FieldValue.serverTimestamp()
         )
 

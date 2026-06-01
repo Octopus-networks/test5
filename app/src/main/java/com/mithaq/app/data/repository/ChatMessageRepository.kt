@@ -90,8 +90,6 @@ class ChatMessageRepository(
                 )
             ).await()
 
-            queueMessageNotification(chatId, senderId, messageRef.id, cleanedText)
-
             ChatMessageResult.Success(messageRef.id)
         } catch (e: Exception) {
             ChatMessageResult.Error(e.localizedMessage ?: "Could not send message.")
@@ -150,38 +148,6 @@ class ChatMessageRepository(
 
     private fun String.safePreview(): String {
         return if (length <= 80) this else take(77).trimEnd() + "..."
-    }
-
-    private suspend fun queueMessageNotification(
-        chatId: String,
-        senderId: String,
-        messageId: String,
-        text: String
-    ) {
-        try {
-            val room = chatRepository.getChatRoom(chatId) ?: return
-            val recipientId = room.participantIds.firstOrNull { it != senderId } ?: return
-            val senderName = room.participantPublicSummaries[senderId]
-                ?.displayName
-                ?.ifBlank { null }
-                ?: "Mithaq member"
-            firestore.collection("notifications").add(
-                mapOf(
-                    "senderUid" to senderId,
-                    "recipientUid" to recipientId,
-                    "title" to "Mithaq - New message",
-                    "body" to "$senderName: ${text.safePreview()}",
-                    "status" to "PENDING",
-                    "type" to "chat_message",
-                    "chatId" to chatId,
-                    "messageId" to messageId,
-                    "timestamp" to System.currentTimeMillis()
-                )
-            ).await()
-        } catch (e: Exception) {
-            // Message delivery must not fail just because notification queuing failed.
-            e.printStackTrace()
-        }
     }
 
     private fun DocumentSnapshot.toChatMessage(parentChatId: String): ChatMessage {

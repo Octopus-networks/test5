@@ -10,9 +10,9 @@ class PublicProfileRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val blockRepository: BlockRepository = BlockRepository(firestore, auth)
 ) {
-    suspend fun getDiscoverProfiles(limit: Long = 20): List<PublicProfile> {
-        val currentUserId = auth.currentUser?.uid.orEmpty()
-        val blockedByCurrentUser = blockRepository.getBlockedUserIds(currentUserId)
+    suspend fun getDiscoverProfiles(limit: Long = 20, viewerUserId: String = ""): List<PublicProfile> {
+        val currentUserId = viewerUserId.ifBlank { auth.currentUser?.uid.orEmpty() }
+        val blockedByCurrentUser = if (currentUserId.isBlank()) emptySet() else blockRepository.getBlockedUserIds(currentUserId)
         val profiles = firestore.collection("publicProfiles")
             .whereEqualTo("isEmailVerified", true)
             .limit(limit)
@@ -26,7 +26,7 @@ class PublicProfileRepository(
             if (profile.userId.isBlank() || profile.userId == currentUserId || profile.userId in blockedByCurrentUser) {
                 continue
             }
-            if (blockRepository.isBlockedBetweenUsers(currentUserId, profile.userId)) {
+            if (currentUserId.isNotBlank() && blockRepository.isBlockedBetweenUsers(currentUserId, profile.userId)) {
                 continue
             }
             visibleProfiles += profile

@@ -452,7 +452,7 @@ fun MithaqPublicProfileCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     val buttonText = when {
                         profile.userId in interestState.sendingToUserIds -> localizedString(isArabic, R.string.discover_sending, R.string.discover_sending_ar)
-                        isBlockedProfile -> localizedString(isArabic, R.string.request_blocked_action_unavailable, R.string.request_blocked_action_unavailable_ar)
+                        isBlockedProfile -> localizedString(isArabic, R.string.request_blocked_short, R.string.request_blocked_short_ar)
                         requestStatus == "pending" -> localizedString(isArabic, R.string.discover_sent, R.string.discover_sent_ar)
                         requestStatus == "accepted" -> localizedString(isArabic, R.string.discover_accepted, R.string.discover_accepted_ar)
                         requestStatus == "declined" -> localizedString(isArabic, R.string.discover_interest_declined, R.string.discover_interest_declined_ar)
@@ -481,7 +481,7 @@ fun MithaqPublicProfileCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     val photoButtonText = when {
                         profile.userId in photoState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
-                        isBlockedProfile -> localizedString(isArabic, R.string.request_blocked_action_unavailable, R.string.request_blocked_action_unavailable_ar)
+                        isBlockedProfile -> localizedString(isArabic, R.string.request_blocked_short, R.string.request_blocked_short_ar)
                         photoStatus == "pending" -> localizedString(isArabic, R.string.discover_photo_requested, R.string.discover_photo_requested_ar)
                         photoStatus == "approved" -> localizedString(isArabic, R.string.discover_photo_approved, R.string.discover_photo_approved_ar)
                         photoStatus == "declined" -> localizedString(isArabic, R.string.discover_photo_declined, R.string.discover_photo_declined_ar)
@@ -511,7 +511,7 @@ fun MithaqPublicProfileCard(
                 Spacer(modifier = Modifier.width(6.dp))
                 val chatButtonText = when {
                     profile.userId in chatState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
-                    isBlockedProfile -> localizedString(isArabic, R.string.request_blocked_action_unavailable, R.string.request_blocked_action_unavailable_ar)
+                    isBlockedProfile -> localizedString(isArabic, R.string.request_blocked_short, R.string.request_blocked_short_ar)
                     chatStatus == "pending" -> localizedString(isArabic, R.string.discover_chat_requested, R.string.discover_chat_requested_ar)
                     chatStatus == "approved" -> localizedString(isArabic, R.string.discover_chat_approved, R.string.discover_chat_approved_ar)
                     chatStatus == "declined" -> localizedString(isArabic, R.string.discover_chat_declined, R.string.discover_chat_declined_ar)

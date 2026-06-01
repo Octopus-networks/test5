@@ -1,5 +1,6 @@
 package com.mithaq.app.ui.auth
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.ActionCodeSettings
@@ -287,6 +288,42 @@ class AuthViewModel(
                 onResult(true, "Verification email sent.")
             } catch (e: Exception) {
                 onResult(false, e.localizedMessage ?: "Could not resend verification email. Please check your connection and try again.")
+            }
+        }
+    }
+
+    fun applyEmailVerificationLink(deepLink: String?, onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            try {
+                val oobCode = deepLink
+                    ?.let { Uri.parse(it).getQueryParameter("oobCode") }
+                    ?.takeIf { it.isNotBlank() }
+
+                if (oobCode == null) {
+                    reloadAndCheckEmailVerification(onResult)
+                    return@launch
+                }
+
+                auth.applyActionCode(oobCode).await()
+                val user = auth.currentUser
+                if (user == null) {
+                    _authState.value = AuthState.Idle
+                    onResult(true, "Email verified. Please sign in again.")
+                    return@launch
+                }
+
+                user.reload().await()
+                val reloadedUser = auth.currentUser
+                if (reloadedUser?.isEmailVerified == true) {
+                    _authState.value = AuthState.Authenticated(reloadedUser.uid)
+                    fetchCurrentUserProfile(reloadedUser.uid)
+                    onResult(true, "Email verified.")
+                } else {
+                    _authState.value = AuthState.EmailVerificationRequired(user.uid, user.email)
+                    onResult(false, "Your email is not verified yet. Please open the activation link first.")
+                }
+            } catch (e: Exception) {
+                onResult(false, e.localizedMessage ?: "Could not complete email verification. Please try the activation link again.")
             }
         }
     }

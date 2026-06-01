@@ -86,9 +86,18 @@ class PhotoRepository(
     suspend fun getPhotoPrivacyMode(userId: String): String {
         if (userId.isBlank()) return PhotoVisibility.ApprovedUsersOnly
         return try {
-            val snapshot = firestore.collection("profiles").document(userId).get().await()
-            val publicSettings = snapshot.get("publicSettings") as? Map<*, *> ?: emptyMap<Any, Any>()
-            val mode = publicSettings["photoPrivacyMode"] as? String
+            val currentUserId = auth.currentUser?.uid.orEmpty()
+            val snapshot = if (currentUserId == userId) {
+                firestore.collection("profiles").document(userId).get().await()
+            } else {
+                firestore.collection("publicProfiles").document(userId).get().await()
+            }
+            val mode = if (currentUserId == userId) {
+                val publicSettings = snapshot.get("publicSettings") as? Map<*, *> ?: emptyMap<Any, Any>()
+                publicSettings["photoPrivacyMode"] as? String
+            } else {
+                snapshot.getString("photoPrivacyMode")
+            }
             mode?.takeIf { it in PhotoVisibility.AllowedValues } ?: PhotoVisibility.ApprovedUsersOnly
         } catch (e: Exception) {
             PhotoVisibility.ApprovedUsersOnly

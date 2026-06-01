@@ -216,9 +216,7 @@ class MainActivity : FragmentActivity() {
 
     private fun captureVerificationDeepLink(intent: Intent?) {
         val data = intent?.dataString
-        if (data?.startsWith("https://mithaq.app/verify-email") == true ||
-            data?.startsWith("https://mithaq.app/reset-password") == true
-        ) {
+        if (data?.startsWith("https://mithaq.app/verify-email") == true) {
             latestDeepLinkData = data
             latestDeepLinkNonce += 1
         }
@@ -888,7 +886,7 @@ fun MithaqAppNavigation(
         when {
             launchIntentData?.startsWith("https://mithaq.app/verify-email") == true -> {
                 currentScreen = Routes.VerifyEmail
-                authViewModel.reloadAndCheckEmailVerification { verified, _ ->
+                authViewModel.applyEmailVerificationLink(launchIntentData) { verified, _ ->
                     if (verified) {
                         val uid = (authViewModel.authState.value as? AuthState.Authenticated)?.userId
                         if (uid != null) {
@@ -896,10 +894,6 @@ fun MithaqAppNavigation(
                         }
                     }
                 }
-            }
-            launchIntentData?.startsWith("https://mithaq.app/reset-password") == true -> {
-                currentScreen = Routes.Login
-            }
         }
     }
 
