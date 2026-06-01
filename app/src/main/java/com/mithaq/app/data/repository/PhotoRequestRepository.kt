@@ -11,7 +11,8 @@ import kotlinx.coroutines.tasks.await
 class PhotoRequestRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val publicProfileRepository: PublicProfileRepository = PublicProfileRepository(firestore, auth)
+    private val publicProfileRepository: PublicProfileRepository = PublicProfileRepository(firestore, auth),
+    private val blockRepository: BlockRepository = BlockRepository(firestore, auth)
 ) {
     suspend fun requestPhoto(fromUserId: String, toUserId: String): PhotoRequestResult {
         if (fromUserId.isBlank() || toUserId.isBlank()) {
@@ -26,6 +27,9 @@ class PhotoRequestRepository(
         }
 
         return try {
+            if (blockRepository.isBlockedBetweenUsers(fromUserId, toUserId)) {
+                return PhotoRequestResult.Error("This action is unavailable because one of you has blocked the other.")
+            }
             val targetProfile = publicProfileRepository.getPublicProfile(toUserId)
                 ?: return PhotoRequestResult.Error("This member is not available for photo requests.")
             if (!allowsRequestBasedPhotoAccess(targetProfile.photoPrivacyMode)) {
@@ -93,6 +97,9 @@ class PhotoRequestRepository(
             if (request.status != "pending") {
                 return PhotoRequestResult.Error("This request is no longer pending.")
             }
+            if (blockRepository.isBlockedBetweenUsers(request.fromUserId, request.toUserId)) {
+                return PhotoRequestResult.Error("This action is unavailable because one of you has blocked the other.")
+            }
             requestRef.update(
                 mapOf(
                     "status" to "cancelled",
@@ -117,6 +124,9 @@ class PhotoRequestRepository(
             }
             if (request.status != "pending") {
                 return PhotoRequestResult.Error("This request is no longer pending.")
+            }
+            if (blockRepository.isBlockedBetweenUsers(request.fromUserId, request.toUserId)) {
+                return PhotoRequestResult.Error("This action is unavailable because one of you has blocked the other.")
             }
             requestRef.update(
                 mapOf(

@@ -11,7 +11,8 @@ import kotlinx.coroutines.tasks.await
 class ChatRequestRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val chatRepository: ChatRepository = ChatRepository(firestore, auth)
+    private val chatRepository: ChatRepository = ChatRepository(firestore, auth),
+    private val blockRepository: BlockRepository = BlockRepository(firestore, auth)
 ) {
     suspend fun requestChat(fromUserId: String, toUserId: String): ChatRequestResult {
         if (fromUserId.isBlank() || toUserId.isBlank()) {
@@ -26,6 +27,9 @@ class ChatRequestRepository(
         }
 
         return try {
+            if (blockRepository.isBlockedBetweenUsers(fromUserId, toUserId)) {
+                return ChatRequestResult.Error("This action is unavailable because one of you has blocked the other.")
+            }
             val acceptedInterestId = acceptedInterestRequestId(fromUserId, toUserId)
                 ?: return ChatRequestResult.Error("Please send or receive accepted interest before requesting chat.")
 
@@ -89,6 +93,9 @@ class ChatRequestRepository(
             if (request.status != "pending") {
                 return ChatRequestResult.Error("This request is no longer pending.")
             }
+            if (blockRepository.isBlockedBetweenUsers(request.fromUserId, request.toUserId)) {
+                return ChatRequestResult.Error("This action is unavailable because one of you has blocked the other.")
+            }
             requestRef.update(
                 mapOf(
                     "status" to "cancelled",
@@ -110,6 +117,9 @@ class ChatRequestRepository(
             val user = auth.currentUser
             if (user?.uid != request.toUserId || !user.isEmailVerified) {
                 return ChatRequestResult.Error("You can respond only to chat requests sent to you.")
+            }
+            if (blockRepository.isBlockedBetweenUsers(request.fromUserId, request.toUserId)) {
+                return ChatRequestResult.Error("This action is unavailable because one of you has blocked the other.")
             }
             if (approved && request.status == "approved") {
                 return when (val roomResult = chatRepository.createChatRoomFromApprovedRequest(requestId)) {

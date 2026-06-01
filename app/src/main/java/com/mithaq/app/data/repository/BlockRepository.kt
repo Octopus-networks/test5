@@ -65,30 +65,47 @@ class BlockRepository(
         }
     }
 
+    suspend fun getBlockedUserIds(userId: String): Set<String> {
+        if (!canReadForUser(userId)) return emptySet()
+        return getBlockedUsers(userId)
+            .map { it.blockedUserId }
+            .filter { it.isNotBlank() && it != userId }
+            .toSet()
+    }
+
     suspend fun isBlockedBetweenUsers(userA: String, userB: String): Boolean {
         if (userA.isBlank() || userB.isBlank() || userA == userB) return true
-        val first = firestore.collection("blocks")
-            .document(blockIdFor(userA, userB))
-            .get()
-            .await()
-            .exists()
-        if (first) return true
-        return firestore.collection("blocks")
-            .document(blockIdFor(userB, userA))
-            .get()
-            .await()
-            .exists()
+        return blockExists(userA, userB) || blockExists(userB, userA)
     }
 
     suspend fun getBlockedUsers(userId: String): List<UserBlock> {
-        val user = auth.currentUser
-        if (user?.uid != userId || !user.isEmailVerified) return emptyList()
+        if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("blocks")
             .whereEqualTo("blockerId", userId)
             .get()
             .await()
             .documents
             .map { it.toUserBlock() }
+    }
+
+    private suspend fun blockExists(blockerUserId: String, blockedUserId: String): Boolean {
+        return try {
+            firestore.collection("blocks")
+                .document(blockIdFor(blockerUserId, blockedUserId))
+                .get()
+                .await()
+                .exists()
+        } catch (e: Exception) {
+            // Some deployed rules allow users to read only their own block records.
+            // Treat unreadable reciprocal records as not safely checkable rather than
+            // breaking Discover/Search, request buttons, or chat reads.
+            false
+        }
+    }
+
+    private fun canReadForUser(userId: String): Boolean {
+        val user = auth.currentUser
+        return user?.uid == userId && user.isEmailVerified
     }
 
     private fun blockIdFor(blockerUserId: String, blockedUserId: String): String {

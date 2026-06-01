@@ -2,6 +2,7 @@ package com.mithaq.app.ui.requests
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mithaq.app.data.repository.BlockRepository
 import com.mithaq.app.data.repository.PhotoRequestRepository
 import com.mithaq.app.data.repository.PhotoRequestResult
 import com.mithaq.app.data.repository.PublicProfileRepository
@@ -18,6 +19,7 @@ data class PhotoRequestUiState(
     val respondingRequestIds: Set<String> = emptySet(),
     val cancellingRequestIds: Set<String> = emptySet(),
     val sentStatusByUserId: Map<String, String> = emptyMap(),
+    val blockedUserIds: Set<String> = emptySet(),
     val sentRequests: List<PhotoRequest> = emptyList(),
     val receivedPendingRequests: List<PhotoRequest> = emptyList(),
     val receivedHistoryRequests: List<PhotoRequest> = emptyList(),
@@ -28,7 +30,8 @@ data class PhotoRequestUiState(
 
 class PhotoRequestViewModel(
     private val repository: PhotoRequestRepository = PhotoRequestRepository(),
-    private val publicProfileRepository: PublicProfileRepository = PublicProfileRepository()
+    private val publicProfileRepository: PublicProfileRepository = PublicProfileRepository(),
+    private val blockRepository: BlockRepository = BlockRepository()
 ) : ViewModel() {
     private val _state = MutableStateFlow(PhotoRequestUiState())
     val state: StateFlow<PhotoRequestUiState> = _state.asStateFlow()
@@ -43,12 +46,16 @@ class PhotoRequestViewModel(
                 val profileIds = (sent.map { it.toUserId } + received.map { it.fromUserId })
                     .filter { it.isNotBlank() }
                     .distinct()
+                val blockedUserIds = profileIds
+                    .filter { blockRepository.isBlockedBetweenUsers(userId, it) }
+                    .toSet()
                 val profiles = profileIds.mapNotNull { id ->
                     publicProfileRepository.getPublicProfile(id)?.let { id to it }
                 }.toMap()
                 _state.value = _state.value.copy(
                     isLoadingRequests = false,
                     sentStatusByUserId = sent.associate { it.toUserId to it.status },
+                    blockedUserIds = blockedUserIds,
                     sentRequests = sent,
                     receivedPendingRequests = received.filter { it.status == "pending" },
                     receivedHistoryRequests = received.filter { it.status != "pending" },

@@ -82,6 +82,15 @@ Phase 8.6 adds realtime Firestore listeners for active chat rooms and text messa
 
 Phase 8.8 queues a `notifications/{notificationId}` document when a participant sends a text message. This document should be created only by the sender, only for the other participant in an existing chat room, and only with a `PENDING` status. The notification document should contain routing metadata such as `chatId`, `messageId`, sender uid, recipient uid, title, and a short safe preview. It must not contain private profile maps, photo URLs, guardian contact details, or full chat exports. For instant background delivery in production, prefer a Cloud Function that observes new chat messages or queued notifications and sends FCM data notifications through the Admin SDK.
 
+Phase 8.9 enforces block state across discovery, requests, and chat in app logic:
+
+- Discover/Home/Search must read only `publicProfiles` and then client-filter users blocked by the current user. If reciprocal block reads are permitted by rules, users who blocked the current user should also be excluded; if not safely readable, the app must fail closed for sends and avoid reading private profiles.
+- Interest/photo/chat request creation must check `BlockRepository.isBlockedBetweenUsers(fromUserId, toUserId)` before writing new pending requests. Existing request history can remain visible to participants, but response/cancel actions should be disabled or rejected while either side is blocked.
+- Chat rooms and old messages remain readable to participants after a block, but new message sends must be disabled with `Messaging is unavailable for this conversation.` No chat rooms or messages are deleted by block enforcement.
+- `BlockRepository.getBlockedUserIds(userId)` is the central source for current-user block filtering. `BlockRepository.isBlockedBetweenUsers(userA, userB)` is the central app-logic gate for actions between two users.
+- Current deployed block documents use `blockerId`, `blockedId`, and `timestamp` with deterministic id `{blockerId}_{blockedId}`. A future rules/data migration can add `blockerUserId`, `blockedUserId`, `createdAt`, `updatedAt`, and optional chat context once Firestore rules are updated.
+- Production security should eventually enforce request/message block checks in Firestore rules or Cloud Functions; client checks improve UX and reduce accidental writes but are not the only security boundary.
+
 Admin membership changes may temporarily fall back from Cloud Functions to direct Firestore updates for `isPremium`, `subscriptionPlan`, `premiumExpiry`, `isWaliAccount`, and `isAdmin`. Rules must allow only role-based admins to perform those writes, and production should prefer backend/admin writes with audit logs.
 
 ## Example Pattern

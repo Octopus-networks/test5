@@ -10,7 +10,8 @@ import kotlinx.coroutines.tasks.await
 
 class PublicProfileRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val blockRepository: BlockRepository = BlockRepository(firestore, auth)
 ) {
     suspend fun createOrUpdatePublicProfileFromOnboarding(userId: String): PublicProfileWriteResult {
         if (userId.isBlank()) {
@@ -47,7 +48,8 @@ class PublicProfileRepository(
     }
 
     suspend fun getDiscoverProfiles(limit: Long = 20): List<PublicProfile> {
-        val currentUserId = auth.currentUser?.uid
+        val currentUserId = auth.currentUser?.uid.orEmpty()
+        val blockedByCurrentUser = blockRepository.getBlockedUserIds(currentUserId)
         return firestore.collection("publicProfiles")
             .whereEqualTo("isEmailVerified", true)
             .limit(limit)
@@ -55,7 +57,12 @@ class PublicProfileRepository(
             .await()
             .documents
             .map { it.toPublicProfile() }
-            .filter { it.userId.isNotBlank() && it.userId != currentUserId }
+            .filter { profile ->
+                profile.userId.isNotBlank() &&
+                    profile.userId != currentUserId &&
+                    profile.userId !in blockedByCurrentUser &&
+                    !blockRepository.isBlockedBetweenUsers(currentUserId, profile.userId)
+            }
             .sortedWith(
                 compareByDescending<PublicProfile> { it.lastActiveAt }
                     .thenByDescending { it.updatedAt }

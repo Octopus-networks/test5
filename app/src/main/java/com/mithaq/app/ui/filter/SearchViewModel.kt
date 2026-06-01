@@ -249,181 +249,43 @@ class SearchViewModel(
 
         viewModelScope.launch {
             try {
-                // First get current user's profile to know their gender and filter for the opposite gender
-                val currentUserDoc = firestore.collection("users")
-                    .document(currentUser.uid)
-                    .get()
-                    .await()
-                
-                val userGender = (currentUserDoc.getString("gender") ?: "MALE").uppercase()
-                val oppositeGender = if (userGender == "MALE") "FEMALE" else "MALE"
-
-                val snapshot = firestore.collection("users")
-                    .whereEqualTo("gender", oppositeGender)
+                val blockRepository = com.mithaq.app.data.repository.BlockRepository(firestore, auth)
+                val blockedUserIds = blockRepository.getBlockedUserIds(currentUser.uid)
+                val snapshot = firestore.collection("publicProfiles")
+                    .whereEqualTo("isEmailVerified", true)
                     .get()
                     .await()
 
                 val profiles = snapshot.documents.mapNotNull { doc ->
                     try {
-                        val uid = doc.id
-                        val name = doc.getString("name") ?: ""
-                        val genderStr = doc.getString("gender") ?: "FEMALE"
-                        val gender = if (genderStr.uppercase() == "MALE") Gender.MALE else Gender.FEMALE
-                        val age = doc.getLong("age")?.toInt() ?: 18
-                        val city = doc.getString("city") ?: ""
-                        val country = doc.getString("country") ?: ""
-                        val timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
-                            country,
-                            doc.getString("timezone")
-                        )
-                        val imageUrl = doc.getString("imageUrl") ?: ""
-                        
-                        val sectStr = doc.getString("sect") ?: "SUNNI"
-                        val sect = try { Sect.valueOf(sectStr.uppercase()) } catch (e: Exception) { Sect.SUNNI }
-                        
-                        val prayerStr = doc.getString("prayerFrequency") ?: "ALWAYS"
-                        val prayer = try { PrayerFrequency.valueOf(prayerStr.uppercase()) } catch (e: Exception) { PrayerFrequency.ALWAYS }
-                        
-                        val modestyStr = doc.getString("modestyPreference") ?: "HIJAB"
-                        val modesty = try { ModestyPreference.valueOf(modestyStr.uppercase()) } catch (e: Exception) { ModestyPreference.HIJAB }
-                        
-                        val relocationStr = doc.getString("relocationWillingness") ?: "OPEN"
-                        val relocation = try { RelocationWillingness.valueOf(relocationStr.uppercase()) } catch (e: Exception) { RelocationWillingness.OPEN }
-                        
-                        val polygamy = doc.getBoolean("polygamyAcceptance") ?: false
-                        val guardianName = doc.getString("guardianName")
-                        val guardianEmail = doc.getString("guardianEmail")
-                        val guardianStatus = doc.getString("guardianStatus")
-                        val isWaliAccount = doc.getBoolean("isWaliAccount") ?: false
-                        val wardUid = doc.getString("wardUid")
-                        val verificationStatus = doc.getString("verificationStatus") ?: "NONE"
-                        val voiceIntroUrl = doc.getString("voiceIntroUrl")
-                        val isAdmin = doc.getBoolean("isAdmin") ?: false
-                        val isPremium = doc.getBoolean("isPremium") ?: false
-                        val subscriptionPlan = doc.getString("subscriptionPlan") ?: "FREE"
-                        val isAdhanEnabled = doc.getBoolean("isAdhanEnabled") ?: false
-                        val adhanLocationLat = doc.getDouble("adhanLocationLat") ?: 0.0
-                        val adhanLocationLng = doc.getDouble("adhanLocationLng") ?: 0.0
-                        val adhanCalculationMethod = doc.getString("adhanCalculationMethod") ?: "MUSLIM_WORLD_LEAGUE"
-                        val adhanSoundPattern = doc.getString("adhanSoundPattern") ?: "TAKBEER"
-                        val fajrPrayedToday = doc.getBoolean("fajrPrayedToday") ?: false
-                        val fajrWeeklyCount = doc.getLong("fajrWeeklyCount")?.toInt() ?: 0
-                        val fajrMonthlyCount = doc.getLong("fajrMonthlyCount")?.toInt() ?: 0
-                        val dhuhrPrayedToday = doc.getBoolean("dhuhrPrayedToday") ?: false
-                        val dhuhrWeeklyCount = doc.getLong("dhuhrWeeklyCount")?.toInt() ?: 0
-                        val dhuhrMonthlyCount = doc.getLong("dhuhrMonthlyCount")?.toInt() ?: 0
-                        val asrPrayedToday = doc.getBoolean("asrPrayedToday") ?: false
-                        val asrWeeklyCount = doc.getLong("asrWeeklyCount")?.toInt() ?: 0
-                        val asrMonthlyCount = doc.getLong("asrMonthlyCount")?.toInt() ?: 0
-                        val maghribPrayedToday = doc.getBoolean("maghribPrayedToday") ?: false
-                        val maghribWeeklyCount = doc.getLong("maghribWeeklyCount")?.toInt() ?: 0
-                        val maghribMonthlyCount = doc.getLong("maghribMonthlyCount")?.toInt() ?: 0
-                        val ishaPrayedToday = doc.getBoolean("ishaPrayedToday") ?: false
-                        val ishaWeeklyCount = doc.getLong("ishaWeeklyCount")?.toInt() ?: 0
-                        val ishaMonthlyCount = doc.getLong("ishaMonthlyCount")?.toInt() ?: 0
-                        val lastPrayerDate = doc.getLong("lastPrayerDate") ?: 0L
-                        val lastWeeklyResetDate = doc.getLong("lastWeeklyResetDate") ?: 0L
-                        val lastMonthlyResetDate = doc.getLong("lastMonthlyResetDate") ?: 0L
-                        val questionnaireAnswers = doc.get("questionnaireAnswers") as? Map<String, String> ?: emptyMap()
-                        val additionalImages = doc.get("additionalImages") as? List<String> ?: emptyList()
-
-                        val username = doc.getString("username") ?: ""
-                        val oathChecked = doc.getBoolean("oathChecked") ?: false
-                        val skinColor = doc.getString("skinColor") ?: ""
-                        val healthStatus = doc.get("healthStatus") as? List<String> ?: emptyList()
-                        val nationality = doc.getString("nationality") ?: ""
-                        val educationLevel = doc.getString("educationLevel") ?: ""
-                        val jobTitle = doc.getString("jobTitle") ?: ""
-                        val incomeLevel = doc.getString("incomeLevel") ?: ""
-                        val fastingHabit = doc.getString("fastingHabit") ?: ""
-                        val weddingTimeline = doc.getString("weddingTimeline") ?: ""
-                        val wifeWorking = doc.getString("wifeWorking") ?: ""
-                        val householdExpenses = doc.getString("householdExpenses") ?: ""
-                        val aymaView = doc.getString("aymaView") ?: ""
-                        val shabkaView = doc.getString("shabkaView") ?: ""
-                        val gpsLocationEnabled = doc.getBoolean("gpsLocationEnabled") ?: false
-                        val blurPictures = doc.getBoolean("blurPictures") ?: true
-                        val height = doc.getLong("height")?.toInt() ?: 170
-                        val weight = doc.getLong("weight")?.toInt() ?: 70
-                        val bodyType = doc.getString("bodyType") ?: "average"
-                        val hairColor = doc.getString("hairColor") ?: "black"
-                        val eyeColor = doc.getString("eyeColor") ?: "brown"
-                        val ethnicity = doc.getString("ethnicity") ?: "arab_middle_eastern"
-                        val maritalStatus = doc.getString("maritalStatus") ?: "single"
-                        val haveChildren = doc.getString("haveChildren") ?: "no"
-                        val languagesSpoken = doc.get("languagesSpoken") as? List<String> ?: emptyList()
-
-                        UserProfile(
-                            uid = uid,
-                            name = name,
-                            gender = gender,
-                            age = age,
-                            city = city,
-                            country = country,
-                            timezone = timezone,
-                            imageUrl = imageUrl,
-                            additionalImages = additionalImages,
-                            sect = sect,
-                            prayerFrequency = prayer,
-                            modestyPreference = modesty,
-                            relocationWillingness = relocation,
-                            polygamyAcceptance = polygamy,
-                            guardianName = guardianName,
-                            guardianEmail = guardianEmail,
-                            guardianStatus = guardianStatus,
-                            isWaliAccount = isWaliAccount,
-                            wardUid = wardUid,
-                            verificationStatus = verificationStatus,
-                            voiceIntroUrl = voiceIntroUrl,
-                            isAdmin = isAdmin,
-                            isPremium = isPremium,
-                            subscriptionPlan = subscriptionPlan,
-                            isAdhanEnabled = isAdhanEnabled,
-                            adhanLocationLat = adhanLocationLat,
-                            adhanLocationLng = adhanLocationLng,
-                            adhanCalculationMethod = adhanCalculationMethod,
-                            adhanSoundPattern = adhanSoundPattern,
-                            fajrPrayedToday = fajrPrayedToday, fajrWeeklyCount = fajrWeeklyCount, fajrMonthlyCount = fajrMonthlyCount,
-                            dhuhrPrayedToday = dhuhrPrayedToday, dhuhrWeeklyCount = dhuhrWeeklyCount, dhuhrMonthlyCount = dhuhrMonthlyCount,
-                            asrPrayedToday = asrPrayedToday, asrWeeklyCount = asrWeeklyCount, asrMonthlyCount = asrMonthlyCount,
-                            maghribPrayedToday = maghribPrayedToday, maghribWeeklyCount = maghribWeeklyCount, maghribMonthlyCount = maghribMonthlyCount,
-                            ishaPrayedToday = ishaPrayedToday, ishaWeeklyCount = ishaWeeklyCount, ishaMonthlyCount = ishaMonthlyCount,
-                            lastPrayerDate = lastPrayerDate,
-                            lastWeeklyResetDate = lastWeeklyResetDate,
-                            lastMonthlyResetDate = lastMonthlyResetDate,
-                            questionnaireAnswers = questionnaireAnswers,
-                            username = username,
-                            oathChecked = oathChecked,
-                            skinColor = skinColor,
-                            healthStatus = healthStatus,
-                            nationality = nationality,
-                            educationLevel = educationLevel,
-                            jobTitle = jobTitle,
-                            incomeLevel = incomeLevel,
-                            fastingHabit = fastingHabit,
-                            weddingTimeline = weddingTimeline,
-                            wifeWorking = wifeWorking,
-                            householdExpenses = householdExpenses,
-                            aymaView = aymaView,
-                            shabkaView = shabkaView,
-                            gpsLocationEnabled = gpsLocationEnabled,
-                            blurPictures = blurPictures,
-                            height = height,
-                            weight = weight,
-                            bodyType = bodyType,
-                            hairColor = hairColor,
-                            eyeColor = eyeColor,
-                            ethnicity = ethnicity,
-                            maritalStatus = maritalStatus,
-                            haveChildren = haveChildren,
-                            languagesSpoken = languagesSpoken
-                        )
+                        val uid = doc.getString("userId") ?: doc.id
+                        if (uid.isBlank() || uid == currentUser.uid || uid in blockedUserIds ||
+                            blockRepository.isBlockedBetweenUsers(currentUser.uid, uid)
+                        ) {
+                            null
+                        } else {
+                            val city = doc.getString("city") ?: ""
+                            val country = doc.getString("country") ?: ""
+                            UserProfile(
+                                uid = uid,
+                                name = doc.getString("displayName") ?: "",
+                                age = doc.getLong("age")?.toInt() ?: 18,
+                                city = city,
+                                country = country,
+                                timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(country, null),
+                                verificationStatus = if (doc.getBoolean("isIdentityVerified") == true) "VERIFIED" else "NONE",
+                                guardianStatus = if (doc.getBoolean("hasGuardian") == true) "VERIFIED" else null,
+                                blurPictures = (doc.getString("photoPrivacyMode") ?: "blurred_by_default") != "visible",
+                                maritalStatus = doc.getString("maritalStatus") ?: "single",
+                                weddingTimeline = doc.getString("marriageTimeline") ?: ""
+                            )
+                        }
                     } catch (e: Exception) {
-                        null // Skip malformed profile documents
+                        null
                     }
                 }
 
-                // Write fetched profiles to local Room database
+                // Cache only sanitized public-profile projections; never cache private profiles here.
                 profiles.forEach { userDao?.insertUser(it.toCached()) }
 
                 allUsersCache = profiles

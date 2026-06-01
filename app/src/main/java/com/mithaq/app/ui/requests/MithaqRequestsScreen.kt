@@ -207,6 +207,7 @@ private fun InterestRequestsTab(
                             publicProfile = state.publicProfilesByUserId[request.fromUserId],
                             isArabic = isArabic,
                             isResponding = request.requestId in state.respondingRequestIds,
+                            isBlocked = request.fromUserId in state.blockedUserIds,
                             onAccept = { onRespond(request.requestId, true) },
                             onDecline = { onRespond(request.requestId, false) }
                         )
@@ -227,6 +228,7 @@ private fun InterestRequestsTab(
                             recipientProfile = state.publicProfilesByUserId[request.toUserId],
                             isArabic = isArabic,
                             isCancelling = request.requestId in state.cancellingRequestIds,
+                            isBlocked = request.toUserId in state.blockedUserIds,
                             onCancel = { onCancel(request.requestId) }
                         )
                     }
@@ -310,6 +312,7 @@ private fun PhotoRequestsTab(
                             publicProfile = state.publicProfilesByUserId[request.fromUserId],
                             isArabic = isArabic,
                             isResponding = request.requestId in state.respondingRequestIds,
+                            isBlocked = request.fromUserId in state.blockedUserIds,
                             onApprove = { onRespond(request.requestId, true) },
                             onDecline = { onRespond(request.requestId, false) }
                         )
@@ -330,6 +333,7 @@ private fun PhotoRequestsTab(
                             recipientProfile = state.publicProfilesByUserId[request.toUserId],
                             isArabic = isArabic,
                             isCancelling = request.requestId in state.cancellingRequestIds,
+                            isBlocked = request.toUserId in state.blockedUserIds,
                             onCancel = { onCancel(request.requestId) }
                         )
                     }
@@ -413,6 +417,7 @@ private fun ChatRequestsTab(
                             publicProfile = state.publicProfilesByUserId[request.fromUserId],
                             isArabic = isArabic,
                             isResponding = request.requestId in state.respondingRequestIds,
+                            isBlocked = request.fromUserId in state.blockedUserIds,
                             onApprove = { onRespond(request.requestId, true) },
                             onDecline = { onRespond(request.requestId, false) }
                         )
@@ -433,6 +438,7 @@ private fun ChatRequestsTab(
                             recipientProfile = state.publicProfilesByUserId[request.toUserId],
                             isArabic = isArabic,
                             isCancelling = request.requestId in state.cancellingRequestIds,
+                            isBlocked = request.toUserId in state.blockedUserIds,
                             onCancel = { onCancel(request.requestId) }
                         )
                     }
@@ -475,6 +481,7 @@ private fun InterestRequestCard(
     publicProfile: PublicProfile?,
     isArabic: Boolean,
     isResponding: Boolean,
+    isBlocked: Boolean,
     onAccept: () -> Unit,
     onDecline: () -> Unit
 ) {
@@ -492,14 +499,14 @@ private fun InterestRequestCard(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = onAccept,
-                enabled = !isResponding,
+                enabled = !isResponding && !isBlocked,
                 modifier = Modifier.weight(1f)
             ) {
                 Text(localizedString(isArabic, R.string.request_accept, R.string.request_accept_ar))
             }
             OutlinedButton(
                 onClick = onDecline,
-                enabled = !isResponding,
+                enabled = !isResponding && !isBlocked,
                 modifier = Modifier.weight(1f)
             ) {
                 Text(localizedString(isArabic, R.string.request_decline, R.string.request_decline_ar))
@@ -514,6 +521,7 @@ private fun SentInterestRequestCard(
     recipientProfile: PublicProfile?,
     isArabic: Boolean,
     isCancelling: Boolean,
+    isBlocked: Boolean,
     onCancel: () -> Unit
 ) {
     val displayName = recipientProfile?.displayName ?: request.toDisplayName
@@ -527,7 +535,7 @@ private fun SentInterestRequestCard(
         if (request.status == "pending") {
             OutlinedButton(
                 onClick = onCancel,
-                enabled = !isCancelling,
+                enabled = !isCancelling && !isBlocked,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(localizedString(isArabic, R.string.request_cancel, R.string.request_cancel_ar))
@@ -558,6 +566,7 @@ private fun PhotoRequestCard(
     publicProfile: PublicProfile?,
     isArabic: Boolean,
     isResponding: Boolean,
+    isBlocked: Boolean,
     onApprove: () -> Unit,
     onDecline: () -> Unit
 ) {
@@ -578,14 +587,14 @@ private fun PhotoRequestCard(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = onApprove,
-                enabled = !isResponding,
+                enabled = !isResponding && !isBlocked,
                 modifier = Modifier.weight(1f)
             ) {
                 Text(localizedString(isArabic, R.string.request_approve, R.string.request_approve_ar))
             }
             OutlinedButton(
                 onClick = onDecline,
-                enabled = !isResponding,
+                enabled = !isResponding && !isBlocked,
                 modifier = Modifier.weight(1f)
             ) {
                 Text(localizedString(isArabic, R.string.request_decline, R.string.request_decline_ar))
@@ -600,6 +609,7 @@ private fun SentPhotoRequestCard(
     recipientProfile: PublicProfile?,
     isArabic: Boolean,
     isCancelling: Boolean,
+    isBlocked: Boolean,
     onCancel: () -> Unit
 ) {
     val displayName = recipientProfile?.displayName.orEmpty()
@@ -613,7 +623,7 @@ private fun SentPhotoRequestCard(
         if (request.status == "pending") {
             OutlinedButton(
                 onClick = onCancel,
-                enabled = !isCancelling,
+                enabled = !isCancelling && !isBlocked,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(localizedString(isArabic, R.string.request_cancel_photo, R.string.request_cancel_photo_ar))
@@ -644,6 +654,7 @@ private fun ChatRequestCard(
     publicProfile: PublicProfile?,
     isArabic: Boolean,
     isResponding: Boolean,
+    isBlocked: Boolean,
     onApprove: () -> Unit,
     onDecline: () -> Unit
 ) {
@@ -664,14 +675,14 @@ private fun ChatRequestCard(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = onApprove,
-                enabled = !isResponding,
+                enabled = !isResponding && !isBlocked,
                 modifier = Modifier.weight(1f)
             ) {
                 Text(localizedString(isArabic, R.string.request_approve, R.string.request_approve_ar))
             }
             OutlinedButton(
                 onClick = onDecline,
-                enabled = !isResponding,
+                enabled = !isResponding && !isBlocked,
                 modifier = Modifier.weight(1f)
             ) {
                 Text(localizedString(isArabic, R.string.request_decline, R.string.request_decline_ar))
@@ -686,6 +697,7 @@ private fun SentChatRequestCard(
     recipientProfile: PublicProfile?,
     isArabic: Boolean,
     isCancelling: Boolean,
+    isBlocked: Boolean,
     onCancel: () -> Unit
 ) {
     val displayName = recipientProfile?.displayName.orEmpty()
@@ -699,7 +711,7 @@ private fun SentChatRequestCard(
         if (request.status == "pending") {
             OutlinedButton(
                 onClick = onCancel,
-                enabled = !isCancelling,
+                enabled = !isCancelling && !isBlocked,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(localizedString(isArabic, R.string.request_cancel_chat, R.string.request_cancel_chat_ar))

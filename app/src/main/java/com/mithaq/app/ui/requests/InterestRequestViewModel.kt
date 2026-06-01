@@ -2,6 +2,7 @@ package com.mithaq.app.ui.requests
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mithaq.app.data.repository.BlockRepository
 import com.mithaq.app.data.repository.InterestRequestRepository
 import com.mithaq.app.data.repository.InterestRequestResult
 import com.mithaq.app.data.repository.PublicProfileRepository
@@ -20,6 +21,7 @@ data class InterestRequestUiState(
     val sentPendingToUserIds: Set<String> = emptySet(),
     val sentStatusByUserId: Map<String, String> = emptyMap(),
     val acceptedWithUserIds: Set<String> = emptySet(),
+    val blockedUserIds: Set<String> = emptySet(),
     val sentRequests: List<InterestRequest> = emptyList(),
     val receivedPendingRequests: List<InterestRequest> = emptyList(),
     val receivedHistoryRequests: List<InterestRequest> = emptyList(),
@@ -30,7 +32,8 @@ data class InterestRequestUiState(
 
 class InterestRequestViewModel(
     private val repository: InterestRequestRepository = InterestRequestRepository(),
-    private val publicProfileRepository: PublicProfileRepository = PublicProfileRepository()
+    private val publicProfileRepository: PublicProfileRepository = PublicProfileRepository(),
+    private val blockRepository: BlockRepository = BlockRepository()
 ) : ViewModel() {
     private val _state = MutableStateFlow(InterestRequestUiState())
     val state: StateFlow<InterestRequestUiState> = _state.asStateFlow()
@@ -47,6 +50,9 @@ class InterestRequestViewModel(
                 val profileIds = (sent.map { it.toUserId } + received.map { it.fromUserId })
                     .filter { it.isNotBlank() }
                     .distinct()
+                val blockedUserIds = profileIds
+                    .filter { blockRepository.isBlockedBetweenUsers(userId, it) }
+                    .toSet()
                 val summaries = profileIds
                     .mapNotNull { request ->
                         publicProfileRepository.getPublicProfile(request)?.let { profile ->
@@ -65,6 +71,7 @@ class InterestRequestViewModel(
                         sent.filter { it.status == "accepted" }.map { it.toUserId } +
                             received.filter { it.status == "accepted" }.map { it.fromUserId }
                         ).toSet(),
+                    blockedUserIds = blockedUserIds,
                     sentRequests = sent,
                     receivedPendingRequests = receivedPending,
                     receivedHistoryRequests = receivedHistory,

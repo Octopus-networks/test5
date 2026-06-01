@@ -420,10 +420,14 @@ fun MithaqPublicProfileCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                val isBlockedProfile = profile.userId in interestState.blockedUserIds ||
+                        profile.userId in photoState.blockedUserIds ||
+                        profile.userId in chatState.blockedUserIds
                 val requestStatus = interestState.sentStatusByUserId[profile.userId]
                 val canSendInterest = currentUserId.isNotBlank() &&
                         profile.userId != currentUserId &&
                         profile.userId !in interestState.sendingToUserIds &&
+                        !isBlockedProfile &&
                         (requestStatus == null || requestStatus == "cancelled")
                 Button(
                     onClick = { onSendInterest(profile.userId) },
@@ -438,6 +442,7 @@ fun MithaqPublicProfileCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     val buttonText = when {
                         profile.userId in interestState.sendingToUserIds -> localizedString(isArabic, R.string.discover_sending, R.string.discover_sending_ar)
+                        isBlockedProfile -> localizedString(isArabic, R.string.request_blocked_action_unavailable, R.string.request_blocked_action_unavailable_ar)
                         requestStatus == "pending" -> localizedString(isArabic, R.string.discover_sent, R.string.discover_sent_ar)
                         requestStatus == "accepted" -> localizedString(isArabic, R.string.discover_accepted, R.string.discover_accepted_ar)
                         requestStatus == "declined" -> localizedString(isArabic, R.string.discover_interest_declined, R.string.discover_interest_declined_ar)
@@ -455,6 +460,7 @@ fun MithaqPublicProfileCard(
                         profile.userId !in photoState.requestingToUserIds &&
                         hasAcceptedInterest &&
                         photoModeAllowsRequest &&
+                        !isBlockedProfile &&
                         (photoStatus == null || photoStatus == "cancelled")
                 OutlinedButton(
                     onClick = { onRequestPhoto(profile.userId) },
@@ -465,6 +471,7 @@ fun MithaqPublicProfileCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     val photoButtonText = when {
                         profile.userId in photoState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
+                        isBlockedProfile -> localizedString(isArabic, R.string.request_blocked_action_unavailable, R.string.request_blocked_action_unavailable_ar)
                         photoStatus == "pending" -> localizedString(isArabic, R.string.discover_photo_requested, R.string.discover_photo_requested_ar)
                         photoStatus == "approved" -> localizedString(isArabic, R.string.discover_photo_approved, R.string.discover_photo_approved_ar)
                         photoStatus == "declined" -> localizedString(isArabic, R.string.discover_photo_declined, R.string.discover_photo_declined_ar)
@@ -483,6 +490,7 @@ fun MithaqPublicProfileCard(
                     profile.userId != currentUserId &&
                     profile.userId !in chatState.requestingToUserIds &&
                     hasAcceptedInterestForChat &&
+                    !isBlockedProfile &&
                     (chatStatus == null || chatStatus == "cancelled")
             OutlinedButton(
                 onClick = { onRequestChat(profile.userId) },
@@ -493,6 +501,7 @@ fun MithaqPublicProfileCard(
                 Spacer(modifier = Modifier.width(6.dp))
                 val chatButtonText = when {
                     profile.userId in chatState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
+                    isBlockedProfile -> localizedString(isArabic, R.string.request_blocked_action_unavailable, R.string.request_blocked_action_unavailable_ar)
                     chatStatus == "pending" -> localizedString(isArabic, R.string.discover_chat_requested, R.string.discover_chat_requested_ar)
                     chatStatus == "approved" -> localizedString(isArabic, R.string.discover_chat_approved, R.string.discover_chat_approved_ar)
                     chatStatus == "declined" -> localizedString(isArabic, R.string.discover_chat_declined, R.string.discover_chat_declined_ar)

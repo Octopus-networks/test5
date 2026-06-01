@@ -11,7 +11,8 @@ import kotlinx.coroutines.tasks.await
 class InterestRequestRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val publicProfileRepository: PublicProfileRepository = PublicProfileRepository(firestore, auth)
+    private val publicProfileRepository: PublicProfileRepository = PublicProfileRepository(firestore, auth),
+    private val blockRepository: BlockRepository = BlockRepository(firestore, auth)
 ) {
     suspend fun sendInterest(fromUserId: String, toUserId: String): InterestRequestResult {
         if (fromUserId.isBlank() || toUserId.isBlank()) {
@@ -28,6 +29,9 @@ class InterestRequestRepository(
         val requestId = requestId(fromUserId, toUserId)
         return try {
             val requestRef = firestore.collection("interestRequests").document(requestId)
+            if (blockRepository.isBlockedBetweenUsers(fromUserId, toUserId)) {
+                return InterestRequestResult.Error("This action is unavailable because one of you has blocked the other.")
+            }
             val existing = requestRef.get().await()
             if (existing.exists() && existing.getString("status") == "pending") {
                 return InterestRequestResult.AlreadyPending
@@ -90,6 +94,9 @@ class InterestRequestRepository(
             if (request.status != "pending") {
                 return InterestRequestResult.Error("This request is no longer pending.")
             }
+            if (blockRepository.isBlockedBetweenUsers(request.fromUserId, request.toUserId)) {
+                return InterestRequestResult.Error("This action is unavailable because one of you has blocked the other.")
+            }
             requestRef.update(
                 mapOf(
                     "status" to "cancelled",
@@ -114,6 +121,9 @@ class InterestRequestRepository(
             }
             if (request.status != "pending") {
                 return InterestRequestResult.Error("This request is no longer pending.")
+            }
+            if (blockRepository.isBlockedBetweenUsers(request.fromUserId, request.toUserId)) {
+                return InterestRequestResult.Error("This action is unavailable because one of you has blocked the other.")
             }
             requestRef.update(
                 mapOf(
