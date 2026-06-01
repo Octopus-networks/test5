@@ -28,7 +28,10 @@ object Config {
             val apiKey = db.app.options.apiKey ?: ""
             apiKey == "mock-api-key-for-testing" || apiKey.contains("mock")
         } catch (e: Exception) {
-            true
+            // Fail closed: never assume mock mode on error. Treating an
+            // initialization failure as "mock" could silently bypass real
+            // backend checks, so default to the safe (non-mock) path.
+            false
         }
     }
 }

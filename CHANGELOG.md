@@ -7,6 +7,12 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+_Nothing yet._
+
+---
+
+## [2.1.0] - 2026-06-01
+
 ### Added
 - `BootReceiver` - dedicated broadcast receiver for `BOOT_COMPLETED` and `LOCKED_BOOT_COMPLETED` that restores Adhan alarms and WorkManager sync automatically after device reboot.
 - `ensureBackgroundServicesRunning()` in `MainActivity` - silently re-queues WorkManager and reschedules Adhan alarms every time the app opens, recovering gracefully from a Force Stop.
@@ -14,10 +20,19 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `directBootAware="true"` on `BootReceiver` so it fires before the first unlock screen on Android 7+.
 - Language badges and technology stack shields in `README.md`.
 - Branch protection workflow in `.github/workflows/protect-main.yml` to block force-pushes on main.
+- `ROADMAP.md` documenting completed milestones and remaining work toward 1.0 public launch.
 
 ### Changed
 - `AdhanReceiver` is now `exported="false"` and only handles `ADHAN_ALARM` actions (Boot recovery delegated to `BootReceiver`).
 - Last logged-in UID is now persisted in `mithaq_prefs` so `BootReceiver` can restart WorkManager without requiring the user to re-open the app.
+- CI workflow `.github/workflows/android.yml` now also runs unit tests and lint as part of the build gate.
+
+### Fixed
+- **CI**: `.github/workflows/android.yml` was invalid YAML (stray Markdown code-fences and broken indentation) and would never run on GitHub Actions. Rewritten as valid, properly-indented workflow.
+
+### Security
+- `Config.isMock()` now **fails closed**: returns `false` (real backend) instead of `true` (mock mode) when Firebase initialization throws, preventing accidental bypass of real backend checks.
+- Removed stale debug APK (`releases/Mithaq-debug-20260530-0040.apk`) that was still tracked in version control despite the documented APK-removal policy.
 
 ---
 
@@ -130,7 +145,8 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ---
 
-[Unreleased]: https://github.com/ahmedbebars/mithaq/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/ahmedbebars/mithaq/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/ahmedbebars/mithaq/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/ahmedbebars/mithaq/compare/v1.5.0...v2.0.0
 [1.5.0]: https://github.com/ahmedbebars/mithaq/compare/v1.2.0...v1.5.0
 [1.2.0]: https://github.com/ahmedbebars/mithaq/compare/v1.0.0...v1.2.0

@@ -32,7 +32,7 @@
 
 <!-- ── APK Size ─────────────────────────────────────────────────────────── -->
 ![Release APK](https://img.shields.io/badge/Release%20APK-13.2%20MB-success?style=for-the-badge&logo=android&logoColor=white)
-![Version](https://img.shields.io/badge/Version-2.0.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.1.0-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-Proprietary-lightgrey?style=for-the-badge)
 
 </div>
