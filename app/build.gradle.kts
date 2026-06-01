@@ -38,8 +38,18 @@ android {
         versionName = "2.0"
     }
 
+    signingConfigs {
+        create("mithaqDebug") {
+            storeFile = file("keystores/mithaq-debug.keystore")
+            storePassword = "android"
+            keyAlias = "mithaq-debug"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         debug {
+            signingConfig = signingConfigs.getByName("mithaqDebug")
             buildConfigField("boolean", "IS_PRODUCTION", "false")
             buildConfigField("String", "GEMINI_API_KEY", buildConfigString(debugGeminiApiKey))
         }
