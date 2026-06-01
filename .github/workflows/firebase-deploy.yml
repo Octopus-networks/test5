@@ -131,4 +131,5 @@ jobs:
           npx --yes firebase-tools@latest deploy \
             --only "${{ steps.deploy_target.outputs.only }}" \
             --project "$PROJECT_ID" \
-            --non-interactive
+            --non-interactive \
+            --force
