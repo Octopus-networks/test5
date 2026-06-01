@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -303,6 +304,7 @@ class MainActivity : FragmentActivity() {
 private fun OnboardingTemporaryCompletionScreen(
     answeredCount: Int,
     completionPercent: Int,
+    isArabic: Boolean,
     onContinueHome: () -> Unit
 ) {
     androidx.activity.compose.BackHandler {
@@ -334,27 +336,27 @@ private fun OnboardingTemporaryCompletionScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Profile setup started",
+                    text = if (isArabic) stringResource(id = R.string.onboarding_started_ar) else stringResource(id = R.string.onboarding_started),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "Your answers are stored locally for this test flow only.",
+                    text = if (isArabic) stringResource(id = R.string.onboarding_local_test_note_ar) else stringResource(id = R.string.onboarding_local_test_note),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(22.dp))
                 Text(
-                    text = "Answered questions: $answeredCount",
+                    text = if (isArabic) stringResource(id = R.string.onboarding_answered_questions_ar, answeredCount) else stringResource(id = R.string.onboarding_answered_questions, answeredCount),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Completion: $completionPercent%",
+                    text = if (isArabic) stringResource(id = R.string.onboarding_completion_percent_ar, completionPercent) else stringResource(id = R.string.onboarding_completion_percent, completionPercent),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -367,7 +369,7 @@ private fun OnboardingTemporaryCompletionScreen(
                         .height(52.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Continue to Home", fontWeight = FontWeight.Bold)
+                    Text(if (isArabic) stringResource(id = R.string.onboarding_continue_home_ar) else stringResource(id = R.string.onboarding_continue_home), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1103,6 +1105,7 @@ fun MithaqAppNavigation(
             OnboardingTemporaryCompletionScreen(
                 answeredCount = onboardingAnsweredCount,
                 completionPercent = onboardingCompletionPercent,
+                isArabic = isArabic,
                 onContinueHome = {
                     hasDismissedOnboarding = true
                     currentScreen = Routes.Home
@@ -1187,7 +1190,7 @@ fun MithaqAppNavigation(
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = if (isArabic) "جاري تجهيز حسابك..." else "Preparing your account...",
+                                text = if (isArabic) stringResource(id = R.string.onboarding_completing_ar) else stringResource(id = R.string.onboarding_completing),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }

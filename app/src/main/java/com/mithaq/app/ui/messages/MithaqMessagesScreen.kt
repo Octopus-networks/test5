@@ -49,7 +49,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.mithaq.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.domain.model.ChatMessage
 import com.mithaq.app.domain.model.ChatParticipantSummary
@@ -59,17 +61,21 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 @Composable
+private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
+    stringResource(id = if (isArabic) arabicResId else englishResId)
+
+@Composable
 fun MithaqMessagesScreen(
     currentUserId: String,
     isArabic: Boolean,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomsViewModel = viewModel(key = "mithaq_chat_rooms")
 ) {
-    val tabs = if (isArabic) {
-        listOf("الطلبات", "المحادثات", "الأرشيف")
-    } else {
-        listOf("Requests", "Active chats", "Archived")
-    }
+    val tabs = listOf(
+        localizedString(isArabic, R.string.chat_tab_requests, R.string.chat_tab_requests_ar),
+        localizedString(isArabic, R.string.chat_tab_active_chats, R.string.chat_tab_active_chats_ar),
+        localizedString(isArabic, R.string.chat_tab_archived, R.string.chat_tab_archived_ar)
+    )
     var selectedTab by remember { mutableIntStateOf(1) }
     val state by viewModel.state.collectAsState()
     val selectedRoom = state.chatRooms.firstOrNull { it.chatId == state.selectedChatId }
@@ -100,15 +106,14 @@ fun MithaqMessagesScreen(
     ) {
         Column(modifier = Modifier.padding(horizontal = 18.dp)) {
             Text(
-                text = if (isArabic) "الرسائل" else "Messages",
+                text = localizedString(isArabic, R.string.messages_title, R.string.messages_title_ar),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = if (isArabic) "المحادثات تظهر بعد قبول طلب التواصل فقط."
-                else "Chats appear only after a respectful request is accepted.",
+                text = localizedString(isArabic, R.string.messages_subtitle, R.string.messages_subtitle_ar),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -137,9 +142,8 @@ fun MithaqMessagesScreen(
                 onOpenChat = viewModel::openChat
             )
             else -> MithaqEmptyState(
-                title = if (isArabic) "لا توجد رسائل هنا" else "No messages here yet",
-                message = if (isArabic) "طلبات التواصل تدار من شاشة الطلبات، والرسائل الفعلية ستضاف لاحقا."
-                else "Chat requests are managed in Requests, and real messaging will be added later.",
+                title = localizedString(isArabic, R.string.messages_empty_title, R.string.messages_empty_title_ar),
+                message = localizedString(isArabic, R.string.messages_empty_message, R.string.messages_empty_message_ar),
                 icon = Icons.Filled.Chat,
                 modifier = Modifier.padding(horizontal = 18.dp)
             )
@@ -178,19 +182,18 @@ private fun ActiveChatsTab(
         }
         state.errorMessage != null -> {
             MithaqEmptyState(
-                title = if (isArabic) "تعذر تحميل المحادثات" else "Could not load chats",
+                title = localizedString(isArabic, R.string.chat_load_error_title, R.string.chat_load_error_title_ar),
                 message = state.errorMessage,
                 icon = Icons.Filled.Refresh,
-                actionLabel = if (isArabic) "إعادة المحاولة" else "Retry",
+                actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry,
                 modifier = Modifier.padding(horizontal = 18.dp)
             )
         }
         state.chatRooms.isEmpty() -> {
             MithaqEmptyState(
-                title = if (isArabic) "لا توجد محادثات نشطة" else "No active chats",
-                message = if (isArabic) "بعد قبول طلب التواصل ستظهر المحادثة هنا بدون كشف أي بيانات خاصة."
-                else "After a chat request is approved, the conversation will appear here without exposing private data.",
+                title = localizedString(isArabic, R.string.chat_no_active_title, R.string.chat_no_active_title_ar),
+                message = localizedString(isArabic, R.string.chat_no_active_message, R.string.chat_no_active_message_ar),
                 icon = Icons.Filled.Chat,
                 modifier = Modifier.padding(horizontal = 18.dp)
             )
@@ -261,11 +264,7 @@ private fun ChatRoomCard(
             }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = room.lastMessagePreview ?: if (isArabic) {
-                    "لا توجد رسائل بعد"
-                } else {
-                    "No messages yet"
-                },
+                text = room.lastMessagePreview ?: localizedString(isArabic, R.string.chat_no_messages_yet, R.string.chat_no_messages_yet_ar),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -275,11 +274,7 @@ private fun ChatRoomCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    if (isArabic) {
-                        "فتح المحادثة"
-                    } else {
-                        "Open chat"
-                    }
+                    localizedString(isArabic, R.string.chat_open, R.string.chat_open_ar)
                 )
             }
         }
@@ -340,7 +335,7 @@ private fun ChatScreen(
             .padding(18.dp)
     ) {
         TextButton(onClick = onBack) {
-            Text(if (isArabic) "رجوع" else "Back")
+            Text(localizedString(isArabic, R.string.common_back, R.string.common_back_ar))
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -351,8 +346,7 @@ private fun ChatScreen(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = if (isArabic) "محادثة نصية محترمة داخل طلب تواصل مقبول فقط."
-            else "Respectful text conversation inside an approved active chat only.",
+            text = localizedString(isArabic, R.string.chat_screen_subtitle, R.string.chat_screen_subtitle_ar),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -365,14 +359,14 @@ private fun ChatScreen(
                 onClick = { showReportDialog = true },
                 modifier = Modifier.weight(1f)
             ) {
-                Text(if (isArabic) "Ø¥Ø¨Ù„Ø§Øº" else "Report")
+                Text(localizedString(isArabic, R.string.chat_report, R.string.chat_report_ar))
             }
             OutlinedButton(
                 onClick = { showBlockDialog = true },
                 modifier = Modifier.weight(1f),
                 enabled = !safetyState.isBlocked && !safetyState.isBlocking
             ) {
-                Text(if (isArabic) "Ø­Ø¸Ø±" else "Block")
+                Text(localizedString(isArabic, R.string.chat_block, R.string.chat_block_ar))
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -386,7 +380,7 @@ private fun ChatScreen(
         }
         if (safetyState.isBlocked) {
             InfoCard(
-                text = if (isArabic) "Ø§Ù„ØªØ±Ø§Ø³Ù„ ØºÙŠØ± Ù…ØªØ§Ø­ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©." else "Messaging is unavailable for this conversation.",
+                text = localizedString(isArabic, R.string.chat_messaging_unavailable, R.string.chat_messaging_unavailable_ar),
                 isError = false
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -408,7 +402,7 @@ private fun ChatScreen(
                 onClick = { viewModel.listenToMessages(room.chatId) },
                 modifier = Modifier.align(Alignment.End)
             ) {
-                Text(if (isArabic) "Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©" else "Retry")
+                Text(localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar))
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -432,9 +426,8 @@ private fun ChatScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     MithaqEmptyState(
-                        title = if (isArabic) "ابدأ محادثة محترمة" else "Start a respectful conversation",
-                        message = if (isArabic) "اكتب رسالة نصية واضحة ومهذبة."
-                        else "Write a clear and considerate text message.",
+                        title = localizedString(isArabic, R.string.chat_start_title, R.string.chat_start_title_ar),
+                        message = localizedString(isArabic, R.string.chat_start_message, R.string.chat_start_message_ar),
                         icon = Icons.Filled.Chat
                     )
                 }
@@ -470,7 +463,7 @@ private fun ChatScreen(
                 value = draft,
                 onValueChange = { if (it.length <= 1000) draft = it },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text(if (isArabic) "اكتب رسالة" else "Write a message") },
+                placeholder = { Text(localizedString(isArabic, R.string.chat_write_message, R.string.chat_write_message_ar)) },
                 enabled = canSend,
                 singleLine = false,
                 maxLines = 4
@@ -499,6 +492,7 @@ private fun ChatScreen(
 
     if (showReportDialog) {
         ReportUserDialog(
+            isArabic = isArabic,
             isSubmitting = safetyState.isSubmittingReport,
             onDismiss = {
                 showReportDialog = false
@@ -514,8 +508,8 @@ private fun ChatScreen(
     if (showBlockDialog) {
         AlertDialog(
             onDismissRequest = { showBlockDialog = false },
-            title = { Text("Block this member?") },
-            text = { Text("They will not be able to send you messages in this conversation.") },
+            title = { Text(localizedString(isArabic, R.string.chat_block_dialog_title, R.string.chat_block_dialog_title_ar)) },
+            text = { Text(localizedString(isArabic, R.string.chat_block_dialog_message, R.string.chat_block_dialog_message_ar)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -524,12 +518,12 @@ private fun ChatScreen(
                     },
                     enabled = !safetyState.isBlocking
                 ) {
-                    Text("Block")
+                    Text(localizedString(isArabic, R.string.chat_block, R.string.chat_block_ar))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBlockDialog = false }) {
-                    Text("Cancel")
+                    Text(localizedString(isArabic, R.string.common_cancel, R.string.common_cancel_ar))
                 }
             }
         )
@@ -568,27 +562,28 @@ private fun InfoCard(
 
 @Composable
 private fun ReportUserDialog(
+    isArabic: Boolean,
     isSubmitting: Boolean,
     onDismiss: () -> Unit,
     onSubmit: (String, String) -> Unit
 ) {
     val reasons = listOf(
-        "Inappropriate message",
-        "Harassment",
-        "Fake profile",
-        "Privacy concern",
-        "Other"
+        localizedString(isArabic, R.string.chat_report_reason_inappropriate, R.string.chat_report_reason_inappropriate_ar),
+        localizedString(isArabic, R.string.chat_report_reason_harassment, R.string.chat_report_reason_harassment_ar),
+        localizedString(isArabic, R.string.chat_report_reason_fake_profile, R.string.chat_report_reason_fake_profile_ar),
+        localizedString(isArabic, R.string.chat_report_reason_privacy, R.string.chat_report_reason_privacy_ar),
+        localizedString(isArabic, R.string.chat_report_reason_other, R.string.chat_report_reason_other_ar)
     )
     var selectedReason by remember { mutableStateOf(reasons.first()) }
     var details by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Report member") },
+        title = { Text(localizedString(isArabic, R.string.chat_report_dialog_title, R.string.chat_report_dialog_title_ar)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Choose a reason and add optional details.",
+                    text = localizedString(isArabic, R.string.chat_report_dialog_message, R.string.chat_report_dialog_message_ar),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -612,7 +607,7 @@ private fun ReportUserDialog(
                     value = details,
                     onValueChange = { details = it.take(500) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Optional details") },
+                    placeholder = { Text(localizedString(isArabic, R.string.chat_report_optional_details, R.string.chat_report_optional_details_ar)) },
                     minLines = 3,
                     maxLines = 5
                 )
@@ -628,12 +623,12 @@ private fun ReportUserDialog(
                 onClick = { onSubmit(selectedReason, details) },
                 enabled = !isSubmitting && selectedReason.isNotBlank()
             ) {
-                Text("Submit report")
+                Text(localizedString(isArabic, R.string.chat_submit_report, R.string.chat_submit_report_ar))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(localizedString(isArabic, R.string.common_cancel, R.string.common_cancel_ar))
             }
         }
     )
@@ -698,21 +693,21 @@ private fun ConversationPlaceholderCard(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
-                text = if (isArabic) "المحادثة ستكون متاحة في المرحلة القادمة."
-                else "Conversation will be available in the next phase.",
+                text = localizedString(isArabic, R.string.chat_conversation_next_phase, R.string.chat_conversation_next_phase_ar),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(onClick = onDismiss) {
-                Text(if (isArabic) "حسنًا" else "OK")
+                Text(localizedString(isArabic, R.string.common_ok, R.string.common_ok_ar))
             }
         }
     }
 }
 
+@Composable
 private fun ChatParticipantSummary.displayTitle(isArabic: Boolean): String {
-    val fallback = if (isArabic) "عضو ميثاق" else "Mithaq member"
+    val fallback = localizedString(isArabic, R.string.chat_member_fallback, R.string.chat_member_fallback_ar)
     val name = displayName.ifBlank { fallback }
     return age?.let { "$name, $it" } ?: name
 }

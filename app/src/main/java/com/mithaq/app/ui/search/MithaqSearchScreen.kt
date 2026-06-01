@@ -20,8 +20,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mithaq.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.ui.components.MithaqEmptyState
 import com.mithaq.app.ui.home.DiscoverUiState
@@ -34,6 +36,10 @@ import com.mithaq.app.ui.requests.InterestRequestUiState
 import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.PhotoRequestUiState
 import com.mithaq.app.ui.requests.PhotoRequestViewModel
+
+@Composable
+private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
+    stringResource(id = if (isArabic) arabicResId else englishResId)
 
 @Composable
 fun MithaqSearchScreen(
@@ -57,15 +63,14 @@ fun MithaqSearchScreen(
             .padding(18.dp)
     ) {
         Text(
-            text = if (isArabic) "البحث" else "Search",
+            text = localizedString(isArabic, R.string.search_title, R.string.search_title_ar),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = if (isArabic) "فلترة آمنة على البيانات العامة فقط، بدون كشف بيانات خاصة."
-            else "Safe filtering over public profile data only, without exposing private fields.",
+            text = localizedString(isArabic, R.string.search_subtitle, R.string.search_subtitle_ar),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -78,8 +83,7 @@ fun MithaqSearchScreen(
         if (state.isNearMePlaceholder) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = if (isArabic) "فلتر القرب مؤقتًا يعتمد على نفس النتائج لحين تجهيز المدينة/GPS."
-                else "Near me currently keeps the same results until city/GPS matching is wired.",
+                text = localizedString(isArabic, R.string.search_location_note, R.string.search_location_note_ar),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -132,27 +136,24 @@ private fun SearchResultsContent(
         }
         state.errorMessage != null -> {
             MithaqEmptyState(
-                title = if (isArabic) "تعذر تحميل نتائج البحث" else "Could not load search results",
-                message = if (isArabic) "البيانات العامة غير متاحة الآن. حاول مرة أخرى."
-                else "Public profile data is not available right now. Please try again.",
+                title = localizedString(isArabic, R.string.search_load_error_title, R.string.search_load_error_title_ar),
+                message = localizedString(isArabic, R.string.search_load_error_message, R.string.search_load_error_message_ar),
                 icon = Icons.Filled.Refresh,
-                actionLabel = if (isArabic) "إعادة المحاولة" else "Retry",
+                actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry
             )
         }
         state.isEmpty -> {
             MithaqEmptyState(
-                title = if (isArabic) "لا توجد ملفات عامة للبحث" else "No public profiles to search",
-                message = if (isArabic) "عند اكتمال ملفات أعضاء آخرين ستظهر النتائج هنا."
-                else "When other completed public profiles are available, results will appear here.",
+                title = localizedString(isArabic, R.string.search_no_profiles_title, R.string.search_no_profiles_title_ar),
+                message = localizedString(isArabic, R.string.search_no_profiles_message, R.string.search_no_profiles_message_ar),
                 icon = Icons.Filled.Search
             )
         }
         state.hasNoFilterResults -> {
             MithaqEmptyState(
-                title = if (isArabic) "لا توجد نتائج مطابقة" else "No matching results",
-                message = if (isArabic) "غيّر الفلتر أو ارجع إلى المقترحات."
-                else "Change the filter or return to recommended profiles.",
+                title = localizedString(isArabic, R.string.search_no_matching_title, R.string.search_no_matching_title_ar),
+                message = localizedString(isArabic, R.string.search_no_matching_message, R.string.search_no_matching_message_ar),
                 icon = Icons.Filled.Search
             )
         }
