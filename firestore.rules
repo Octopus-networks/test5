@@ -10,10 +10,26 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
+    function hasAdminClaim() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    function hasModeratorClaim() {
+      return isAuthenticated() && request.auth.token.moderator == true;
+    }
+
+    function hasLegacyAdminFlag() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isAdmin() {
+      return hasAdminClaim() || hasLegacyAdminFlag();
+    }
+
+    function isModerator() {
+      return hasModeratorClaim() || isAdmin();
     }
 
     function isVerifiedEmailUser() {
@@ -250,7 +266,7 @@ service cloud.firestore {
     }
 
     match /userPhotos/{userId}/photos/{photoId} {
-      allow read: if isVerifiedEmailUser() && (request.auth.uid == userId || isAdmin());
+      allow read: if isVerifiedEmailUser() && (request.auth.uid == userId || isModerator());
       allow create: if isVerifiedEmailUser() &&
         request.auth.uid == userId &&
         request.resource.data.userId == userId &&
@@ -269,13 +285,23 @@ service cloud.firestore {
           "createdAt",
           "updatedAt"
         ]);
-      allow update: if isVerifiedEmailUser() &&
+      allow update: if (
+        isVerifiedEmailUser() &&
         request.auth.uid == userId &&
         request.resource.data.userId == resource.data.userId &&
         request.resource.data.photoId == resource.data.photoId &&
         request.resource.data.storagePath == resource.data.storagePath &&
         request.resource.data.status == resource.data.status &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visibility", "updatedAt"]);
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visibility", "updatedAt"])
+      ) || (
+        isModerator() &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.photoId == resource.data.photoId &&
+        request.resource.data.storagePath == resource.data.storagePath &&
+        request.resource.data.visibility == resource.data.visibility &&
+        request.resource.data.status in ["pending_review", "approved", "rejected"] &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "reviewReason", "reviewedBy", "reviewedAt", "updatedAt"])
+      );
       allow delete: if false;
     }
 
@@ -510,9 +536,43 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow create: if isAuthenticated() &&
-        request.resource.data.reporterId == request.auth.uid;
-      allow read, delete: if isAdmin();
+      allow create: if isVerifiedEmailUser() &&
+        request.resource.data.reporterUserId == request.auth.uid &&
+        request.resource.data.get("reporterId", request.auth.uid) == request.auth.uid &&
+        request.resource.data.reportId == reportId &&
+        request.resource.data.reportedUserId is string &&
+        request.resource.data.reportedUserId != request.auth.uid &&
+        request.resource.data.get("reportedId", request.resource.data.reportedUserId) == request.resource.data.reportedUserId &&
+        request.resource.data.reason is string &&
+        request.resource.data.reason.size() > 0 &&
+        request.resource.data.details is string &&
+        request.resource.data.details.size() <= 500 &&
+        request.resource.data.status == "open" &&
+        request.resource.data.keys().hasOnly([
+          "reportId",
+          "reporterId",
+          "reportedId",
+          "reporterUserId",
+          "reportedUserId",
+          "chatId",
+          "reason",
+          "details",
+          "status",
+          "reviewedBy",
+          "reviewedAt",
+          "adminNote",
+          "timestamp",
+          "createdAt",
+          "updatedAt"
+        ]);
+      allow read: if isModerator();
+      allow update: if isModerator() &&
+        request.resource.data.reportId == resource.data.reportId &&
+        request.resource.data.reporterUserId == resource.data.reporterUserId &&
+        request.resource.data.reportedUserId == resource.data.reportedUserId &&
+        request.resource.data.status in ["open", "reviewed", "dismissed", "action_taken"] &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "reviewedBy", "reviewedAt", "adminNote", "updatedAt"]);
+      allow delete: if false;
     }
 
     match /chatRooms/{roomId} {

@@ -9,7 +9,10 @@ data class UserReport(
     val chatId: String = "",
     val reason: String = "",
     val details: String = "",
-    val status: String = "open",
+    val status: String = ReportStatus.Open,
     val createdAt: Date? = null,
-    val updatedAt: Date? = null
+    val updatedAt: Date? = null,
+    val reviewedBy: String = "",
+    val reviewedAt: Date? = null,
+    val adminNote: String = ""
 )

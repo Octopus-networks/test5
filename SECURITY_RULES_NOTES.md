@@ -95,9 +95,29 @@ Phase 11 adds the secure photo upload/display foundation:
 - `hidden` shows a locked placeholder, `blurred_by_default` shows a symbolic blurred placeholder until real blurred previews exist, `approved_users_only` requires an approved photo request, and `matched_users_only` remains a future match-policy placeholder.
 - TODOs before production: ML Kit/manual photo review, blurred preview generation, stronger Storage emulator tests/rules, admin review workflow, and optional Cloud Function access validation.
 
+Phase 12 adds admin and moderation foundations without exposing normal-user navigation:
+
+- Admin/moderator access should use Firebase custom claims (`admin == true` or `moderator == true`). The legacy `users/{uid}.isAdmin` rule fallback is temporary compatibility only and should not be the production source of truth.
+- Android moderation code is structured as `AdminModerationScreen -> AdminModerationViewModel -> ModerationRepository -> Firestore`; Compose does not call Firebase directly.
+- `AdminModerationScreen` is intentionally hidden from normal navigation. Production routing must expose it only to trusted custom-claim accounts and ideally behind an internal route/build gate.
+- `reports/{reportId}` stores `reportId`, `reporterUserId`, `reportedUserId`, optional `chatId`, `reason`, `details`, `status`, timestamps, `reviewedBy`, `reviewedAt`, and `adminNote`. Verified users may only create their own reports; normal users must not list/read reports. Admins/moderators may read and update review status.
+- Report statuses are `open`, `reviewed`, `dismissed`, and `action_taken`.
+- `userPhotos/{userId}/photos/{photoId}` remains owner-scoped. Normal users may create their own metadata only as `pending_review`; they cannot set `approved`. Admins/moderators may update review status to `approved` or `rejected` with review metadata. Rejected photo metadata remains stored but must not display publicly.
+- Approved photo status is only one gate. Real display still depends on privacy mode, approved photo requests, and Storage/backend access policy; approved photos must not be written to `publicProfiles` as URLs.
+- Future user safety status values are documented as `normal`, `warned`, `restricted`, `suspended`, and `banned`, but Phase 12 does not automatically ban or restrict users.
+- Rules changes in this phase document the intended custom-claim moderation access pattern. Do not deploy rules without emulator tests and production IAM/custom-claim setup.
+
+Phase 12 production moderation TODOs:
+
+- Add server-side custom-claim assignment through trusted admin tooling; do not hardcode admin emails in production code.
+- Add Firebase Emulator tests for report create/read/update and photo approve/reject denial/allow cases.
+- Add an internal admin route only after custom claims are deployed and verified.
+- Add audit logging for moderation actions before production.
+- Consider Cloud Functions for photo review transitions if stronger server-side validation/auditability is needed.
+
 Phase 8.6 adds realtime Firestore listeners for active chat rooms and text messages. Listener access must still be protected by the same Firestore rules as normal reads: verified users may listen only to `chats/{chatId}` documents where their uid is in `participantIds`, and only to `chats/{chatId}/messages/{messageId}` under chats where they are participants. Realtime updates do not relax the text-only message limits, participant checks, block checks, or private-profile boundaries.
 
-Phase 8.8 queues a `notifications/{notificationId}` document when a participant sends a text message. This document should be created only by the sender, only for the other participant in an existing chat room, and only with a `PENDING` status. The notification document should contain routing metadata such as `chatId`, `messageId`, sender uid, recipient uid, title, and a short safe preview. It must not contain private profile maps, photo URLs, guardian contact details, or full chat exports. For instant background delivery in production, prefer a Cloud Function that observes new chat messages or queued notifications and sends FCM data notifications through the Admin SDK.
+Phase 8.8 originally considered client-queued `notifications/{notificationId}` documents for chat messages, but Phase 11.5 removed client notification writes because notifications are out of MVP bug-fix scope and current rules keep notifications server-created only. For instant background delivery in production, prefer a Cloud Function that observes new chat messages and sends FCM data notifications through the Admin SDK without exposing private profile maps, photo URLs, guardian contact details, or full chat exports.
 
 Phase 8.9 enforces block state across discovery, requests, and chat in app logic:
 

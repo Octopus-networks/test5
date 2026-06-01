@@ -42,6 +42,9 @@ class ReportRepository(
                     "reason" to cleanReason,
                     "details" to cleanDetails,
                     "status" to "open",
+                    "reviewedBy" to null,
+                    "reviewedAt" to null,
+                    "adminNote" to null,
                     "timestamp" to FieldValue.serverTimestamp(),
                     "createdAt" to FieldValue.serverTimestamp(),
                     "updatedAt" to FieldValue.serverTimestamp()

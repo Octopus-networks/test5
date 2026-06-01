@@ -10,8 +10,14 @@ service firebase.storage {
     }
 
     function isAdmin() {
-      return isAuthenticated() &&
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
+    }
+
+    function isModerator() {
+      return isAuthenticated() && (request.auth.token.moderator == true || isAdmin());
     }
 
     function canReadProfileMedia(imageId) {
@@ -34,7 +40,7 @@ service firebase.storage {
     }
 
     match /user_photos/{userId}/{photoFile} {
-      allow read: if isOwner(userId) || isAdmin() || approvedPhotoRequestFor(userId);
+      allow read: if isOwner(userId) || isModerator() || approvedPhotoRequestFor(userId);
       allow create: if isOwner(userId) &&
         photoFile.matches('[A-Za-z0-9_-]+\\.jpg') &&
         request.resource.size < 5 * 1024 * 1024 &&
