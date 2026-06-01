@@ -23,6 +23,7 @@ function isVerifiedEmailUser() {
 - Guardian details such as phone, email, relationship notes, and permissions should remain private and must not be copied into public discovery documents.
 - Chat data and message contents should remain private to room members, authorized wali access, and role-based admin moderation flows only.
 - Private photo URLs should remain protected by the approval/photo-request system; public discovery should expose only privacy mode/status, not raw URLs.
+- Phase 11 stores uploaded profile photos in Storage under `user_photos/{userId}/{photoId}.jpg` and metadata under `userPhotos/{userId}/photos/{photoId}`. `publicProfiles` must never contain Storage paths or download URLs.
 - Sensitive profile data should be exposed only through visibility-aware summary fields.
 - Admin access should remain role-based and should not rely on client-controlled fields.
 
@@ -83,6 +84,16 @@ Phase 8.5 introduces basic chat safety foundations:
 - Message sending should be denied when either participant has blocked the other. The client now checks this before sending, but production rules may need a helper structure or Cloud Function enforcement because cross-document block checks can become complex.
 - Existing messages remain visible after a block, but new messages should be disabled for both participants until the block state changes.
 - Reports and blocks do not expose private profiles, photo URLs, guardian data, or raw prayer data.
+
+Phase 11 adds the secure photo upload/display foundation:
+
+- Photo metadata lives at `userPhotos/{userId}/photos/{photoId}` with `photoId`, `userId`, `storagePath`, `type`, `status`, `visibility`, `createdAt`, and `updatedAt` only.
+- Photo bytes live at `user_photos/{userId}/{photoId}.jpg` in Firebase Storage.
+- Users may upload only to their own `user_photos/{userId}/...` path and read their own photos.
+- Approved viewers may read a private photo only when an approved `photoRequests/{viewerUid_ownerUid}` document exists. Production may move this to Cloud Functions/signed access for stronger validation and auditability.
+- Discovery/Home/Search must not store or read photo URLs from `publicProfiles`; approved viewing is resolved through `PhotoRepository` after checking photo request/visibility policy.
+- `hidden` shows a locked placeholder, `blurred_by_default` shows a symbolic blurred placeholder until real blurred previews exist, `approved_users_only` requires an approved photo request, and `matched_users_only` remains a future match-policy placeholder.
+- TODOs before production: ML Kit/manual photo review, blurred preview generation, stronger Storage emulator tests/rules, admin review workflow, and optional Cloud Function access validation.
 
 Phase 8.6 adds realtime Firestore listeners for active chat rooms and text messages. Listener access must still be protected by the same Firestore rules as normal reads: verified users may listen only to `chats/{chatId}` documents where their uid is in `participantIds`, and only to `chats/{chatId}/messages/{messageId}` under chats where they are participants. Realtime updates do not relax the text-only message limits, participant checks, block checks, or private-profile boundaries.
 

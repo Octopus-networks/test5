@@ -238,6 +238,7 @@ service cloud.firestore {
           "personalStatus",
           "religiousPractice",
           "marriageIntent",
+          "publicSettings",
           "updatedAt"
         ]);
       allow delete: if false;
@@ -246,6 +247,36 @@ service cloud.firestore {
     match /publicProfiles/{userId} {
       allow read: if isVerifiedEmailUser() || isAdmin();
       allow create, update, delete: if false;
+    }
+
+    match /userPhotos/{userId}/photos/{photoId} {
+      allow read: if isVerifiedEmailUser() && (request.auth.uid == userId || isAdmin());
+      allow create: if isVerifiedEmailUser() &&
+        request.auth.uid == userId &&
+        request.resource.data.userId == userId &&
+        request.resource.data.photoId == photoId &&
+        request.resource.data.storagePath == "user_photos/" + userId + "/" + photoId + ".jpg" &&
+        request.resource.data.type in ["main", "extra"] &&
+        request.resource.data.status == "pending_review" &&
+        request.resource.data.visibility in ["hidden", "blurred_by_default", "approved_users_only", "matched_users_only"] &&
+        request.resource.data.keys().hasOnly([
+          "photoId",
+          "userId",
+          "storagePath",
+          "type",
+          "status",
+          "visibility",
+          "createdAt",
+          "updatedAt"
+        ]);
+      allow update: if isVerifiedEmailUser() &&
+        request.auth.uid == userId &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.photoId == resource.data.photoId &&
+        request.resource.data.storagePath == resource.data.storagePath &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visibility", "updatedAt"]);
+      allow delete: if false;
     }
 
     match /interestRequests/{requestId} {

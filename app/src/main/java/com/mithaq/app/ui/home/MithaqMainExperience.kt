@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.mithaq.app.ui.messages.MithaqMessagesScreen
 import com.mithaq.app.ui.profile.MithaqProfileHubScreen
+import com.mithaq.app.ui.photo.MyPhotosScreen
 import com.mithaq.app.ui.requests.ChatRequestViewModel
 import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.MithaqRequestsScreen
@@ -63,6 +64,7 @@ fun MithaqMainExperience(
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(MithaqMainTab.Home) }
+    var showMyPhotos by remember { mutableStateOf(false) }
     val interestRequestViewModel: InterestRequestViewModel = viewModel(key = "mithaq_interest_requests")
     val photoRequestViewModel: PhotoRequestViewModel = viewModel(key = "mithaq_photo_requests")
     val chatRequestViewModel: ChatRequestViewModel = viewModel(key = "mithaq_chat_requests")
@@ -137,11 +139,23 @@ fun MithaqMainExperience(
                 isArabic = isArabic,
                 modifier = screenModifier
             )
-            MithaqMainTab.Profile -> MithaqProfileHubScreen(
-                isArabic = isArabic,
-                onSignOut = onSignOut,
-                modifier = screenModifier
-            )
+            MithaqMainTab.Profile -> {
+                if (showMyPhotos) {
+                    MyPhotosScreen(
+                        currentUserId = currentUserId,
+                        isArabic = isArabic,
+                        onBack = { showMyPhotos = false },
+                        modifier = screenModifier
+                    )
+                } else {
+                    MithaqProfileHubScreen(
+                        isArabic = isArabic,
+                        onSignOut = onSignOut,
+                        modifier = screenModifier,
+                        onPhotoPrivacyClick = { showMyPhotos = true }
+                    )
+                }
+            }
         }
     }
 }

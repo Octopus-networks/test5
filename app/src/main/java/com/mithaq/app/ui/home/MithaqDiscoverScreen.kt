@@ -42,11 +42,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -62,6 +64,7 @@ import com.mithaq.app.ui.requests.InterestRequestUiState
 import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.PhotoRequestUiState
 import com.mithaq.app.ui.requests.PhotoRequestViewModel
+import coil.compose.AsyncImage
 
 @Composable
 private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
@@ -81,6 +84,10 @@ fun MithaqDiscoverScreen(
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
     val chatState by chatRequestViewModel.state.collectAsState()
+
+    LaunchedEffect(currentUserId) {
+        viewModel.loadProfiles(currentUserId)
+    }
 
     Column(
         modifier = modifier
@@ -143,7 +150,7 @@ fun MithaqDiscoverScreen(
             onRequestChat = { toUserId ->
                 chatRequestViewModel.requestChat(currentUserId, toUserId)
             },
-            onRetry = viewModel::loadProfiles
+            onRetry = { viewModel.loadProfiles(currentUserId) }
         )
     }
 }
@@ -316,6 +323,7 @@ private fun DiscoverProfileContent(
                     interestState = interestState,
                     photoState = photoState,
                     chatState = chatState,
+                    visiblePhotoUrl = state.visiblePhotoUrlsByUserId[profile.userId],
                     onSendInterest = onSendInterest,
                     onRequestPhoto = onRequestPhoto,
                     onRequestChat = onRequestChat,
@@ -335,6 +343,7 @@ fun MithaqPublicProfileCard(
     interestState: InterestRequestUiState = InterestRequestUiState(),
     photoState: PhotoRequestUiState = PhotoRequestUiState(),
     chatState: ChatRequestUiState = ChatRequestUiState(),
+    visiblePhotoUrl: String? = null,
     onSendInterest: (String) -> Unit = {},
     onRequestPhoto: (String) -> Unit = {},
     onRequestChat: (String) -> Unit = {}
@@ -348,7 +357,8 @@ fun MithaqPublicProfileCard(
         Column(modifier = Modifier.padding(16.dp)) {
             PhotoPrivacyPlaceholder(
                 mode = profile.photoPrivacyMode,
-                isArabic = isArabic
+                isArabic = isArabic,
+                visiblePhotoUrl = visiblePhotoUrl
             )
             Spacer(modifier = Modifier.height(16.dp))
             Row(
@@ -517,8 +527,22 @@ fun MithaqPublicProfileCard(
 @Composable
 private fun PhotoPrivacyPlaceholder(
     mode: String,
-    isArabic: Boolean
+    isArabic: Boolean,
+    visiblePhotoUrl: String? = null
 ) {
+    if (!visiblePhotoUrl.isNullOrBlank()) {
+        AsyncImage(
+            model = visiblePhotoUrl,
+            contentDescription = localizedString(isArabic, R.string.discover_photo_approved, R.string.discover_photo_approved_ar),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1.22f)
+                .clip(RoundedCornerShape(20.dp))
+        )
+        return
+    }
+
     val normalizedMode = mode.ifBlank { "blurred_by_default" }
     val label = when (normalizedMode) {
         "hidden" -> localizedString(isArabic, R.string.discover_photo_hidden, R.string.discover_photo_hidden_ar)

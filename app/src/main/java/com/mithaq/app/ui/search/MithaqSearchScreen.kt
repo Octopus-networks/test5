@@ -16,6 +16,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -55,6 +56,10 @@ fun MithaqSearchScreen(
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
     val chatState by chatRequestViewModel.state.collectAsState()
+
+    LaunchedEffect(currentUserId) {
+        viewModel.loadProfiles(currentUserId)
+    }
 
     Column(
         modifier = modifier
@@ -105,7 +110,7 @@ fun MithaqSearchScreen(
             onRequestChat = { toUserId ->
                 chatRequestViewModel.requestChat(currentUserId, toUserId)
             },
-            onRetry = viewModel::loadProfiles
+            onRetry = { viewModel.loadProfiles(currentUserId) }
         )
     }
 }
@@ -166,6 +171,7 @@ private fun SearchResultsContent(
                     interestState = interestState,
                     photoState = photoState,
                     chatState = chatState,
+                    visiblePhotoUrl = state.visiblePhotoUrlsByUserId[profile.userId],
                     onSendInterest = onSendInterest,
                     onRequestPhoto = onRequestPhoto,
                     onRequestChat = onRequestChat,

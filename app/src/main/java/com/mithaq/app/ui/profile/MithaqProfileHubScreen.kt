@@ -38,24 +38,37 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
 
+enum class ProfileHubAction {
+    MyProfile,
+    Privacy,
+    PhotoPrivacy,
+    Guardian,
+    Prayer,
+    Notifications,
+    Language,
+    Security,
+    Support
+}
+
 private data class ProfileHubItem(
     val titleResId: Int,
     val titleArabicResId: Int,
     val subtitleResId: Int,
     val subtitleArabicResId: Int,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val action: ProfileHubAction
 )
 
 private val profileItems = listOf(
-    ProfileHubItem(R.string.profile_hub_my_profile_title, R.string.profile_hub_my_profile_title_ar, R.string.profile_hub_my_profile_subtitle, R.string.profile_hub_my_profile_subtitle_ar, Icons.Filled.Person),
-    ProfileHubItem(R.string.profile_hub_privacy_title, R.string.profile_hub_privacy_title_ar, R.string.profile_hub_privacy_subtitle, R.string.profile_hub_privacy_subtitle_ar, Icons.Filled.Lock),
-    ProfileHubItem(R.string.profile_hub_photo_privacy_title, R.string.profile_hub_photo_privacy_title_ar, R.string.profile_hub_photo_privacy_subtitle, R.string.profile_hub_photo_privacy_subtitle_ar, Icons.Filled.Visibility),
-    ProfileHubItem(R.string.profile_hub_guardian_title, R.string.profile_hub_guardian_title_ar, R.string.profile_hub_guardian_subtitle, R.string.profile_hub_guardian_subtitle_ar, Icons.Filled.CheckCircle),
-    ProfileHubItem(R.string.profile_hub_prayer_title, R.string.profile_hub_prayer_title_ar, R.string.profile_hub_prayer_subtitle, R.string.profile_hub_prayer_subtitle_ar, Icons.Filled.Settings),
-    ProfileHubItem(R.string.profile_hub_notifications_title, R.string.profile_hub_notifications_title_ar, R.string.profile_hub_notifications_subtitle, R.string.profile_hub_notifications_subtitle_ar, Icons.Filled.Info),
-    ProfileHubItem(R.string.profile_hub_language_title, R.string.profile_hub_language_title_ar, R.string.profile_hub_language_subtitle, R.string.profile_hub_language_subtitle_ar, Icons.Filled.Settings),
-    ProfileHubItem(R.string.profile_hub_security_title, R.string.profile_hub_security_title_ar, R.string.profile_hub_security_subtitle, R.string.profile_hub_security_subtitle_ar, Icons.Filled.Lock),
-    ProfileHubItem(R.string.profile_hub_support_title, R.string.profile_hub_support_title_ar, R.string.profile_hub_support_subtitle, R.string.profile_hub_support_subtitle_ar, Icons.Filled.Info)
+    ProfileHubItem(R.string.profile_hub_my_profile_title, R.string.profile_hub_my_profile_title_ar, R.string.profile_hub_my_profile_subtitle, R.string.profile_hub_my_profile_subtitle_ar, Icons.Filled.Person, ProfileHubAction.MyProfile),
+    ProfileHubItem(R.string.profile_hub_privacy_title, R.string.profile_hub_privacy_title_ar, R.string.profile_hub_privacy_subtitle, R.string.profile_hub_privacy_subtitle_ar, Icons.Filled.Lock, ProfileHubAction.Privacy),
+    ProfileHubItem(R.string.profile_hub_photo_privacy_title, R.string.profile_hub_photo_privacy_title_ar, R.string.profile_hub_photo_privacy_subtitle, R.string.profile_hub_photo_privacy_subtitle_ar, Icons.Filled.Visibility, ProfileHubAction.PhotoPrivacy),
+    ProfileHubItem(R.string.profile_hub_guardian_title, R.string.profile_hub_guardian_title_ar, R.string.profile_hub_guardian_subtitle, R.string.profile_hub_guardian_subtitle_ar, Icons.Filled.CheckCircle, ProfileHubAction.Guardian),
+    ProfileHubItem(R.string.profile_hub_prayer_title, R.string.profile_hub_prayer_title_ar, R.string.profile_hub_prayer_subtitle, R.string.profile_hub_prayer_subtitle_ar, Icons.Filled.Settings, ProfileHubAction.Prayer),
+    ProfileHubItem(R.string.profile_hub_notifications_title, R.string.profile_hub_notifications_title_ar, R.string.profile_hub_notifications_subtitle, R.string.profile_hub_notifications_subtitle_ar, Icons.Filled.Info, ProfileHubAction.Notifications),
+    ProfileHubItem(R.string.profile_hub_language_title, R.string.profile_hub_language_title_ar, R.string.profile_hub_language_subtitle, R.string.profile_hub_language_subtitle_ar, Icons.Filled.Settings, ProfileHubAction.Language),
+    ProfileHubItem(R.string.profile_hub_security_title, R.string.profile_hub_security_title_ar, R.string.profile_hub_security_subtitle, R.string.profile_hub_security_subtitle_ar, Icons.Filled.Lock, ProfileHubAction.Security),
+    ProfileHubItem(R.string.profile_hub_support_title, R.string.profile_hub_support_title_ar, R.string.profile_hub_support_subtitle, R.string.profile_hub_support_subtitle_ar, Icons.Filled.Info, ProfileHubAction.Support)
 )
 
 @Composable
@@ -66,7 +79,8 @@ private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: I
 fun MithaqProfileHubScreen(
     isArabic: Boolean,
     onSignOut: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPhotoPrivacyClick: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -88,7 +102,15 @@ fun MithaqProfileHubScreen(
         )
         Spacer(modifier = Modifier.height(18.dp))
         profileItems.forEach { item ->
-            ProfileHubRow(item = item, isArabic = isArabic)
+            ProfileHubRow(
+                item = item,
+                isArabic = isArabic,
+                onClick = {
+                    if (item.action == ProfileHubAction.PhotoPrivacy) {
+                        onPhotoPrivacyClick()
+                    }
+                }
+            )
             Spacer(modifier = Modifier.height(10.dp))
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -107,12 +129,13 @@ fun MithaqProfileHubScreen(
 @Composable
 private fun ProfileHubRow(
     item: ProfileHubItem,
-    isArabic: Boolean
+    isArabic: Boolean,
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { },
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
