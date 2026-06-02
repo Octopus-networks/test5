@@ -89,10 +89,9 @@ class OnboardingRepository(
                 .document(userId)
                 .set(profileData, SetOptions.merge())
                 .await()
-            when (val publicResult = publicProfileRepository.createOrUpdatePublicProfileFromOnboarding(userId)) {
-                PublicProfileWriteResult.Success -> Unit
-                is PublicProfileWriteResult.Error -> return OnboardingSaveResult.Error(publicResult.message)
-            }
+            // publicProfiles is mirrored server-side by the mirrorPublicProfile Cloud Function
+            // on this profiles/{userId} write. Android no longer writes publicProfiles directly
+            // (Phase 11.8 privacy closure).
             saveCompletionCache(userId, true)
             OnboardingSaveResult.Success(
                 answeredQuestions = answers.values.count { it.hasContent() },

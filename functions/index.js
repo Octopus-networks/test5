@@ -1,7 +1,7 @@
 "use strict";
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -286,5 +286,77 @@ exports.onChatMessageCreated = onDocumentCreated(
       body: "You have a new message.",
       type: "chat_message",
     });
+  }
+);
+
+// ── Public discovery mirror (server-owned) ───────────────────────────────────
+// publicProfiles is owned by the server. On every write to profiles/{userId}, mirror
+// a sanitized, allow-listed subset to publicProfiles/{userId}. Sensitive data (income,
+// health, fertility, weight, raw prayer logs, guardian contacts, private photo URLs,
+// chat data, reports, blocks) is NEVER copied. Clients are denied direct writes by rules.
+function humanizeLabel(value) {
+  return String(value || "")
+    .trim()
+    .replace(/-/g, "_")
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function buildPublicProfile(userId, profile, isEmailVerified) {
+  const basicInfo = profile.basicInfo || {};
+  const personalStatus = profile.personalStatus || {};
+  const marriageIntent = profile.marriageIntent || {};
+  const firstName = String(basicInfo.name || "").trim().split(/\s+/)[0] || "";
+  const ageRaw = basicInfo.age;
+  const age = typeof ageRaw === "number" ? ageRaw : (parseInt(ageRaw, 10) || null);
+  return {
+    userId,
+    displayName: firstName.slice(0, 30),
+    age,
+    city: String(basicInfo.city || "").trim(),
+    country: humanizeLabel(basicInfo.country),
+    accountType: humanizeLabel(basicInfo.accountType),
+    maritalStatus: humanizeLabel(personalStatus.maritalStatus),
+    marriageTimeline: humanizeLabel(marriageIntent.timeline),
+    prayerHabitPublicLabel: "Not shared",
+    prayerRoutineShared: false,
+    localTimeEnabled: false,
+    hasGuardian: false,
+    isEmailVerified: !!isEmailVerified,
+    isIdentityVerified: false,
+    photoPrivacyMode: "blurred_by_default",
+    profileCompletionPercent:
+      typeof profile.profileCompletionPercent === "number" ? profile.profileCompletionPercent : 0,
+    lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+}
+
+exports.mirrorPublicProfile = onDocumentWritten(
+  { document: "profiles/{userId}", region },
+  async (event) => {
+    const userId = event.params.userId;
+    const after = event.data && event.data.after;
+
+    // Profile deleted -> remove the public mirror.
+    if (!after || !after.exists) {
+      await db.collection("publicProfiles").doc(userId).delete().catch(() => {});
+      return;
+    }
+
+    const profile = after.data() || {};
+
+    let isEmailVerified = false;
+    try {
+      const userRecord = await admin.auth().getUser(userId);
+      isEmailVerified = !!userRecord.emailVerified;
+    } catch (error) {
+      isEmailVerified = false;
+    }
+
+    const publicData = buildPublicProfile(userId, profile, isEmailVerified);
+    await db.collection("publicProfiles").doc(userId).set(publicData, { merge: true });
   }
 );

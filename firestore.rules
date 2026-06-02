@@ -244,43 +244,11 @@ service cloud.firestore {
     }
 
     match /publicProfiles/{userId} {
+      // Server-owned discovery mirror. Read-only for verified users; ALL client writes are
+      // denied. publicProfiles is created/updated solely by the mirrorPublicProfile Cloud
+      // Function via the Admin SDK (which bypasses these rules). (Phase 11.8 privacy closure)
       allow read: if isVerifiedEmailUser() || isAdmin();
-      allow create, update: if isVerifiedEmailUser() &&
-        request.auth.uid == userId &&
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.keys().hasOnly([
-          "userId",
-          "displayName",
-          "age",
-          "city",
-          "country",
-          "accountType",
-          "maritalStatus",
-          "marriageTimeline",
-          "prayerHabitPublicLabel",
-          "prayerRoutineShared",
-          "localTimeEnabled",
-          "hasGuardian",
-          "isEmailVerified",
-          "isIdentityVerified",
-          "photoPrivacyMode",
-          "profileCompletionPercent",
-          "lastActiveAt",
-          "updatedAt"
-        ]) &&
-        request.resource.data.isEmailVerified == true &&
-        !(request.resource.data.keys().hasAny([
-          "income",
-          "health",
-          "fertility",
-          "weight",
-          "guardianEmail",
-          "guardianPhone",
-          "privatePhotoUrl",
-          "photoUrl",
-          "rawPrayerLogs"
-        ]));
-      allow delete: if false;
+      allow create, update, delete: if false;
     }
 
     match /interestRequests/{requestId} {
