@@ -17,7 +17,7 @@
 | JDK | OpenJDK 21 (Android Studio JBR: `C:\Program Files\Android\Android Studio\jbr`) |
 | Build cmd | `.\gradlew.bat --no-daemon --offline --console=plain :app:assembleDebug` |
 | Main HEAD | `4ac5f17` (includes the Phase 11.12A structured-onboarding merge, PR #21) |
-| Firebase | Rules/Functions reviewed from repo source; **not redeployed by this QA** |
+| Firebase | Rules/Functions reviewed from repo source; **fixes deployed live to `mithaq-matchmaking`** (see §10) |
 
 > **Important context:** `main` now includes **Phase 11.12A structured onboarding** (merged just before this QA). That merge changed the shape of the `profiles/{uid}` write **without** updating Firestore rules or the public-profile mirror — which is the source of the two critical bugs below.
 
@@ -97,7 +97,7 @@ Interactive run not performed, so **no live accounts were created**. For the man
 | BUG-1 | Added the 8 Phase-11.12A storage-group keys to the `profiles` write allow-list | `firestore.rules` | **No** — still owner-only + email-verified; data stays private to owner/admin; no other collection affected |
 | BUG-2 | Read `basicInfo.displayName`, `location.city/country`, `marriageIntent.maritalStatus` (with legacy fallbacks); same output fields | `functions/index.js` | **No** — identical allow-listed output set; only public-safe fields; no new/private fields added |
 
-Both are minimal and **require redeploy to take effect** (see TODOs). `node --check functions/index.js` → syntax OK.
+Both are minimal. **Deployed live** on 2026-06-03 to `mithaq-matchmaking` (`firebase deploy --only firestore:rules,functions`): rules released to cloud.firestore; all 7 functions (incl. `mirrorPublicProfile`) updated successfully. `node --check functions/index.js` → syntax OK.
 
 ## 7. Bugs not fixed (with rationale)
 
@@ -148,9 +148,8 @@ Both are minimal and **require redeploy to take effect** (see TODOs). `node --ch
 
 ## 11. Remaining TODOs
 
-1. **Deploy the fixes** (required for them to take effect):
-   `firebase deploy --only firestore:rules,functions`
-2. **Run the manual two-account checklist (§12) on a device/emulator** after deploy — interactive verification was not possible in this environment.
+1. ✅ **DONE — Deployed the fixes** on 2026-06-03: `firebase deploy --only firestore:rules,functions` → rules released; all 7 functions updated. (Deploy noted Node.js 20 runtime is deprecated — decommission 2026-10-30 — and `firebase-functions` is outdated; both pre-existing, schedule a runtime/deps upgrade.)
+2. **Run the manual two-account checklist (§12) on a device/emulator** — now that fixes are live, this is the **only** remaining gate to close Phase 11.5. Interactive verification was not possible in this CLI environment.
 3. **BUG-4 follow-up:** discovery/search block filtering (needs server support for the bidirectional case).
 4. **BUG-3 / notifications (out of scope):** new `chats/*` message path has no server notification trigger; the legacy `onChatMessageCreated` only watches `chatRooms/*`.
 5. **Legacy cleanup (prior phase):** remove `OnboardingWizardScreen` (old ID/selfie verification) so no old verification flow can appear.
@@ -201,9 +200,10 @@ Both are minimal and **require redeploy to take effect** (see TODOs). `node --ch
 
 ## 13. Final verdict
 
-**Phase 11.5 is NOT yet ready to close.** ❌ (pending deploy + on-device verification)
+**Phase 11.5 is CODE-COMPLETE and DEPLOYED, pending one final gate: on-device verification.** 🟡
 
-- The QA **found and fixed two critical, flow-breaking regressions** (BUG-1, BUG-2) introduced by the 11.12A merge; without them the entire two-account journey is dead at onboarding.
-- The fixes are **code-complete and minimal** but **not yet deployed**, and the flow has **not been run interactively** in this environment.
+- The QA **found and fixed two critical, flow-breaking regressions** (BUG-1, BUG-2) introduced by the 11.12A merge; without them the entire two-account journey was dead at onboarding.
+- The fixes are minimal, the app builds, and they are **now deployed live** to `mithaq-matchmaking` (rules + all functions). 
+- The flow still has **not been run interactively** in this environment, so I cannot certify the live behaviour myself.
 
-**To close Phase 11.5:** (1) deploy `firestore:rules` + `functions`; (2) run the §12 checklist on a device and confirm all items; (3) decide on BUG-4 (discovery block filter) as accept-as-known-gap or schedule the follow-up. Once §12 passes on-device, Phase 11.5 can be closed. No new features were added; the photo/interest/chat/block **architecture was not changed** — only a rules allow-list extension and a mirror field-path correction.
+**To close Phase 11.5:** (1) ✅ deploy `firestore:rules` + `functions` — **done**; (2) **run the §12 checklist on a device and confirm all items** — this is the only remaining blocker; (3) decide on BUG-4 (discovery block filter) as accept-as-known-gap or schedule the follow-up. Once §12 passes on-device, Phase 11.5 can be closed. No new features were added; the photo/interest/chat/block **architecture was not changed** — only a rules allow-list extension and a mirror field-path correction.
