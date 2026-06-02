@@ -1090,6 +1090,7 @@ fun MithaqAppNavigation(
             QuestionScreen(
                 viewModel = onboardingViewModel,
                 userId = currentUserId,
+                isArabic = isArabic,
                 onExitRequested = {
                     currentScreen = Routes.Home
                 },

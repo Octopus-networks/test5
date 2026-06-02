@@ -8,6 +8,7 @@ import com.google.firebase.firestore.SetOptions
 import com.mithaq.app.Config
 import com.mithaq.app.domain.model.OnboardingAnswer
 import com.mithaq.app.domain.model.OnboardingStep
+import com.mithaq.app.domain.model.QuestionType
 import kotlinx.coroutines.tasks.await
 
 class OnboardingRepository(
@@ -53,26 +54,14 @@ class OnboardingRepository(
             ((answeredRequired.toFloat() / requiredStepIds.size.toFloat()) * 100f).toInt().coerceIn(0, 100)
         }
 
-        val profileData = mapOf(
+        // Data-driven: every persisted step writes its value under
+        // storageGroup.firestoreKey -> fieldKey inside profiles/{userId}. Private/match-only fields
+        // are stored here only; Android never writes publicProfiles (the server Cloud Function owns
+        // that mirror — Phase 11.8 privacy closure).
+        val profileData = buildProfileGroups(steps, answers) + mapOf(
             "onboardingCompleted" to true,
             "onboardingStep" to "complete",
             "profileCompletionPercent" to completionPercent,
-            "basicInfo" to mapOf(
-                "accountType" to selected("account_type", answers),
-                "name" to text("name", answers),
-                "age" to number("age", answers),
-                "country" to selected("country", answers),
-                "city" to text("city", answers)
-            ),
-            "personalStatus" to mapOf(
-                "maritalStatus" to selected("marital_status", answers)
-            ),
-            "religiousPractice" to mapOf(
-                "prayerHabit" to selected("prayer_habit", answers)
-            ),
-            "marriageIntent" to mapOf(
-                "timeline" to selected("marriage_timeline", answers)
-            ),
             "updatedAt" to FieldValue.serverTimestamp()
         )
 
@@ -115,16 +104,41 @@ class OnboardingRepository(
         return user?.uid == userId && user.isEmailVerified
     }
 
-    private fun selected(stepId: String, answers: Map<String, OnboardingAnswer>): String {
-        return answers[stepId]?.selectedOptionIds?.firstOrNull().orEmpty()
+    /**
+     * Builds the nested profile map purely from step metadata. Each persisted step's value is placed
+     * under its storage group's firestoreKey -> fieldKey. Flow-only steps (breaks/summary) and blank
+     * answers are skipped. Everything stays inside profiles/{userId}.
+     */
+    private fun buildProfileGroups(
+        steps: List<OnboardingStep>,
+        answers: Map<String, OnboardingAnswer>
+    ): Map<String, Any> {
+        val groups = mutableMapOf<String, MutableMap<String, Any>>()
+        steps.forEach { step ->
+            if (!step.isPersisted) return@forEach
+            val groupKey = step.storageGroup.firestoreKey
+            if (groupKey.isBlank() || step.fieldKey.isBlank()) return@forEach
+            val value = answerValue(step, answers[step.id]) ?: return@forEach
+            groups.getOrPut(groupKey) { mutableMapOf() }[step.fieldKey] = value
+        }
+        return groups
     }
 
-    private fun text(stepId: String, answers: Map<String, OnboardingAnswer>): String {
-        return answers[stepId]?.text?.trim().orEmpty()
-    }
-
-    private fun number(stepId: String, answers: Map<String, OnboardingAnswer>): Int? {
-        return answers[stepId]?.number ?: answers[stepId]?.text?.toIntOrNull()
+    /** Extracts the storable value for a step: a String, a List<String> (multi), or an Int. */
+    private fun answerValue(step: OnboardingStep, answer: OnboardingAnswer?): Any? {
+        if (answer == null) return null
+        return when (step.type) {
+            QuestionType.MultiChoice -> answer.selectedOptionIds.takeIf { it.isNotEmpty() }
+            QuestionType.SingleChoice,
+            QuestionType.YesNo,
+            QuestionType.SearchableList,
+            QuestionType.PrivacyMode -> answer.selectedOptionIds.firstOrNull()?.takeIf { it.isNotBlank() }
+            QuestionType.NumberInput -> answer.number ?: answer.text.toIntOrNull()
+            QuestionType.TextInput,
+            QuestionType.LongTextInput -> answer.text.trim().takeIf { it.isNotBlank() }
+            QuestionType.SectionBreak,
+            QuestionType.Summary -> null
+        }
     }
 
     private fun OnboardingAnswer.hasContent(): Boolean {

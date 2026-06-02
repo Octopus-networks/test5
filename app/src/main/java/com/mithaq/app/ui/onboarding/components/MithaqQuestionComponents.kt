@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.foundation.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
 import com.mithaq.app.domain.model.IllustrationKey
 import com.mithaq.app.domain.model.OnboardingProgress
-import com.mithaq.app.domain.model.QuestionOption
 
 @Composable
 fun MithaqQuestionScaffold(
@@ -58,6 +58,7 @@ fun MithaqQuestionScaffold(
     canGoBack: Boolean,
     canContinue: Boolean,
     showSkip: Boolean,
+    isArabic: Boolean,
     onBack: () -> Unit,
     onContinue: () -> Unit,
     onSkip: () -> Unit,
@@ -105,6 +106,7 @@ fun MithaqQuestionScaffold(
                 canGoBack = canGoBack,
                 canContinue = canContinue,
                 showSkip = showSkip,
+                isArabic = isArabic,
                 onBack = onBack,
                 onContinue = onContinue,
                 onSkip = onSkip
@@ -164,6 +166,53 @@ fun MithaqIllustrationHeader(
     )
 }
 
+/**
+ * Placeholder header for the structured flow. Every question and break carries an [imageKey] for
+ * future Stitch artwork (see STITCH_ONBOARDING_IMAGE_BRIEF.md); until those assets exist we render a
+ * calm, on-brand placeholder rather than a real drawable. [imageKey] is intentionally not shown to
+ * the user — it only identifies the future asset.
+ */
+@Composable
+fun MithaqOnboardingImagePlaceholder(
+    imageKey: String,
+    isArabic: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val description = stringResource(
+        id = if (isArabic) R.string.onb_image_placeholder_desc_ar else R.string.onb_image_placeholder_desc
+    )
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(132.dp)
+            .background(
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Filled.Image,
+                contentDescription = description,
+                tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f),
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 @Composable
 fun MithaqProgressBar(
     progress: OnboardingProgress,
@@ -214,7 +263,8 @@ fun MithaqQuestionTitle(
 
 @Composable
 fun MithaqOptionCard(
-    option: QuestionOption,
+    label: String,
+    helperText: String?,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -244,14 +294,14 @@ fun MithaqOptionCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = option.label,
+                    text = label,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                if (option.helperText.isNotBlank()) {
+                if (!helperText.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = option.helperText,
+                        text = helperText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -329,6 +379,7 @@ fun MithaqBottomNavigationButtons(
     canGoBack: Boolean,
     canContinue: Boolean,
     showSkip: Boolean,
+    isArabic: Boolean,
     onBack: () -> Unit,
     onContinue: () -> Unit,
     onSkip: () -> Unit,
@@ -340,7 +391,7 @@ fun MithaqBottomNavigationButtons(
                 onClick = onSkip,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Text("Skip")
+                Text(stringResource(id = if (isArabic) R.string.onb_skip_ar else R.string.onb_skip))
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -349,13 +400,13 @@ fun MithaqBottomNavigationButtons(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             MithaqSecondaryButton(
-                text = "Back",
+                text = stringResource(id = if (isArabic) R.string.onb_back_ar else R.string.onb_back),
                 onClick = onBack,
                 enabled = canGoBack,
                 modifier = Modifier.weight(1f)
             )
             MithaqPrimaryButton(
-                text = "Continue",
+                text = stringResource(id = if (isArabic) R.string.onb_continue_ar else R.string.onb_continue),
                 onClick = onContinue,
                 enabled = canContinue,
                 modifier = Modifier.weight(1f)

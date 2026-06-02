@@ -4,13 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mithaq.app.data.repository.OnboardingRepository
 import com.mithaq.app.data.repository.OnboardingSaveResult
-import com.mithaq.app.domain.model.IllustrationKey
 import com.mithaq.app.domain.model.OnboardingAnswer
-import com.mithaq.app.domain.model.OnboardingSection
 import com.mithaq.app.domain.model.OnboardingState
 import com.mithaq.app.domain.model.OnboardingStep
 import com.mithaq.app.domain.model.OnboardingValidationRule
-import com.mithaq.app.domain.model.QuestionOption
 import com.mithaq.app.domain.model.QuestionType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +17,7 @@ import kotlinx.coroutines.launch
 class OnboardingViewModel(
     private val repository: OnboardingRepository = OnboardingRepository()
 ) : ViewModel() {
-    private val _state = MutableStateFlow(OnboardingState(steps = sampleSteps()))
+    private val _state = MutableStateFlow(OnboardingState(steps = MithaqOnboardingFlow.steps()))
     val state: StateFlow<OnboardingState> = _state.asStateFlow()
 
     fun loadCompletionStatus(userId: String, onResult: (Boolean) -> Unit) {
@@ -161,6 +158,7 @@ class OnboardingViewModel(
                         QuestionType.YesNo,
                         QuestionType.SearchableList,
                         QuestionType.PrivacyMode -> answer?.selectedOptionIds?.isNotEmpty() == true
+                        QuestionType.SectionBreak,
                         QuestionType.Summary -> true
                     }
                     if (!hasValue) return "Please answer this question to continue."
@@ -194,123 +192,5 @@ class OnboardingViewModel(
             }
         }
         return null
-    }
-
-    private fun sampleSteps(): List<OnboardingStep> {
-        val basics = OnboardingSection("basics", "Basic info")
-        val personal = OnboardingSection("personal", "Personal status")
-        val faith = OnboardingSection("faith", "Religious practice")
-        val intent = OnboardingSection("intent", "Marriage intent")
-
-        return listOf(
-            OnboardingStep(
-                id = "account_type",
-                section = basics,
-                type = QuestionType.SingleChoice,
-                title = "What type of account are you creating?",
-                illustration = IllustrationKey.ACCOUNT_TYPE,
-                options = listOf(
-                    QuestionOption("male", "Male seeking wife"),
-                    QuestionOption("female", "Female seeking husband"),
-                    QuestionOption("guardian", "Guardian / Wali")
-                ),
-                validationRules = listOf(OnboardingValidationRule.Required)
-            ),
-            OnboardingStep(
-                id = "name",
-                section = basics,
-                type = QuestionType.TextInput,
-                title = "What is your name?",
-                helperText = "Use the name you want serious matches to see.",
-                illustration = IllustrationKey.BASIC_INFO,
-                validationRules = listOf(
-                    OnboardingValidationRule.Required,
-                    OnboardingValidationRule.MinLength(3),
-                    OnboardingValidationRule.MaxLength(30)
-                )
-            ),
-            OnboardingStep(
-                id = "age",
-                section = basics,
-                type = QuestionType.NumberInput,
-                title = "How old are you?",
-                illustration = IllustrationKey.BASIC_INFO,
-                validationRules = listOf(
-                    OnboardingValidationRule.Required,
-                    OnboardingValidationRule.NumberRange(18, 77)
-                )
-            ),
-            OnboardingStep(
-                id = "country",
-                section = basics,
-                type = QuestionType.SearchableList,
-                title = "Which country do you live in?",
-                illustration = IllustrationKey.LOCATION,
-                options = listOf(
-                    QuestionOption("egypt", "Egypt"),
-                    QuestionOption("saudi_arabia", "Saudi Arabia"),
-                    QuestionOption("uae", "United Arab Emirates"),
-                    QuestionOption("kuwait", "Kuwait"),
-                    QuestionOption("qatar", "Qatar"),
-                    QuestionOption("usa", "United States")
-                ),
-                validationRules = listOf(OnboardingValidationRule.Required)
-            ),
-            OnboardingStep(
-                id = "city",
-                section = basics,
-                type = QuestionType.TextInput,
-                title = "Which city are you in?",
-                illustration = IllustrationKey.LOCATION,
-                validationRules = listOf(
-                    OnboardingValidationRule.Required,
-                    OnboardingValidationRule.MinLength(2)
-                )
-            ),
-            OnboardingStep(
-                id = "marital_status",
-                section = personal,
-                type = QuestionType.SingleChoice,
-                title = "What is your marital status?",
-                illustration = IllustrationKey.MARITAL_STATUS,
-                options = listOf(
-                    QuestionOption("single", "Single"),
-                    QuestionOption("divorced_no_children", "Divorced without children"),
-                    QuestionOption("divorced_with_children", "Divorced with children"),
-                    QuestionOption("widowed", "Widowed"),
-                    QuestionOption("discuss_later", "Prefer to discuss later")
-                ),
-                validationRules = listOf(OnboardingValidationRule.Required)
-            ),
-            OnboardingStep(
-                id = "prayer_habit",
-                section = faith,
-                type = QuestionType.PrivacyMode,
-                title = "How would you describe your prayer habit?",
-                helperText = "This is private by default and can be hidden.",
-                illustration = IllustrationKey.RELIGION,
-                options = listOf(
-                    QuestionOption("always", "Always"),
-                    QuestionOption("daily", "Daily"),
-                    QuestionOption("sometimes", "Sometimes"),
-                    QuestionOption("prefer_not", "Prefer not to say")
-                ),
-                validationRules = listOf(OnboardingValidationRule.Required)
-            ),
-            OnboardingStep(
-                id = "marriage_timeline",
-                section = intent,
-                type = QuestionType.SingleChoice,
-                title = "When do you plan to get married?",
-                illustration = IllustrationKey.MARRIAGE_INTENT,
-                options = listOf(
-                    QuestionOption("soon", "As soon as possible"),
-                    QuestionOption("one_two_years", "In 1 to 2 years"),
-                    QuestionOption("not_hurry", "I am not in a hurry"),
-                    QuestionOption("discuss_later", "Prefer to discuss later")
-                ),
-                validationRules = listOf(OnboardingValidationRule.Required)
-            )
-        )
     }
 }

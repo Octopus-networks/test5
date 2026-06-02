@@ -424,4 +424,274 @@
     <string name="photo_visibility_hidden_ar">خاصة</string>
     <string name="photo_visibility_public">عامة</string>
     <string name="photo_visibility_public_ar">عامة</string>
+
+    <!-- ============================================================ -->
+    <!-- Phase 11.12A — Structured onboarding (Arabic locale defaults)  -->
+    <!-- Base keys only; _ar siblings resolve from the default values/. -->
+    <!-- ============================================================ -->
+
+    <!-- Shared options -->
+    <string name="onb_yes">نعم</string>
+    <string name="onb_no">لا</string>
+    <string name="onb_maybe">ربما</string>
+    <string name="onb_discuss">أفضل المناقشة لاحقًا</string>
+    <string name="onb_pns">أفضل عدم الإفصاح</string>
+
+    <!-- Onboarding chrome -->
+    <string name="onb_back">رجوع</string>
+    <string name="onb_continue">متابعة</string>
+    <string name="onb_skip">تخطي</string>
+    <string name="onb_image_placeholder_desc">الرسم التوضيحي قريبًا</string>
+    <string name="onb_note_private">خاص — يمكنك أنت فقط رؤيته. لا يظهر أبدًا في ملفك العام.</string>
+    <string name="onb_note_match">يُستخدم فقط لتحسين توافقك — ولا يظهر في ملفك.</string>
+    <string name="onb_note_optional">اختياري — يمكنك تخطيه وإضافته لاحقًا.</string>
+
+    <!-- Sections -->
+    <string name="onb_sec_identity">الهوية والموقع</string>
+    <string name="onb_sec_religion">الدين والقيم</string>
+    <string name="onb_sec_marriage">الزواج والأسرة</string>
+    <string name="onb_sec_edu">التعليم والعمل والمظهر</string>
+    <string name="onb_sec_personality">الشخصية ونمط الحياة</string>
+    <string name="onb_sec_partner">تفضيلات شريك الحياة</string>
+    <string name="onb_sec_privacy">الخصوصية والثقة</string>
+
+    <!-- Break / info screens -->
+    <string name="onb_brk_identity_t">لنُنشئ ملفك الشخصي</string>
+    <string name="onb_brk_identity_s">أولًا، بعض المعلومات الأساسية عنك وعن مكان إقامتك.</string>
+    <string name="onb_brk_religion_t">الدين والقيم</string>
+    <string name="onb_brk_religion_s">دينك هو أساس الزواج المبارك. تساعدنا هذه الإجابات على التوافق فيما يهم أكثر.</string>
+    <string name="onb_brk_marriage_t">الزواج والأسرة</string>
+    <string name="onb_brk_marriage_s">لنتعرف على نيّاتك وآمالك في الحياة الأسرية.</string>
+    <string name="onb_brk_edu_t">التعليم والعمل وأنت</string>
+    <string name="onb_brk_edu_s">القليل عن دراستك وعملك ومظهرك. العناصر الحساسة اختيارية وخاصة.</string>
+    <string name="onb_brk_personality_t">شخصيتك</string>
+    <string name="onb_brk_personality_s">ساعد شريك حياتك المستقبلي على التعرف على حقيقتك.</string>
+    <string name="onb_brk_partner_t">ما الذي تبحث عنه</string>
+    <string name="onb_brk_partner_s">أخبرنا عن شريك الحياة الذي تأمل أن تجده. هذا يوجّه توافقك.</string>
+    <string name="onb_brk_privacy_t">الخصوصية والثقة</string>
+    <string name="onb_brk_privacy_s">أخيرًا، اختر كيفية مشاركة صورك وأكّد جدية نيّتك.</string>
+    <string name="onb_brk_trust_t">كيف نحافظ على أمان ميثاق</string>
+    <string name="onb_brk_trust_s">يبني ميثاق الثقة من خلال مراجعة الملفات وإشراك الولي والمحادثات المراقَبة — لا من خلال مشاركة بياناتك الخاصة. تظل متحكمًا في صورك ومعلوماتك في كل خطوة.</string>
+
+    <!-- Identity &amp; Location -->
+    <string name="onb_account_type_t">ما نوع الحساب الذي تنشئه؟</string>
+    <string name="onb_account_type_male">رجل يبحث عن زوجة</string>
+    <string name="onb_account_type_female">امرأة تبحث عن زوج</string>
+    <string name="onb_account_type_guardian">ولي الأمر</string>
+    <string name="onb_first_name_t">ما اسمك الأول؟</string>
+    <string name="onb_first_name_h">اسمك الحقيقي. يبقى خاصًا حتى تختار مشاركته.</string>
+    <string name="onb_display_name_t">ما الاسم الذي يراه المتوافقون معك؟</string>
+    <string name="onb_display_name_h">اسم العرض الذي يظهر في ملفك العام.</string>
+    <string name="onb_gender_t">ما جنسك؟</string>
+    <string name="onb_gender_male">ذكر</string>
+    <string name="onb_gender_female">أنثى</string>
+    <string name="onb_age_t">كم عمرك؟</string>
+    <string name="onb_age_h">يجب أن يكون عمرك 18 عامًا على الأقل لاستخدام ميثاق.</string>
+    <string name="onb_nationality_t">ما جنسيتك؟</string>
+    <string name="onb_country_t">في أي بلد تقيم؟</string>
+    <string name="onb_city_t">في أي مدينة أنت؟</string>
+    <string name="onb_relocate_t">هل أنت مستعد للانتقال بعد الزواج؟</string>
+
+    <!-- Countries -->
+    <string name="onb_country_egypt">مصر</string>
+    <string name="onb_country_saudi">السعودية</string>
+    <string name="onb_country_uae">الإمارات العربية المتحدة</string>
+    <string name="onb_country_kuwait">الكويت</string>
+    <string name="onb_country_qatar">قطر</string>
+    <string name="onb_country_bahrain">البحرين</string>
+    <string name="onb_country_oman">عُمان</string>
+    <string name="onb_country_jordan">الأردن</string>
+    <string name="onb_country_morocco">المغرب</string>
+    <string name="onb_country_algeria">الجزائر</string>
+    <string name="onb_country_tunisia">تونس</string>
+    <string name="onb_country_turkey">تركيا</string>
+    <string name="onb_country_uk">المملكة المتحدة</string>
+    <string name="onb_country_usa">الولايات المتحدة</string>
+    <string name="onb_country_canada">كندا</string>
+    <string name="onb_country_other">أخرى</string>
+
+    <!-- Religion &amp; Values -->
+    <string name="onb_sect_t">كيف تصف توجهك؟</string>
+    <string name="onb_sect_sunni">سُنّي</string>
+    <string name="onb_sect_just_muslim">مسلم فحسب</string>
+    <string name="onb_sect_other">أخرى</string>
+    <string name="onb_commitment_t">كيف تصف التزامك الديني؟</string>
+    <string name="onb_commitment_very">ملتزم جدًا</string>
+    <string name="onb_commitment_practicing">ملتزم</string>
+    <string name="onb_commitment_moderate">معتدل</string>
+    <string name="onb_commitment_learning">ما زلت أتعلم وأتطور</string>
+    <string name="onb_prayer_t">كيف تصف صلاتك؟</string>
+    <string name="onb_prayer_five">الصلوات الخمس كاملة</string>
+    <string name="onb_prayer_most">معظم الصلوات</string>
+    <string name="onb_prayer_sometimes">أحيانًا</string>
+    <string name="onb_prayer_working">أعمل على ذلك</string>
+    <string name="onb_mosque_t">هل تذهب إلى المسجد وصلاة الجمعة؟</string>
+    <string name="onb_mosque_always">دائمًا</string>
+    <string name="onb_mosque_usually">غالبًا</string>
+    <string name="onb_mosque_sometimes">أحيانًا</string>
+    <string name="onb_mosque_rarely">نادرًا</string>
+    <string name="onb_quran_t">كم مرة تقرأ القرآن؟</string>
+    <string name="onb_quran_daily">يوميًا</string>
+    <string name="onb_quran_weekly">أسبوعيًا</string>
+    <string name="onb_quran_sometimes">أحيانًا</string>
+    <string name="onb_quran_learning">أتعلم القراءة</string>
+    <string name="onb_halal_t">ما مدى التزامك بالطعام الحلال؟</string>
+    <string name="onb_halal_strict">صارم</string>
+    <string name="onb_halal_mostly">حلال في الغالب</string>
+    <string name="onb_halal_flexible">مرن</string>
+    <string name="onb_family_values_t">كيف تصف قيمك الأسرية؟</string>
+    <string name="onb_family_values_traditional">تقليدية</string>
+    <string name="onb_family_values_balanced">متوازنة</string>
+    <string name="onb_family_values_modern">عصرية</string>
+    <string name="onb_modesty_t">كيف تعبّر عن الحشمة؟</string>
+    <string name="onb_modesty_h">اختر ما يصفك أكثر. يظهر هذا فقط كما ترغب.</string>
+    <string name="onb_modesty_niqab">نقاب</string>
+    <string name="onb_modesty_hijab">حجاب</string>
+    <string name="onb_modesty_modest">لباس محتشم</string>
+    <string name="onb_modesty_beard">لحية / مظهر سُنّي</string>
+    <string name="onb_wali_t">ما رأيك في إشراك ولي الأمر؟</string>
+    <string name="onb_wali_h">يساعد الولي في إبقاء التواصل جادًا وحلالًا.</string>
+    <string name="onb_wali_essential">ضروري من البداية</string>
+    <string name="onb_wali_welcome">مرحّب به ومُشجّع</string>
+    <string name="onb_wali_later">أفضل إشراكه لاحقًا</string>
+
+    <!-- Marriage &amp; Family -->
+    <string name="onb_marital_t">ما حالتك الاجتماعية؟</string>
+    <string name="onb_marital_single">أعزب (لم يسبق الزواج)</string>
+    <string name="onb_marital_divorced">مطلّق</string>
+    <string name="onb_marital_widowed">أرمل</string>
+    <string name="onb_has_children_t">هل لديك أطفال؟</string>
+    <string name="onb_num_children_t">كم عدد أطفالك؟</string>
+    <string name="onb_num_children_h">اختياري. اتركه فارغًا إن أردت.</string>
+    <string name="onb_wants_children_t">هل ترغب في الأطفال (أو المزيد منهم)؟</string>
+    <string name="onb_timeline_t">متى تأمل أن تتزوج؟</string>
+    <string name="onb_timeline_asap">في أقرب وقت ممكن</string>
+    <string name="onb_timeline_one_two">خلال سنة إلى سنتين</string>
+    <string name="onb_timeline_no_rush">لا عجلة</string>
+    <string name="onb_polygamy_t">ما موقفك من تعدد الزوجات؟</string>
+    <string name="onb_polygamy_open">منفتح عليه</string>
+    <string name="onb_polygamy_not_open">غير منفتح عليه</string>
+    <string name="onb_housing_t">أين ستعيش بعد الزواج؟</string>
+    <string name="onb_housing_own">منزلنا الخاص</string>
+    <string name="onb_housing_family">مع العائلة</string>
+    <string name="onb_housing_flexible">مرن</string>
+    <string name="onb_household_t">كيف ترى مسؤوليات المنزل؟</string>
+    <string name="onb_household_h">اختر كل ما ينطبق.</string>
+    <string name="onb_household_provider">الزوج هو المُعيل</string>
+    <string name="onb_household_homemaker">الزوجة تدير المنزل</string>
+    <string name="onb_household_shared">مسؤوليات مشتركة</string>
+    <string name="onb_household_flexible">مرن، بالاتفاق</string>
+    <string name="onb_mahr_t">هل لديك أفكار حول المهر / الشبكة؟</string>
+    <string name="onb_mahr_h">اختياري وخاص. يمكنك مناقشة التفاصيل لاحقًا مع الولي.</string>
+
+    <!-- Education / Work / Appearance -->
+    <string name="onb_education_t">ما مستواك التعليمي؟</string>
+    <string name="onb_education_high">الثانوية</string>
+    <string name="onb_education_diploma">دبلوم</string>
+    <string name="onb_education_bachelor">بكالوريوس</string>
+    <string name="onb_education_master">ماجستير</string>
+    <string name="onb_education_phd">دكتوراه</string>
+    <string name="onb_study_field_t">ماذا درست؟ (اختياري)</string>
+    <string name="onb_occupation_t">ما مهنتك؟</string>
+    <string name="onb_employment_t">ما حالتك الوظيفية؟</string>
+    <string name="onb_employment_employed">موظف</string>
+    <string name="onb_employment_self">يعمل لحسابه</string>
+    <string name="onb_employment_student">طالب</string>
+    <string name="onb_employment_seeking">يبحث عن عمل</string>
+    <string name="onb_employment_not">لا يعمل</string>
+    <string name="onb_income_t">ما نطاق دخلك؟ (اختياري)</string>
+    <string name="onb_income_h">خاص واختياري. لا يظهر لأحد.</string>
+    <string name="onb_income_low">متواضع</string>
+    <string name="onb_income_medium">مريح</string>
+    <string name="onb_income_high">مرتفع</string>
+    <string name="onb_height_t">ما طولك؟ (سم)</string>
+    <string name="onb_height_h">أدخل طولك بالسنتيمتر.</string>
+    <string name="onb_weight_t">ما وزنك؟ (كجم، اختياري)</string>
+    <string name="onb_weight_h">اختياري وخاص.</string>
+    <string name="onb_body_t">كيف تصف بنيتك الجسدية؟ (اختياري)</string>
+    <string name="onb_body_slim">نحيف</string>
+    <string name="onb_body_athletic">رياضي</string>
+    <string name="onb_body_average">متوسط</string>
+    <string name="onb_body_curvy">ممتلئ القوام</string>
+    <string name="onb_body_plus">ممتلئ</string>
+    <string name="onb_smoking_t">هل تدخّن؟</string>
+    <string name="onb_smoking_no">لا</string>
+    <string name="onb_smoking_occ">أحيانًا</string>
+    <string name="onb_smoking_yes">نعم</string>
+    <string name="onb_living_t">ما وضع سكنك الحالي؟</string>
+    <string name="onb_living_family">مع العائلة</string>
+    <string name="onb_living_alone">أعيش بمفردي</string>
+    <string name="onb_living_shared">سكن مشترك</string>
+
+    <!-- Personality &amp; Lifestyle -->
+    <string name="onb_ideal_day_t">صِف يومك المثالي (اختياري)</string>
+    <string name="onb_ideal_day_h">بضع جمل تساعد المتوافقين على تخيّل الحياة معك.</string>
+    <string name="onb_activity_t">ما نوع الأنشطة التي تستمتع بها أكثر؟</string>
+    <string name="onb_activity_outdoors">في الهواء الطلق</string>
+    <string name="onb_activity_home">وقت هادئ في المنزل</string>
+    <string name="onb_activity_social">وقت مع العائلة والأصدقاء</string>
+    <string name="onb_activity_learning">تعلّم شيء جديد</string>
+    <string name="onb_activity_worship">العبادة والتأمل</string>
+    <string name="onb_hobbies_t">ما هواياتك؟</string>
+    <string name="onb_hobbies_h">اختر حتى خمسة.</string>
+    <string name="onb_hobbies_reading">القراءة</string>
+    <string name="onb_hobbies_sports">الرياضة</string>
+    <string name="onb_hobbies_cooking">الطبخ</string>
+    <string name="onb_hobbies_travel">السفر</string>
+    <string name="onb_hobbies_tech">التقنية</string>
+    <string name="onb_hobbies_volunteering">العمل التطوعي</string>
+    <string name="onb_hobbies_art">الفنون والحِرف</string>
+    <string name="onb_languages_t">ما اللغات التي تتحدثها؟</string>
+    <string name="onb_languages_arabic">العربية</string>
+    <string name="onb_languages_english">الإنجليزية</string>
+    <string name="onb_languages_french">الفرنسية</string>
+    <string name="onb_languages_turkish">التركية</string>
+    <string name="onb_languages_urdu">الأردية</string>
+    <string name="onb_languages_other">أخرى</string>
+    <string name="onb_english_t">ما مستواك في الإنجليزية؟</string>
+    <string name="onb_english_fluent">طليق</string>
+    <string name="onb_english_good">جيد</string>
+    <string name="onb_english_basic">أساسي</string>
+    <string name="onb_english_none">لا أتحدثها</string>
+
+    <!-- Partner Preferences -->
+    <string name="onb_partner_age_t">النطاق العمري المفضل للشريك؟</string>
+    <string name="onb_partner_age_18_25">18–25</string>
+    <string name="onb_partner_age_25_30">25–30</string>
+    <string name="onb_partner_age_30_40">30–40</string>
+    <string name="onb_partner_age_40_plus">40+</string>
+    <string name="onb_partner_age_flexible">مرن</string>
+    <string name="onb_partner_location_t">الموقع المفضل للشريك؟ (اختياري)</string>
+    <string name="onb_partner_location_h">دولة أو مدينة، إن كان لديك تفضيل.</string>
+    <string name="onb_partner_qualities_t">ما الصفات الأهم بالنسبة لك؟</string>
+    <string name="onb_partner_qualities_h">اختر حتى أربعة.</string>
+    <string name="onb_pq_religious">متدين</string>
+    <string name="onb_pq_kind">طيب القلب</string>
+    <string name="onb_pq_ambitious">طموح</string>
+    <string name="onb_pq_family">محب للعائلة</string>
+    <string name="onb_pq_educated">متعلم</string>
+    <string name="onb_pq_humorous">خفيف الظل</string>
+    <string name="onb_partner_religious_t">الممارسة الدينية المفضلة في الشريك؟</string>
+    <string name="onb_partner_rel_very">ملتزم جدًا</string>
+    <string name="onb_partner_rel_practicing">ملتزم</string>
+    <string name="onb_partner_rel_moderate">معتدل</string>
+    <string name="onb_partner_rel_open">منفتح على الجميع</string>
+    <string name="onb_partner_reloc_t">ما توقعاتك بشأن الانتقال؟</string>
+    <string name="onb_partner_reloc_to_me">ينتقل الشريك إليّ</string>
+    <string name="onb_partner_reloc_i_can">يمكنني الانتقال</string>
+    <string name="onb_partner_reloc_either">كلاهما مناسب</string>
+
+    <!-- Privacy &amp; Trust -->
+    <string name="onb_photo_privacy_t">كيف ينبغي مشاركة صورك؟</string>
+    <string name="onb_photo_privacy_h">تبقى أنت المتحكم. يمكنك تغيير هذا في أي وقت من الإعدادات.</string>
+    <string name="onb_photo_on_request">فقط بعد موافقتي على الطلب</string>
+    <string name="onb_photo_after_match">بعد التوافق بيننا</string>
+    <string name="onb_photo_wali_only">للولي فقط</string>
+    <string name="onb_photo_blurred">معاينة مموّهة، والكاملة عند الطلب</string>
+    <string name="onb_oath_t">هل تتعهد بنوايا صادقة وجادة؟</string>
+    <string name="onb_oath_h">ميثاق لمن يسعون بصدق إلى زواج حلال.</string>
+    <string name="onb_oath_agree">نعم، أتعهد بذلك بإخلاص</string>
+    <string name="onb_oath_not_yet">ليس بعد</string>
+    <string name="onb_summary_t">ملفك جاهز</string>
+    <string name="onb_summary_s">راجع إجاباتك ثم تابع. يمكنك تعديل أي شيء لاحقًا من ملفك.</string>
 </resources>
