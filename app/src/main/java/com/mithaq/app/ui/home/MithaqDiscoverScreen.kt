@@ -62,7 +62,13 @@ import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.domain.model.PublicProfile
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
 import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.components.MithaqStateIllustration
+import com.mithaq.app.ui.components.MithaqIllustrationType
+import com.mithaq.app.ui.components.MithaqLoadingSkeleton
+import com.mithaq.app.ui.components.SkeletonType
 import com.mithaq.app.ui.requests.ChatRequestUiState
 import com.mithaq.app.ui.requests.ChatRequestViewModel
 import com.mithaq.app.ui.requests.InterestRequestUiState
@@ -282,13 +288,10 @@ private fun DiscoverProfileContent(
 ) {
     when {
         state.isLoading -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                repeat(2) {
+                    MithaqLoadingSkeleton(type = SkeletonType.PROFILE_CARD)
+                }
             }
         }
         state.errorMessage != null -> {
@@ -539,41 +542,34 @@ private fun PhotoPrivacyPlaceholder(
         "matched_users_only" -> if (isArabic) "تظهر بعد التطابق" else "MATCH TO VIEW"
         else -> if (isArabic) "صورة محمية" else "PHOTO PROTECTED"
     }
-    val icon = when (normalizedMode) {
-        "matched_users_only" -> Icons.Filled.Favorite
-        "hidden" -> Icons.Filled.Lock
-        else -> Icons.Filled.Shield
-    }
+
+    val softGold = Color(0xFFF2CA50)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1.1f)
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surfaceVariant,
-                        MaterialTheme.colorScheme.surface,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFF131313)) // Deep charcoal background
+            .border(
+                1.dp,
+                softGold.copy(alpha = 0.22f),
+                RoundedCornerShape(24.dp)
             ),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp)
+            MithaqStateIllustration(
+                type = MithaqIllustrationType.SHIELD_LOCK,
+                tint = softGold,
+                modifier = Modifier.size(100.dp)
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = caption,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = softGold
             )
         }
     }

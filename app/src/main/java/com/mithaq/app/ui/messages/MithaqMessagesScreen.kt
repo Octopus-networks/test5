@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
@@ -56,7 +57,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.domain.model.ChatMessage
 import com.mithaq.app.domain.model.ChatParticipantSummary
 import com.mithaq.app.domain.model.ChatRoom
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
 import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.components.MithaqStateIllustration
+import com.mithaq.app.ui.components.MithaqIllustrationType
+import com.mithaq.app.ui.components.MithaqLoadingSkeleton
+import com.mithaq.app.ui.components.SkeletonType
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -171,13 +178,10 @@ private fun ActiveChatsTab(
 ) {
     when {
         state.isLoading -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(3) {
+                    MithaqLoadingSkeleton(type = SkeletonType.MESSAGE_ROW)
+                }
             }
         }
         state.errorMessage != null -> {
@@ -409,13 +413,15 @@ private fun ChatScreen(
 
         when {
             state.isLoading -> {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    contentAlignment = Alignment.Center
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    CircularProgressIndicator()
+                    repeat(4) {
+                        MithaqLoadingSkeleton(type = SkeletonType.MESSAGE_ROW)
+                    }
                 }
             }
             state.messages.isEmpty() -> {
@@ -536,27 +542,52 @@ private fun InfoCard(
     isError: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val softGold = Color(0xFFF2CA50)
+    val softEmerald = Color(0xFF8BD6B6)
+    val softRed = Color(0xFFE57373)
+
+    val isSuccess = text.contains("نجاح", ignoreCase = true) || 
+                    text.contains("success", ignoreCase = true) || 
+                    text.contains("تم إرسال", ignoreCase = true) ||
+                    text.contains("submitted", ignoreCase = true)
+
+    val accentColor = when {
+        isError -> softRed
+        isSuccess -> softEmerald
+        else -> softGold
+    }
+
+    val illustrationType = when {
+        isError -> MithaqIllustrationType.ALERT_GEOMETRIC
+        isSuccess -> MithaqIllustrationType.CHECK_GEOMETRIC
+        else -> MithaqIllustrationType.ALERT_GEOMETRIC
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isError) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.primaryContainer
-            }
-        )
+            containerColor = Color(0xFF131313)
+        ),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.24f))
     ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(12.dp),
-            color = if (isError) {
-                MaterialTheme.colorScheme.onErrorContainer
-            } else {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            },
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            MithaqStateIllustration(
+                type = illustrationType,
+                tint = accentColor,
+                modifier = Modifier.size(32.dp)
+            )
+            Text(
+                text = text,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 

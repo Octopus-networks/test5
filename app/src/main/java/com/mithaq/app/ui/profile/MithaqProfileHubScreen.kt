@@ -42,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
+import androidx.activity.compose.BackHandler
 import com.mithaq.app.ui.photo.MyPhotosScreen
 
 private data class ProfileHubItem(
@@ -76,6 +77,14 @@ fun MithaqProfileHubScreen(
 ) {
     var openItem by remember { mutableStateOf<ProfileHubItem?>(null) }
     var showMyPhotos by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = showMyPhotos || openItem != null) {
+        if (showMyPhotos) {
+            showMyPhotos = false
+        } else {
+            openItem = null
+        }
+    }
 
     if (showMyPhotos) {
         MyPhotosScreen(

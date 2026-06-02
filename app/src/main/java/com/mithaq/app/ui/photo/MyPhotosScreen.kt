@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,6 +36,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Arrangement
+import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.components.MithaqLoadingSkeleton
+import com.mithaq.app.ui.components.SkeletonType
 import com.mithaq.app.domain.model.PhotoType
 import com.mithaq.app.domain.model.UserPhoto
 
@@ -141,11 +151,15 @@ fun MyPhotosScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         when {
-            state.isLoading -> CircularProgressIndicator()
-            state.photos.isEmpty() -> Text(
-                text = if (isArabic) "لم ترفع أي صور بعد." else "You have not uploaded any photos yet.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            state.isLoading -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(2) {
+                    MithaqLoadingSkeleton(type = SkeletonType.REQUEST_ROW)
+                }
+            }
+            state.photos.isEmpty() -> MithaqEmptyState(
+                title = if (isArabic) "لا توجد صور بعد" else "No photos yet",
+                message = if (isArabic) "صورك المرفوعة ستظهر هنا بعد المراجعة." else "Your uploaded photos will appear here after review.",
+                icon = Icons.Filled.Favorite
             )
             else -> state.photos.forEach { photo ->
                 MyPhotoRow(photo = photo, isArabic = isArabic)
@@ -157,25 +171,48 @@ fun MyPhotosScreen(
 
 @Composable
 private fun MyPhotoRow(photo: UserPhoto, isArabic: Boolean) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
-        Column(modifier = Modifier.padding(14.dp)) {
+    val softGold = Color(0xFFF2CA50)
+    val softEmerald = Color(0xFF8BD6B6)
+    val softRed = Color(0xFFE57373)
+
+    val statusColor = when (photo.status) {
+        "approved" -> softEmerald
+        "rejected" -> softRed
+        else -> softGold
+    }
+
+    val visibilityLabel = when (photo.visibility.lowercase()) {
+        "hidden" -> if (isArabic) "خاصة" else "Private"
+        "public" -> if (isArabic) "عامة" else "Public"
+        else -> photo.visibility
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF131313)),
+        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.16f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = if (photo.type == PhotoType.MAIN.raw) {
                     if (isArabic) "الصورة الرئيسية" else "Main photo"
                 } else {
                     if (isArabic) "صورة إضافية" else "Extra photo"
                 },
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = (if (isArabic) "الحالة: " else "Status: ") + statusLabel(photo.status, isArabic),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = statusColor,
+                fontWeight = FontWeight.Medium
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = (if (isArabic) "الخصوصية: " else "Visibility: ") + photo.visibility,
+                text = (if (isArabic) "الخصوصية: " else "Visibility: ") + visibilityLabel,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

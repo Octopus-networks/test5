@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
@@ -32,6 +33,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.data.repository.PhotoRepository
 import com.mithaq.app.domain.model.PhotoAccessLevel
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
+import com.mithaq.app.ui.components.MithaqStateIllustration
+import com.mithaq.app.ui.components.MithaqIllustrationType
 import com.mithaq.app.domain.model.PhotoVisibility
 
 /**
@@ -98,24 +103,30 @@ fun SecurePhotoView(
 @Composable
 private fun SecurePhotoPlaceholder(mode: String, isArabic: Boolean) {
     val visibility = PhotoVisibility.from(mode)
+    val softGold = Color(0xFFF2CA50)
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(Color(0xFF131313)) // Deep charcoal background
+            .border(
+                1.dp,
+                softGold.copy(alpha = 0.22f),
+                RoundedCornerShape(18.dp)
+            )
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = if (visibility == PhotoVisibility.BLURRED_BY_DEFAULT) Icons.Filled.Visibility else Icons.Filled.Lock,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        MithaqStateIllustration(
+            type = MithaqIllustrationType.SHIELD_LOCK,
+            tint = softGold,
+            modifier = Modifier.size(90.dp)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = placeholderLabel(visibility, isArabic),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = softGold,
             textAlign = TextAlign.Center
         )
     }

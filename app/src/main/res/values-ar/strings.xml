@@ -404,4 +404,22 @@
     <string name="request_status_declined_ar">مرفوض</string>
     <string name="request_status_cancelled">ملغي</string>
     <string name="request_status_cancelled_ar">ملغي</string>
+
+    <!-- Phase 11.6 strings -->
+    <string name="common_no_internet">لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة.</string>
+    <string name="common_no_internet_ar">لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة.</string>
+    <string name="report_sent_success">تم إرسال البلاغ بنجاح. سيقوم فريقنا بمراجعته.</string>
+    <string name="report_sent_success_ar">تم إرسال البلاغ بنجاح. سيقوم فريقنا بمراجعته.</string>
+    <string name="report_sent_failure">تعذر إرسال البلاغ. حاول مرة أخرى لاحقًا.</string>
+    <string name="report_sent_failure_ar">تعذر إرسال البلاغ. حاول مرة أخرى لاحقًا.</string>
+    <string name="photo_status_approved">مقبولة</string>
+    <string name="photo_status_approved_ar">مقبولة</string>
+    <string name="photo_status_rejected">مرفوضة</string>
+    <string name="photo_status_rejected_ar">مرفوضة</string>
+    <string name="photo_status_pending">قيد المراجعة</string>
+    <string name="photo_status_pending_ar">قيد المراجعة</string>
+    <string name="photo_visibility_hidden">خاصة</string>
+    <string name="photo_visibility_hidden_ar">خاصة</string>
+    <string name="photo_visibility_public">عامة</string>
+    <string name="photo_visibility_public_ar">عامة</string>
 </resources>
