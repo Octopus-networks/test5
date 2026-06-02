@@ -32,7 +32,7 @@
     <string name="messages_empty_message">Chat requests are managed in Requests, and real messaging will appear here after approval.</string>
     <string name="chat_load_error_title">Could not load chats</string>
     <string name="chat_no_active_title">No active chats</string>
-    <string name="chat_no_active_message">After a chat request is approved, the conversation will appear here without exposing private data.</string>
+    <string name="chat_no_active_message">To start a conversation, send an interest first. After it is accepted, request chat approval. Approved chats appear here.</string>
     <string name="chat_no_messages_yet">No messages yet</string>
     <string name="chat_open">Open chat</string>
     <string name="chat_screen_subtitle">Respectful text conversation inside an approved active chat only.</string>
@@ -114,6 +114,7 @@
     <string name="discover_request_photo">Request photo access</string>
     <string name="discover_chat_requested">Chat requested</string>
     <string name="discover_chat_approved">Chat approved</string>
+    <string name="discover_open_chat">Open chat</string>
     <string name="discover_chat_declined">Chat request declined</string>
     <string name="discover_request_chat">Request chat</string>
     <string name="discover_new_members">New members</string>
@@ -163,7 +164,7 @@
     <string name="messages_empty_message_ar">تُدار طلبات التواصل من شاشة الطلبات، وتظهر الرسائل هنا بعد الموافقة.</string>
     <string name="chat_load_error_title_ar">تعذر تحميل المحادثات</string>
     <string name="chat_no_active_title_ar">لا توجد محادثات نشطة</string>
-    <string name="chat_no_active_message_ar">بعد قبول طلب التواصل ستظهر المحادثة هنا دون كشف أي بيانات خاصة.</string>
+    <string name="chat_no_active_message_ar">لبدء محادثة، أرسل اهتمامًا أولًا، وبعد قبوله اطلب الموافقة على التواصل. تظهر المحادثات المقبولة هنا.</string>
     <string name="chat_no_messages_yet_ar">لا توجد رسائل بعد.</string>
     <string name="chat_open_ar">فتح المحادثة</string>
     <string name="chat_screen_subtitle_ar">محادثة نصية محترمة داخل طلب تواصل مقبول فقط.</string>
@@ -242,6 +243,7 @@
     <string name="discover_request_photo_ar">طلب رؤية الصورة</string>
     <string name="discover_chat_requested_ar">تم طلب التواصل</string>
     <string name="discover_chat_approved_ar">تم قبول التواصل</string>
+    <string name="discover_open_chat_ar">افتح المحادثة</string>
     <string name="discover_chat_declined_ar">تم رفض طلب التواصل</string>
     <string name="discover_request_chat_ar">طلب تواصل</string>
     <string name="discover_new_members_ar">أعضاء جدد</string>

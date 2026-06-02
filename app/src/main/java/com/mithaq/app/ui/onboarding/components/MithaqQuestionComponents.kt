@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -63,10 +67,19 @@ fun MithaqQuestionScaffold(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .navigationBarsPadding()
+            .imePadding()
     ) {
-        Column {
+        // Scrollable content area: long lists (e.g. searchable country list) scroll here
+        // and can never push the bottom action bar off-screen.
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(top = 24.dp, bottom = 12.dp)
+        ) {
             MithaqSectionCard(title = sectionTitle)
             Spacer(modifier = Modifier.height(14.dp))
             MithaqProgressBar(progress = progress)
@@ -76,9 +89,18 @@ fun MithaqQuestionScaffold(
             content()
         }
 
-        Column {
+        // Pinned bottom action bar: Continue / Back are always visible, clear of the
+        // system navigation bar and the keyboard.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp)
+        ) {
             MithaqValidationBox(message = validationMessage)
-            Spacer(modifier = Modifier.height(16.dp))
+            if (validationMessage != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
             MithaqBottomNavigationButtons(
                 canGoBack = canGoBack,
                 canContinue = canContinue,

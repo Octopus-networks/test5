@@ -114,6 +114,7 @@ fun MithaqMainExperience(
                 interestRequestViewModel = interestRequestViewModel,
                 photoRequestViewModel = photoRequestViewModel,
                 chatRequestViewModel = chatRequestViewModel,
+                onOpenMessages = { selectedTab = MithaqMainTab.Messages },
                 modifier = screenModifier
             )
             MithaqMainTab.Search -> MithaqSearchScreen(
@@ -122,6 +123,7 @@ fun MithaqMainExperience(
                 interestRequestViewModel = interestRequestViewModel,
                 photoRequestViewModel = photoRequestViewModel,
                 chatRequestViewModel = chatRequestViewModel,
+                onOpenMessages = { selectedTab = MithaqMainTab.Messages },
                 modifier = screenModifier
             )
             MithaqMainTab.Requests -> MithaqRequestsScreen(

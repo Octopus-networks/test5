@@ -55,7 +55,8 @@ fun MithaqSearchScreen(
     viewModel: DiscoverViewModel = viewModel(key = "mithaq_public_search"),
     interestRequestViewModel: InterestRequestViewModel,
     photoRequestViewModel: PhotoRequestViewModel,
-    chatRequestViewModel: ChatRequestViewModel
+    chatRequestViewModel: ChatRequestViewModel,
+    onOpenMessages: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val interestState by interestRequestViewModel.state.collectAsState()
@@ -111,6 +112,7 @@ fun MithaqSearchScreen(
             onRequestChat = { toUserId ->
                 chatRequestViewModel.requestChat(currentUserId, toUserId)
             },
+            onOpenChat = { onOpenMessages() },
             onRetry = viewModel::loadProfiles
         )
     }
@@ -127,6 +129,7 @@ private fun SearchResultsContent(
     onSendInterest: (String) -> Unit,
     onRequestPhoto: (String) -> Unit,
     onRequestChat: (String) -> Unit,
+    onOpenChat: (String) -> Unit = {},
     onRetry: () -> Unit
 ) {
     when {
@@ -172,6 +175,7 @@ private fun SearchResultsContent(
                     onSendInterest = onSendInterest,
                     onRequestPhoto = onRequestPhoto,
                     onRequestChat = onRequestChat,
+                    onOpenChat = onOpenChat,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }

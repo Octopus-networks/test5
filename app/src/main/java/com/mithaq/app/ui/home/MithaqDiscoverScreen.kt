@@ -88,7 +88,8 @@ fun MithaqDiscoverScreen(
     viewModel: DiscoverViewModel = viewModel(key = "mithaq_discover_home"),
     interestRequestViewModel: InterestRequestViewModel,
     photoRequestViewModel: PhotoRequestViewModel,
-    chatRequestViewModel: ChatRequestViewModel
+    chatRequestViewModel: ChatRequestViewModel,
+    onOpenMessages: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val interestState by interestRequestViewModel.state.collectAsState()
@@ -156,6 +157,7 @@ fun MithaqDiscoverScreen(
             onRequestChat = { toUserId ->
                 chatRequestViewModel.requestChat(currentUserId, toUserId)
             },
+            onOpenChat = { onOpenMessages() },
             onRetry = viewModel::loadProfiles
         )
     }
@@ -284,6 +286,7 @@ private fun DiscoverProfileContent(
     onSendInterest: (String) -> Unit,
     onRequestPhoto: (String) -> Unit,
     onRequestChat: (String) -> Unit,
+    onOpenChat: (String) -> Unit = {},
     onRetry: () -> Unit
 ) {
     when {
@@ -329,6 +332,7 @@ private fun DiscoverProfileContent(
                     onSendInterest = onSendInterest,
                     onRequestPhoto = onRequestPhoto,
                     onRequestChat = onRequestChat,
+                    onOpenChat = onOpenChat,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
@@ -347,7 +351,8 @@ fun MithaqPublicProfileCard(
     chatState: ChatRequestUiState = ChatRequestUiState(),
     onSendInterest: (String) -> Unit = {},
     onRequestPhoto: (String) -> Unit = {},
-    onRequestChat: (String) -> Unit = {}
+    onRequestChat: (String) -> Unit = {},
+    onOpenChat: (String) -> Unit = {}
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -504,14 +509,17 @@ fun MithaqPublicProfileCard(
             Spacer(modifier = Modifier.height(10.dp))
             val chatStatus = chatState.sentStatusByUserId[profile.userId]
             val hasAcceptedInterestForChat = profile.userId in interestState.acceptedWithUserIds
+            val chatApproved = chatStatus == "approved"
             val canRequestChat = currentUserId.isNotBlank() &&
                     profile.userId != currentUserId &&
                     profile.userId !in chatState.requestingToUserIds &&
                     hasAcceptedInterestForChat &&
                     (chatStatus == null || chatStatus == "cancelled")
             OutlinedButton(
-                onClick = { onRequestChat(profile.userId) },
-                enabled = canRequestChat,
+                onClick = {
+                    if (chatApproved) onOpenChat(profile.userId) else onRequestChat(profile.userId)
+                },
+                enabled = canRequestChat || chatApproved,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -519,7 +527,7 @@ fun MithaqPublicProfileCard(
                 val chatButtonText = when {
                     profile.userId in chatState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
                     chatStatus == "pending" -> localizedString(isArabic, R.string.discover_chat_requested, R.string.discover_chat_requested_ar)
-                    chatStatus == "approved" -> localizedString(isArabic, R.string.discover_chat_approved, R.string.discover_chat_approved_ar)
+                    chatApproved -> localizedString(isArabic, R.string.discover_open_chat, R.string.discover_open_chat_ar)
                     chatStatus == "declined" -> localizedString(isArabic, R.string.discover_chat_declined, R.string.discover_chat_declined_ar)
                     !hasAcceptedInterestForChat -> localizedString(isArabic, R.string.discover_interest_first, R.string.discover_interest_first_ar)
                     else -> localizedString(isArabic, R.string.discover_request_chat, R.string.discover_request_chat_ar)
