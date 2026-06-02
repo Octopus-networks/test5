@@ -6,8 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.AlertDialog
@@ -29,19 +28,20 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
 import com.mithaq.app.domain.model.OnboardingAnswer
+import com.mithaq.app.domain.model.OnboardingPrivacy
 import com.mithaq.app.domain.model.OnboardingStep
 import com.mithaq.app.domain.model.QuestionOption
 import com.mithaq.app.domain.model.QuestionType
 import com.mithaq.app.ui.onboarding.components.MithaqInputField
-import com.mithaq.app.ui.onboarding.components.MithaqIllustrationHeader
+import com.mithaq.app.ui.onboarding.components.MithaqOnboardingImagePlaceholder
 import com.mithaq.app.ui.onboarding.components.MithaqOptionCard
-import com.mithaq.app.ui.onboarding.components.MithaqPrimaryButton
 import com.mithaq.app.ui.onboarding.components.MithaqQuestionScaffold
 
 @Composable
 fun QuestionScreen(
     viewModel: OnboardingViewModel = remember { OnboardingViewModel() },
     userId: String = "",
+    isArabic: Boolean = false,
     onExitRequested: () -> Unit = {},
     onComplete: (answeredQuestions: Int, profileCompletionPercent: Int) -> Unit = { _, _ -> }
 ) {
@@ -53,7 +53,7 @@ fun QuestionScreen(
         LaunchedEffect(state.answeredQuestions, state.profileCompletionPercent) {
             onComplete(state.answeredQuestions, state.profileCompletionPercent)
         }
-        Text(stringResource(id = R.string.onboarding_completing))
+        Text(stringResource(id = if (isArabic) R.string.onboarding_completing_ar else R.string.onboarding_completing))
         return
     }
 
@@ -73,41 +73,43 @@ fun QuestionScreen(
     if (showExitConfirm) {
         AlertDialog(
             onDismissRequest = { showExitConfirm = false },
-            title = { Text(stringResource(id = R.string.onboarding_leave_title)) },
-            text = { Text(stringResource(id = R.string.onboarding_leave_message)) },
+            title = { Text(stringResource(id = if (isArabic) R.string.onboarding_leave_title_ar else R.string.onboarding_leave_title)) },
+            text = { Text(stringResource(id = if (isArabic) R.string.onboarding_leave_message_ar else R.string.onboarding_leave_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showExitConfirm = false
                     onExitRequested()
                 }) {
-                    Text(stringResource(id = R.string.onboarding_leave))
+                    Text(stringResource(id = if (isArabic) R.string.onboarding_leave_ar else R.string.onboarding_leave))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showExitConfirm = false }) {
-                    Text(stringResource(id = R.string.onboarding_stay))
+                    Text(stringResource(id = if (isArabic) R.string.onboarding_stay_ar else R.string.onboarding_stay))
                 }
             }
         )
     }
 
     if (step == null) {
-        Text(stringResource(id = R.string.onboarding_no_questions))
+        Text(stringResource(id = if (isArabic) R.string.onboarding_no_questions_ar else R.string.onboarding_no_questions))
         return
     }
 
     val answer = state.answers[step.id]
     val canContinue = step.isOptional || answerHasValue(step, answer)
+    val showSkip = step.isOptional && !step.isBreak && step.type != QuestionType.Summary
 
     MithaqQuestionScaffold(
         progress = state.progress,
-        sectionTitle = step.section.title,
-        title = step.title,
-        helperText = step.helperText,
+        sectionTitle = stringResource(id = step.section.title.resolve(isArabic)),
+        title = stringResource(id = step.title.resolve(isArabic)),
+        helperText = step.helperText?.let { stringResource(id = it.resolve(isArabic)) }.orEmpty(),
         validationMessage = state.validationMessage,
         canGoBack = !state.isLoading,
         canContinue = canContinue && !state.isLoading,
-        showSkip = step.isOptional,
+        showSkip = showSkip,
+        isArabic = isArabic,
         onBack = ::handleBack,
         onContinue = { viewModel.continueToNext(userId) },
         onSkip = viewModel::skipOptional
@@ -119,23 +121,35 @@ fun QuestionScreen(
             ) {
                 CircularProgressIndicator()
                 Text(
-                    text = stringResource(id = R.string.onboarding_saving),
+                    text = stringResource(id = if (isArabic) R.string.onboarding_saving_ar else R.string.onboarding_saving),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.height(18.dp))
         }
-        step.illustration?.let { illustration ->
-            MithaqIllustrationHeader(illustration = illustration)
-            Spacer(modifier = Modifier.height(18.dp))
+
+        MithaqOnboardingImagePlaceholder(imageKey = step.imageKey, isArabic = isArabic)
+        Spacer(modifier = Modifier.height(18.dp))
+
+        when {
+            step.isBreak -> Unit // title + subtitle + image already shown; no input
+            step.type == QuestionType.Summary -> SummaryContent(
+                steps = state.steps,
+                answers = state.answers,
+                isArabic = isArabic
+            )
+            else -> {
+                QuestionContent(
+                    step = step,
+                    answer = answer,
+                    isArabic = isArabic,
+                    onOptionSelected = viewModel::selectOption,
+                    onTextChanged = viewModel::updateText
+                )
+                PrivacyNote(step = step, isArabic = isArabic)
+            }
         }
-        QuestionContent(
-            step = step,
-            answer = answer,
-            onOptionSelected = viewModel::selectOption,
-            onTextChanged = viewModel::updateText
-        )
     }
 }
 
@@ -143,24 +157,17 @@ fun QuestionScreen(
 private fun QuestionContent(
     step: OnboardingStep,
     answer: OnboardingAnswer?,
+    isArabic: Boolean,
     onOptionSelected: (String) -> Unit,
     onTextChanged: (String) -> Unit
 ) {
     when (step.type) {
         QuestionType.SingleChoice,
         QuestionType.MultiChoice,
+        QuestionType.YesNo,
         QuestionType.PrivacyMode -> OptionList(
             options = step.options,
-            selectedIds = answer?.selectedOptionIds.orEmpty(),
-            onOptionSelected = onOptionSelected
-        )
-
-        QuestionType.YesNo -> OptionList(
-            options = if (step.options.isEmpty()) {
-                listOf(QuestionOption("yes", "Yes"), QuestionOption("no", "No"))
-            } else {
-                step.options
-            },
+            isArabic = isArabic,
             selectedIds = answer?.selectedOptionIds.orEmpty(),
             onOptionSelected = onOptionSelected
         )
@@ -168,7 +175,7 @@ private fun QuestionContent(
         QuestionType.TextInput -> MithaqInputField(
             value = answer?.text.orEmpty(),
             onValueChange = onTextChanged,
-            placeholder = stringResource(id = R.string.onboarding_type_answer)
+            placeholder = stringResource(id = if (isArabic) R.string.onboarding_type_answer_ar else R.string.onboarding_type_answer)
         )
 
         QuestionType.NumberInput -> MithaqInputField(
@@ -176,38 +183,42 @@ private fun QuestionContent(
             onValueChange = { value ->
                 if (value.all { it.isDigit() }) onTextChanged(value)
             },
-            placeholder = stringResource(id = R.string.onboarding_enter_number),
+            placeholder = stringResource(id = if (isArabic) R.string.onboarding_enter_number_ar else R.string.onboarding_enter_number),
             keyboardType = KeyboardType.Number
         )
 
         QuestionType.LongTextInput -> MithaqInputField(
             value = answer?.text.orEmpty(),
             onValueChange = onTextChanged,
-            placeholder = stringResource(id = R.string.onboarding_write_answer),
+            placeholder = stringResource(id = if (isArabic) R.string.onboarding_write_answer_ar else R.string.onboarding_write_answer),
             singleLine = false,
             minLines = 5
         )
 
         QuestionType.SearchableList -> SearchableOptionList(
             options = step.options,
+            isArabic = isArabic,
             selectedIds = answer?.selectedOptionIds.orEmpty(),
             onOptionSelected = onOptionSelected
         )
 
-        QuestionType.Summary -> SummaryQuestion(answer = answer)
+        QuestionType.SectionBreak,
+        QuestionType.Summary -> Unit
     }
 }
 
 @Composable
 private fun OptionList(
     options: List<QuestionOption>,
+    isArabic: Boolean,
     selectedIds: List<String>,
     onOptionSelected: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         options.forEach { option ->
             MithaqOptionCard(
-                option = option,
+                label = stringResource(id = option.label.resolve(isArabic)),
+                helperText = option.helperText?.let { stringResource(id = it.resolve(isArabic)) },
                 selected = option.id in selectedIds,
                 onClick = { onOptionSelected(option.id) }
             )
@@ -218,27 +229,29 @@ private fun OptionList(
 @Composable
 private fun SearchableOptionList(
     options: List<QuestionOption>,
+    isArabic: Boolean,
     selectedIds: List<String>,
     onOptionSelected: (String) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    val filtered = remember(query, options) {
-        if (query.isBlank()) {
-            options
-        } else {
-            options.filter { it.label.contains(query, ignoreCase = true) }
-        }
+    // Resolve labels once so search matches the language the user actually sees.
+    val resolved = options.map { it to stringResource(id = it.label.resolve(isArabic)) }
+    val filtered = if (query.isBlank()) {
+        resolved
+    } else {
+        resolved.filter { (_, label) -> label.contains(query, ignoreCase = true) }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         MithaqInputField(
             value = query,
             onValueChange = { query = it },
-            placeholder = stringResource(id = R.string.onboarding_search)
+            placeholder = stringResource(id = if (isArabic) R.string.onboarding_search_ar else R.string.onboarding_search)
         )
-        filtered.forEach { option ->
+        filtered.forEach { (option, label) ->
             MithaqOptionCard(
-                option = option,
+                label = label,
+                helperText = option.helperText?.let { stringResource(id = it.resolve(isArabic)) },
                 selected = option.id in selectedIds,
                 onClick = { onOptionSelected(option.id) }
             )
@@ -247,70 +260,74 @@ private fun SearchableOptionList(
 }
 
 @Composable
-private fun SummaryQuestion(answer: OnboardingAnswer?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Text(
-            text = answer?.text?.takeIf { it.isNotBlank() } ?: stringResource(id = R.string.onboarding_review_answers),
-            modifier = Modifier.fillMaxWidth(),
-            style = MaterialTheme.typography.bodyLarge
-        )
+private fun PrivacyNote(step: OnboardingStep, isArabic: Boolean) {
+    val noteRes = when {
+        step.privacy == OnboardingPrivacy.PRIVATE ->
+            if (isArabic) R.string.onb_note_private_ar else R.string.onb_note_private
+        step.privacy == OnboardingPrivacy.MATCH_ONLY ->
+            if (isArabic) R.string.onb_note_match_ar else R.string.onb_note_match
+        step.isOptional ->
+            if (isArabic) R.string.onb_note_optional_ar else R.string.onb_note_optional
+        else -> return
     }
+    Spacer(modifier = Modifier.height(12.dp))
+    Text(
+        text = stringResource(id = noteRes),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
-private fun OnboardingSummary(
-    answers: Map<String, OnboardingAnswer>,
+private fun SummaryContent(
     steps: List<OnboardingStep>,
-    onFinish: () -> Unit
+    answers: Map<String, OnboardingAnswer>,
+    isArabic: Boolean
 ) {
     Column(
-        modifier = Modifier
-            .verticalScroll(rememberScrollState())
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text(
-            text = stringResource(id = R.string.onboarding_answers_complete),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        steps.forEach { step ->
-            val answer = answers[step.id]
-            SummaryRow(step = step, answer = answer)
+        steps.filter { it.isPersisted }.forEach { step ->
+            val value = summaryValue(step, answers[step.id], isArabic)
+            if (value.isNotBlank()) {
+                SummaryRow(
+                    label = stringResource(id = step.title.resolve(isArabic)),
+                    value = value
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        MithaqPrimaryButton(
-            text = stringResource(id = R.string.onboarding_finish),
-            onClick = onFinish,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 
 @Composable
-private fun SummaryRow(
+private fun summaryValue(
     step: OnboardingStep,
-    answer: OnboardingAnswer?
-) {
-    val selectedLabels = answer?.selectedOptionIds.orEmpty()
-        .mapNotNull { id -> step.options.firstOrNull { it.id == id }?.label }
-    val value = when {
-        selectedLabels.isNotEmpty() -> selectedLabels.joinToString()
-        !answer?.text.isNullOrBlank() -> answer?.text.orEmpty()
-        else -> stringResource(id = R.string.onboarding_review_answers)
+    answer: OnboardingAnswer?,
+    isArabic: Boolean
+): String {
+    if (answer == null) return ""
+    val labels = answer.selectedOptionIds
+        .mapNotNull { id -> step.options.firstOrNull { it.id == id } }
+        .map { stringResource(id = it.label.resolve(isArabic)) }
+    return when {
+        labels.isNotEmpty() -> labels.joinToString(", ")
+        answer.text.isNotBlank() -> answer.text
+        answer.number != null -> answer.number.toString()
+        else -> ""
     }
+}
 
+@Composable
+private fun SummaryRow(label: String, value: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
             Text(
-                text = step.title,
-                style = MaterialTheme.typography.labelLarge,
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -324,7 +341,7 @@ private fun SummaryRow(
 }
 
 private fun answerHasValue(step: OnboardingStep, answer: OnboardingAnswer?): Boolean {
-    if (step.type == QuestionType.Summary) return true
+    if (step.isBreak || step.type == QuestionType.Summary) return true
     if (answer == null) return false
     return when (step.type) {
         QuestionType.TextInput,
@@ -335,6 +352,7 @@ private fun answerHasValue(step: OnboardingStep, answer: OnboardingAnswer?): Boo
         QuestionType.YesNo,
         QuestionType.SearchableList,
         QuestionType.PrivacyMode -> answer.selectedOptionIds.isNotEmpty()
+        QuestionType.SectionBreak,
         QuestionType.Summary -> true
     }
 }
