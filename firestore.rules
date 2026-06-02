@@ -238,6 +238,16 @@ service cloud.firestore {
           "personalStatus",
           "religiousPractice",
           "marriageIntent",
+          // Phase 11.12A structured onboarding storage groups (owner-only profile data;
+          // still private to owner/admin — publicProfiles mirror is server-owned).
+          "location",
+          "family",
+          "educationWork",
+          "lifestyle",
+          "appearance",
+          "personality",
+          "partnerPreferences",
+          "privacyTrust",
           "updatedAt"
         ]);
       allow delete: if false;
