@@ -201,7 +201,8 @@ private fun InterestRequestsTab(
                     MithaqEmptyState(
                         title = localizedString(isArabic, R.string.requests_no_received_interest, R.string.requests_no_received_interest_ar),
                         message = localizedString(isArabic, R.string.requests_no_received_interest_message, R.string.requests_no_received_interest_message_ar),
-                        icon = Icons.Filled.Favorite
+                        icon = Icons.Filled.Favorite,
+                        compact = true
                     )
                 } else {
                     state.receivedPendingRequests.forEach { request ->
@@ -221,7 +222,8 @@ private fun InterestRequestsTab(
                     MithaqEmptyState(
                         title = localizedString(isArabic, R.string.requests_no_sent_interest, R.string.requests_no_sent_interest_ar),
                         message = localizedString(isArabic, R.string.requests_no_sent_interest_message, R.string.requests_no_sent_interest_message_ar),
-                        icon = Icons.Filled.Favorite
+                        icon = Icons.Filled.Favorite,
+                        compact = true
                     )
                 } else {
                     state.sentRequests.forEach { request ->
@@ -240,7 +242,8 @@ private fun InterestRequestsTab(
                     MithaqEmptyState(
                         title = localizedString(isArabic, R.string.requests_no_history, R.string.requests_no_history_ar),
                         message = localizedString(isArabic, R.string.requests_history_message, R.string.requests_history_message_ar),
-                        icon = Icons.Filled.Favorite
+                        icon = Icons.Filled.Favorite,
+                        compact = true
                     )
                 } else {
                     state.receivedHistoryRequests.forEach { request ->
@@ -301,7 +304,8 @@ private fun PhotoRequestsTab(
                     MithaqEmptyState(
                         title = localizedString(isArabic, R.string.requests_no_received_photo, R.string.requests_no_received_photo_ar),
                         message = localizedString(isArabic, R.string.requests_no_received_photo_message, R.string.requests_no_received_photo_message_ar),
-                        icon = Icons.Filled.Favorite
+                        icon = Icons.Filled.Favorite,
+                        compact = true
                     )
                 } else {
                     state.receivedPendingRequests.forEach { request ->
@@ -321,7 +325,8 @@ private fun PhotoRequestsTab(
                     MithaqEmptyState(
                         title = localizedString(isArabic, R.string.requests_no_sent_photo, R.string.requests_no_sent_photo_ar),
                         message = localizedString(isArabic, R.string.requests_no_sent_photo_message, R.string.requests_no_sent_photo_message_ar),
-                        icon = Icons.Filled.Favorite
+                        icon = Icons.Filled.Favorite,
+                        compact = true
                     )
                 } else {
                     state.sentRequests.forEach { request ->
@@ -340,7 +345,8 @@ private fun PhotoRequestsTab(
                     MithaqEmptyState(
                         title = localizedString(isArabic, R.string.requests_no_photo_history, R.string.requests_no_photo_history_ar),
                         message = localizedString(isArabic, R.string.requests_photo_history_message, R.string.requests_photo_history_message_ar),
-                        icon = Icons.Filled.Favorite
+                        icon = Icons.Filled.Favorite,
+                        compact = true
                     )
                 } else {
                     state.receivedHistoryRequests.forEach { request ->
@@ -401,7 +407,8 @@ private fun ChatRequestsTab(
                     MithaqEmptyState(
                         title = localizedString(isArabic, R.string.requests_no_received_chat, R.string.requests_no_received_chat_ar),
                         message = localizedString(isArabic, R.string.requests_no_received_chat_message, R.string.requests_no_received_chat_message_ar),
-                        icon = Icons.Filled.Favorite
+                        icon = Icons.Filled.Favorite,
+                        compact = true
                     )
                 } else {
                     state.receivedPendingRequests.forEach { request ->
@@ -421,7 +428,8 @@ private fun ChatRequestsTab(
                     MithaqEmptyState(
                         title = localizedString(isArabic, R.string.requests_no_sent_chat, R.string.requests_no_sent_chat_ar),
                         message = localizedString(isArabic, R.string.requests_no_sent_chat_message, R.string.requests_no_sent_chat_message_ar),
-                        icon = Icons.Filled.Favorite
+                        icon = Icons.Filled.Favorite,
+                        compact = true
                     )
                 } else {
                     state.sentRequests.forEach { request ->
@@ -440,7 +448,8 @@ private fun ChatRequestsTab(
                     MithaqEmptyState(
                         title = localizedString(isArabic, R.string.requests_no_chat_history, R.string.requests_no_chat_history_ar),
                         message = localizedString(isArabic, R.string.requests_chat_history_message, R.string.requests_chat_history_message_ar),
-                        icon = Icons.Filled.Favorite
+                        icon = Icons.Filled.Favorite,
+                        compact = true
                     )
                 } else {
                     state.receivedHistoryRequests.forEach { request ->

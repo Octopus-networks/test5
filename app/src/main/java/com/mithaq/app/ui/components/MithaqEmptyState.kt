@@ -36,7 +36,8 @@ fun MithaqEmptyState(
     modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Filled.Info,
     actionLabel: String? = null,
-    onAction: (() -> Unit)? = null
+    onAction: (() -> Unit)? = null,
+    compact: Boolean = false
 ) {
     // Map standard icon types to beautiful line-art illustrations
     val illustrationType = when (icon) {
@@ -50,6 +51,10 @@ fun MithaqEmptyState(
     val isError = icon == Icons.Filled.Refresh
     val softGold = Color(0xFFF2CA50)
     val softRed = Color(0xFFE57373)
+    // The card is always dark charcoal, so text must always be light for readable
+    // contrast regardless of the active light/dark theme.
+    val titleColor = Color(0xFFF2EFEA) // off-white
+    val messageColor = Color(0xFFBBB3A6) // muted light gray
 
     val borderColor = if (isError) {
         softRed.copy(alpha = 0.32f)
@@ -74,28 +79,31 @@ fun MithaqEmptyState(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 32.dp),
+                .padding(
+                    horizontal = if (compact) 20.dp else 24.dp,
+                    vertical = if (compact) 18.dp else 32.dp
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             MithaqStateIllustration(
                 type = illustrationType,
                 tint = illustrationTint,
-                modifier = Modifier.height(130.dp)
+                modifier = Modifier.height(if (compact) 76.dp else 130.dp)
             )
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(if (compact) 12.dp else 18.dp))
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = titleColor,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compact) 6.dp else 10.dp))
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+                color = messageColor,
                 textAlign = TextAlign.Center
             )
             if (actionLabel != null && onAction != null) {
