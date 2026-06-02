@@ -29,6 +29,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +72,17 @@ fun MithaqProfileHubScreen(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var openItem by remember { mutableStateOf<ProfileHubItem?>(null) }
+    val selectedItem = openItem
+    if (selectedItem != null) {
+        ProfileSectionDetail(
+            item = selectedItem,
+            isArabic = isArabic,
+            onBack = { openItem = null },
+            modifier = modifier
+        )
+        return
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -88,7 +103,7 @@ fun MithaqProfileHubScreen(
         )
         Spacer(modifier = Modifier.height(18.dp))
         profileItems.forEach { item ->
-            ProfileHubRow(item = item, isArabic = isArabic)
+            ProfileHubRow(item = item, isArabic = isArabic, onClick = { openItem = item })
             Spacer(modifier = Modifier.height(10.dp))
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -107,12 +122,13 @@ fun MithaqProfileHubScreen(
 @Composable
 private fun ProfileHubRow(
     item: ProfileHubItem,
-    isArabic: Boolean
+    isArabic: Boolean,
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { },
+            .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
@@ -149,5 +165,60 @@ private fun ProfileHubRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ProfileSectionDetail(
+    item: ProfileHubItem,
+    isArabic: Boolean,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(18.dp)
+    ) {
+        TextButton(onClick = onBack) {
+            Text(text = if (isArabic) "‹ رجوع" else "‹ Back")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary
+            )
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = localizedString(isArabic, item.titleResId, item.titleArabicResId),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = localizedString(isArabic, item.subtitleResId, item.subtitleArabicResId),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = if (isArabic) {
+                "الإعدادات التفصيلية لهذا القسم قيد الربط وستتوفّر قريبًا."
+            } else {
+                "Detailed controls for this section are being connected and will be available soon."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
