@@ -41,7 +41,13 @@ import com.mithaq.app.domain.model.ChatRequest
 import com.mithaq.app.domain.model.InterestRequest
 import com.mithaq.app.domain.model.PhotoRequest
 import com.mithaq.app.domain.model.PublicProfile
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
 import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.components.MithaqStateIllustration
+import com.mithaq.app.ui.components.MithaqIllustrationType
+import com.mithaq.app.ui.components.MithaqLoadingSkeleton
+import com.mithaq.app.ui.components.SkeletonType
 
 @Composable
 private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
@@ -161,13 +167,10 @@ private fun InterestRequestsTab(
 ) {
     when {
         state.isLoadingRequests -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(2) {
+                    MithaqLoadingSkeleton(type = SkeletonType.REQUEST_ROW)
+                }
             }
         }
         state.errorMessage != null -> {
@@ -264,13 +267,10 @@ private fun PhotoRequestsTab(
 ) {
     when {
         state.isLoadingRequests -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(2) {
+                    MithaqLoadingSkeleton(type = SkeletonType.REQUEST_ROW)
+                }
             }
         }
         state.errorMessage != null -> {
@@ -367,13 +367,10 @@ private fun ChatRequestsTab(
 ) {
     when {
         state.isLoadingRequests -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(2) {
+                    MithaqLoadingSkeleton(type = SkeletonType.REQUEST_ROW)
+                }
             }
         }
         state.errorMessage != null -> {
@@ -733,17 +730,27 @@ private fun InterestStatusCard(
     isArabic: Boolean,
     actions: @Composable () -> Unit = {}
 ) {
+    val softGold = Color(0xFFF2CA50)
+    val softEmerald = Color(0xFF8BD6B6)
+    val softRed = Color(0xFFE57373)
+
+    val statusColor = when (status) {
+        "accepted", "approved" -> softEmerald
+        "declined", "cancelled", "rejected" -> softRed
+        else -> softGold
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF131313)),
+        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.16f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.secondary
+                color = softGold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -764,7 +771,8 @@ private fun InterestStatusCard(
             Text(
                 text = statusLabel(status, isArabic),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = statusColor,
+                fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(12.dp))
             actions()

@@ -9,18 +9,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,35 +38,60 @@ fun MithaqEmptyState(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null
 ) {
+    // Map standard icon types to beautiful line-art illustrations
+    val illustrationType = when (icon) {
+        Icons.Filled.Search -> MithaqIllustrationType.ARCH
+        Icons.Filled.Chat -> MithaqIllustrationType.SPEECH_BUBBLES
+        Icons.Filled.Favorite -> MithaqIllustrationType.CRESCENT_STAR
+        Icons.Filled.Refresh -> MithaqIllustrationType.ALERT_GEOMETRIC
+        else -> MithaqIllustrationType.ARCH
+    }
+
+    val isError = icon == Icons.Filled.Refresh
+    val softGold = Color(0xFFF2CA50)
+    val softRed = Color(0xFFE57373)
+
+    val borderColor = if (isError) {
+        softRed.copy(alpha = 0.32f)
+    } else {
+        softGold.copy(alpha = 0.28f)
+    }
+
+    val illustrationTint = if (isError) {
+        softRed
+    } else {
+        softGold
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+            containerColor = Color(0xFF131313).copy(alpha = 0.86f) // Premium dark charcoal surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary
+            MithaqStateIllustration(
+                type = illustrationType,
+                tint = illustrationTint,
+                modifier = Modifier.height(130.dp)
             )
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(18.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
@@ -71,14 +99,19 @@ fun MithaqEmptyState(
                 textAlign = TextAlign.Center
             )
             if (actionLabel != null && onAction != null) {
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(22.dp))
                 OutlinedButton(
                     onClick = onAction,
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, illustrationTint.copy(alpha = 0.72f)),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
+                        contentColor = illustrationTint
                     )
                 ) {
-                    Text(actionLabel)
+                    Text(
+                        text = actionLabel,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }

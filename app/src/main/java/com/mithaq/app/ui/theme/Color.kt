@@ -2,14 +2,15 @@ package com.mithaq.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Brand Colors (Deep Emerald/Teal representation)
-val PrimaryEmeraldDark = Color(0xFF0A5C36)
+// Emerald = Trust / Verification (Stitch "emerald-trust")
+val PrimaryEmeraldDark = Color(0xFF005C43)   // secondary-container
 val PrimaryEmerald = Color(0xFF0F766E)
-val PrimaryEmeraldLight = Color(0xFF14B8A6)
+val PrimaryEmeraldLight = Color(0xFF8BD6B6)  // Stitch emerald-trust
 
-// Secondary/Accent Colors (Warm Islamic Gold/Amber representation)
-val AccentGold = Color(0xFFD4AF37)
-val AccentGoldLight = Color(0xFFFFD700)
+// Soft Gold = primary brand / value (Stitch "soft-gold")
+val AccentGold = Color(0xFFF2CA50)           // Stitch soft-gold (primary)
+val AccentGoldLight = Color(0xFFFFE088)      // primary-fixed
+val AccentGoldDeep = Color(0xFFD4AF37)       // primary-container
 val AccentAmber = Color(0xFFF59E0B)
 
 // Neutral Colors - Light Mode (Eggshell/Ivory bases)
@@ -19,12 +20,14 @@ val SurfaceVariantLight = Color(0xFFF4F1EA)
 val TextPrimaryLight = Color(0xFF1C1B1F)
 val TextSecondaryLight = Color(0xFF49454F)
 
-// Neutral Colors - Dark Mode (Midnight Forest/Charcoal bases)
-val BackgroundDark = Color(0xFF0F1713)
-val SurfaceDark = Color(0xFF16201C)
-val SurfaceVariantDark = Color(0xFF1F2C26)
-val TextPrimaryDark = Color(0xFFE6E1E5)
-val TextSecondaryDark = Color(0xFFCAC4D0)
+// Neutral Colors - Dark Mode (Stitch "Deep Charcoal" — neutral, not greenish)
+val BackgroundDark = Color(0xFF131313)
+val SurfaceDark = Color(0xFF1C1B1B)
+val SurfaceVariantDark = Color(0xFF353534)
+val TextPrimaryDark = Color(0xFFE5E2E1)
+val TextSecondaryDark = Color(0xFFD0C5AF)
+val OutlineWarm = Color(0xFF99907C)          // Stitch outline
+val OutlineWarmVariant = Color(0xFF4D4635)   // Stitch outline-variant
 
 // Helper Status Colors
 val ErrorRed = Color(0xFFEF4444)

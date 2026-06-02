@@ -23,10 +23,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -38,12 +41,16 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,7 +62,13 @@ import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.domain.model.PublicProfile
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
 import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.components.MithaqStateIllustration
+import com.mithaq.app.ui.components.MithaqIllustrationType
+import com.mithaq.app.ui.components.MithaqLoadingSkeleton
+import com.mithaq.app.ui.components.SkeletonType
 import com.mithaq.app.ui.requests.ChatRequestUiState
 import com.mithaq.app.ui.requests.ChatRequestViewModel
 import com.mithaq.app.ui.requests.InterestRequestUiState
@@ -275,13 +288,10 @@ private fun DiscoverProfileContent(
 ) {
     when {
         state.isLoading -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                repeat(2) {
+                    MithaqLoadingSkeleton(type = SkeletonType.PROFILE_CARD)
+                }
             }
         }
         state.errorMessage != null -> {
@@ -346,10 +356,22 @@ fun MithaqPublicProfileCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            PhotoPrivacyPlaceholder(
-                mode = profile.photoPrivacyMode,
-                isArabic = isArabic
-            )
+            // Phase 11: show the real photo only when this viewer holds an approved photo
+            // request for the owner. Otherwise keep the privacy-aware placeholder.
+            // SecurePhotoView re-checks access and Storage rules remain the real boundary.
+            if (photoState.sentStatusByUserId[profile.userId] == "approved") {
+                com.mithaq.app.ui.photo.SecurePhotoView(
+                    ownerId = profile.userId,
+                    photoPrivacyMode = profile.photoPrivacyMode,
+                    isArabic = isArabic,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                PhotoPrivacyPlaceholder(
+                    mode = profile.photoPrivacyMode,
+                    isArabic = isArabic
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -363,28 +385,31 @@ fun MithaqPublicProfileCard(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        text = profile.locationLabel(isArabic),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Filled.LocationOn,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = profile.locationLabel(isArabic),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                // Favorite heart (visual state only for now; persistence is a follow-up).
+                var favorited by remember(profile.userId) { mutableStateOf(false) }
+                IconButton(onClick = { favorited = !favorited }) {
+                    Icon(
+                        imageVector = if (favorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (favorited) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                AssistChip(
-                    onClick = {},
-                    label = { Text("${profile.profileCompletionPercent}%") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(
@@ -511,54 +536,40 @@ private fun PhotoPrivacyPlaceholder(
     isArabic: Boolean
 ) {
     val normalizedMode = mode.ifBlank { "blurred_by_default" }
-    val label = when (normalizedMode) {
-        "hidden" -> localizedString(isArabic, R.string.discover_photo_hidden, R.string.discover_photo_hidden_ar)
-        "approved_users_only" -> localizedString(isArabic, R.string.discover_photo_by_approval, R.string.discover_photo_by_approval_ar)
-        "matched_users_only" -> localizedString(isArabic, R.string.discover_photo_for_matches, R.string.discover_photo_for_matches_ar)
-        else -> localizedString(isArabic, R.string.discover_photo_blurred, R.string.discover_photo_blurred_ar)
+    val caption = when (normalizedMode) {
+        "hidden" -> if (isArabic) "صور خاصة" else "PRIVATE PHOTOS"
+        "approved_users_only" -> if (isArabic) "اطلب الإذن للعرض" else "REQUEST TO VIEW"
+        "matched_users_only" -> if (isArabic) "تظهر بعد التطابق" else "MATCH TO VIEW"
+        else -> if (isArabic) "صورة محمية" else "PHOTO PROTECTED"
     }
-    val icon = when (normalizedMode) {
-        "approved_users_only" -> Icons.Filled.Visibility
-        "matched_users_only" -> Icons.Filled.Favorite
-        else -> Icons.Filled.Lock
-    }
+
+    val softGold = Color(0xFFF2CA50)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1.22f)
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f),
-                        MaterialTheme.colorScheme.surfaceVariant,
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.34f)
-                    )
-                )
+            .aspectRatio(1.1f)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFF131313)) // Deep charcoal background
+            .border(
+                1.dp,
+                softGold.copy(alpha = 0.22f),
+                RoundedCornerShape(24.dp)
             ),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(92.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.45f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(38.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+            MithaqStateIllustration(
+                type = MithaqIllustrationType.SHIELD_LOCK,
+                tint = softGold,
+                modifier = Modifier.size(100.dp)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                text = caption,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = softGold
             )
         }
     }
@@ -580,8 +591,8 @@ private fun ProfileSignalChip(
             )
         },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.58f),
-            labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+            labelColor = MaterialTheme.colorScheme.secondary,
             leadingIconContentColor = MaterialTheme.colorScheme.secondary
         )
     )

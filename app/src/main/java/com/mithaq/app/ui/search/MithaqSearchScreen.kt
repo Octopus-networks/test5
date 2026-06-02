@@ -25,7 +25,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.graphics.Color
 import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.components.MithaqStateIllustration
+import com.mithaq.app.ui.components.MithaqIllustrationType
+import com.mithaq.app.ui.components.MithaqLoadingSkeleton
+import com.mithaq.app.ui.components.SkeletonType
 import com.mithaq.app.ui.home.DiscoverUiState
 import com.mithaq.app.ui.home.DiscoverViewModel
 import com.mithaq.app.ui.home.MithaqPublicProfileCard
@@ -125,13 +131,10 @@ private fun SearchResultsContent(
 ) {
     when {
         state.isLoading -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                repeat(2) {
+                    MithaqLoadingSkeleton(type = SkeletonType.PROFILE_CARD)
+                }
             }
         }
         state.errorMessage != null -> {
