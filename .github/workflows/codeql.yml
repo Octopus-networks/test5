@@ -1,0 +1,97 @@
+name: CodeQL
+
+# Advanced CodeQL setup for Mithaq.
+#
+# Phase 12.1B: the repo previously used CodeQL *default setup*, which auto-selected
+# `build-mode: autobuild` for `java-kotlin`. Autobuild cannot build this Android Gradle project,
+# so the "Analyze (java-kotlin)" check failed. `build-mode: none` then failed differently
+# ("no source code seen") because the buildless extractor did not pick up the Kotlin sources.
+#
+# Fix: java-kotlin uses **build-mode: manual** and CodeQL traces an explicit Gradle debug build so
+# it can extract Java/Kotlin. The build mirrors the proven `.github/workflows/android.yml` recipe
+# (JDK 17 + Android SDK + online deps with the Gradle cache — NOT `--offline`, which would fail on
+# a clean runner). The other languages keep `build-mode: none` (no build needed).
+#
+# NOTE: requires CodeQL *default setup* to be disabled (done in Phase 12.1B).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, matching the previous default-setup cadence.
+    - cron: '23 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+          - language: java-kotlin
+            build-mode: manual
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Java/Kotlin manual-build environment (java-kotlin matrix job only) ──────────────
+      - name: Set up JDK 17
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+          cache: gradle
+
+      - name: Setup Android SDK
+        if: matrix.language == 'java-kotlin'
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        if: matrix.language == 'java-kotlin'
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK packages
+        if: matrix.language == 'java-kotlin'
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0" || true
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # CodeQL traces this explicit Gradle build (build-mode: manual) to extract Java/Kotlin.
+      # Mirrors the successful android.yml build (online deps + Gradle cache; not --offline).
+      - name: Manual build for CodeQL (Java/Kotlin)
+        if: matrix.language == 'java-kotlin'
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace --console=plain
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
