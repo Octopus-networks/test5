@@ -264,3 +264,34 @@ match /blocks/{blockId} {
 ```
 
 Review the existing custom rules before applying this globally because Mithaq already has guardian, wali, reports, notifications, chat, and photo-access rules.
+
+## Phase 12 — Admin & Moderation
+
+Phase 12 adds admin-only moderation surfaces. Admin detection remains role-based via the
+server-controlled `users/{uid}.isAdmin` field (clients cannot set it; only the `setUserRole` Cloud
+Function or an existing admin can). See `ADMIN_MODERATION.md` for the full design and the recommended
+migration to Firebase custom claims.
+
+Rule changes (all admin-gated; no broad read/write, no `if true`):
+
+- `reports/{reportId}` — added `allow update: if isAdmin()` so admins can set
+  `status` (`reviewed` / `dismissed` / `action_taken`) and an `adminNote`. Normal users still cannot
+  read or update reports; they may only create their own.
+- `userPhotos/{uid}/photos/{photoId}` — added an **admin-only** update branch that may change **only**
+  `status`, `rejectionReason`, `updatedAt` (validated with `diff().affectedKeys().hasOnly([...])`,
+  `status in ["pending_review","approved","rejected"]`). Admins cannot alter the image bytes, owner,
+  storage path, type, or visibility. Owners still upload as `pending_review` and can never
+  self-approve. `rejectionReason` was added to the owner upload allow-list so a re-upload after a
+  rejection still validates.
+- `userModeration/{moderatedUserId}` — new collection, `allow read, write: if isAdmin()` only.
+  Stores `status` (`active` / `warned` / `suspended` / `banned`) + `note` + `updatedBy`. Foundation
+  only; full ban enforcement across sign-in/discovery/requests/chat remains a TODO and should likely
+  move to a Cloud Function.
+
+Indexing: the admin "pending photos" list uses a collection-group equality query on `photos.status`,
+served by Firestore's automatic single-field (collection-group-scoped) index — no custom composite
+index required.
+
+Production hardening direction: move report/photo moderation writes behind Cloud Functions with
+`adminAuditLogs`, and adopt custom claims so rules check `request.auth.token.admin` without a
+per-evaluation `get()`.
