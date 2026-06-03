@@ -1,0 +1,63 @@
+name: CodeQL
+
+# Advanced CodeQL setup for Mithaq.
+#
+# Why this file exists (Phase 12.1B): the repo previously used CodeQL *default setup*, which
+# auto-selected `build-mode: autobuild` for the `java-kotlin` language. Autobuild cannot build this
+# Android Gradle project, so the "Analyze (java-kotlin)" check failed on every run. This advanced
+# setup pins **build-mode: none** for java-kotlin (and the other languages), which analyzes source
+# without attempting a build — fixing the failure without touching any app code or the real build.
+#
+# NOTE: to take effect, CodeQL *default setup* must be disabled for this repo (advanced + default
+# cannot both own code scanning). See PHASE_12_1B / the PR description for the exact one-time step.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, matching the previous default-setup cadence.
+    - cron: '23 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+          - language: java-kotlin
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # build-mode: none — CodeQL analyzes source directly and never runs autobuild/Gradle.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
