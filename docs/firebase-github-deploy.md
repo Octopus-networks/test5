@@ -4,15 +4,20 @@ This repository includes `.github/workflows/firebase-deploy.yml` to deploy Fireb
 
 ## What the workflow deploys
 
-The workflow can deploy these targets:
+**Automatic (push to `main`):** deploys **only Firestore rules + Storage rules**
+(`firestore:rules,storage`). **Functions are never deployed automatically**, and `--force` is not
+used on automatic deploys.
 
-- `all` → `firestore:rules,storage,functions`
-- `rules` → `firestore:rules,storage`
-- `firestore` → `firestore:rules`
+**Manual (`workflow_dispatch` from the Actions tab)** uses the `deployTarget` input:
+
+- `rules` (default) → `firestore:rules`
 - `storage` → `storage`
 - `functions` → `functions`
+- `all` → `firestore:rules,storage,functions`
 
-It runs automatically on pushes to `main` when Firebase-related files change, and it can also be started manually from the **Actions** tab.
+**Functions can only be deployed manually** via `workflow_dispatch`. Manual runs apply `--force`
+(intentional, operator-initiated). The workflow still runs on push when Firebase-related files
+change, but on push it only validates and deploys the rules + storage targets above.
 
 ## Required GitHub secret
 
@@ -48,11 +53,17 @@ Do not commit the service account JSON into the repository.
 1. Open GitHub → **Actions**.
 2. Select **Deploy Firebase**.
 3. Click **Run workflow**.
-4. Choose a target.
+4. Choose a `deployTarget` (default `rules`; choose `functions` or `all` to deploy Cloud Functions).
 5. Leave `dry_run=false` to deploy, or set `dry_run=true` to validate only.
 
 ## Safety notes
 
-- The workflow deploys automatically only from `main`.
+- The workflow deploys automatically only from `main`, and **only Firestore + Storage rules** on
+  that automatic path. **Functions are never auto-deployed** — they require a manual
+  `workflow_dispatch` with `deployTarget = functions` (or `all`).
+- Why functions are manual-only: a functions deploy with `--force` can replace/remove Cloud
+  Functions and run server-side code changes, so it should be an explicit, reviewed action — not a
+  side effect of any merge that happens to touch `functions/**`.
+- `--force` is applied only on manual runs; automatic rules/storage deploys never use it.
 - Pull requests validate through the normal Android workflow; Firebase deploy happens only after merge to `main`.
 - Keep Firebase Console rules and repository rules in sync. Prefer deploying from GitHub so the deployed state is traceable to a commit.

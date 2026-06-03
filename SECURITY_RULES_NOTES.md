@@ -295,3 +295,20 @@ index required.
 Production hardening direction: move report/photo moderation writes behind Cloud Functions with
 `adminAuditLogs`, and adopt custom claims so rules check `request.auth.token.admin` without a
 per-evaluation `get()`.
+
+## Phase 12.1 — Safer Firebase deploy workflow
+
+`.github/workflows/firebase-deploy.yml` was hardened so a normal merge to `main` can no longer
+auto-deploy Cloud Functions:
+
+- **Automatic (push to `main`)** deploys **only** `firestore:rules,storage` (Firestore + Storage
+  rules). **Functions are never deployed automatically**, and `--force` is not used on the automatic
+  path.
+- **Functions are manual-only** via `workflow_dispatch` with `deployTarget` (`rules` (default) /
+  `storage` / `functions` / `all`). `--force` is applied only on manual, operator-initiated runs.
+- No "deploy all" by default; no automatic functions deploy on PR merge.
+
+Why: a functions deploy runs server-side code changes and (with `--force`) can replace/remove
+functions, so it must be an explicit, reviewed action — not a side effect of any merge that touches
+`functions/**`. Rules deploys are non-destructive and remain automatic after an approved merge.
+Secrets handling is unchanged (`FIREBASE_SERVICE_ACCOUNT` used only in the auth step; never printed).
