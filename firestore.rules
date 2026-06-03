@@ -495,6 +495,9 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.reporterId == request.auth.uid;
       allow read, delete: if isAdmin();
+      // Phase 12: admins review reports (status -> reviewed/dismissed/action_taken + admin note).
+      // Admin-only; normal users still cannot read or update reports.
+      allow update: if isAdmin();
     }
 
     match /chatRooms/{roomId} {
@@ -615,11 +618,13 @@ service cloud.firestore {
         (approvedPhotoRequest() && resource.data.visibility != "hidden")
       );
 
-      allow create, update: if isVerifiedEmailUser() &&
+      allow create, update: if (
+        isVerifiedEmailUser() &&
         request.auth.uid == userId && (
           (
             // Full (re)upload by the owner. Status always resets to pending_review;
-            // clients can never self-approve a photo.
+            // clients can never self-approve a photo. (rejectionReason allowed-optional so a
+            // re-upload after an admin rejection still validates.)
             request.resource.data.userId == request.auth.uid &&
             request.resource.data.photoId == photoId &&
             request.resource.data.storagePath == ("user_photos/" + request.auth.uid + "/" + photoId + ".jpg") &&
@@ -627,7 +632,7 @@ service cloud.firestore {
             request.resource.data.status == "pending_review" &&
             request.resource.data.visibility in ["hidden", "blurred_by_default", "approved_users_only", "matched_users_only"] &&
             request.resource.data.keys().hasOnly([
-              "photoId", "userId", "storagePath", "type", "status", "visibility", "createdAt", "updatedAt"
+              "photoId", "userId", "storagePath", "type", "status", "visibility", "rejectionReason", "createdAt", "updatedAt"
             ])
           ) ||
           (
@@ -635,9 +640,24 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visibility", "updatedAt"]) &&
             request.resource.data.visibility in ["hidden", "blurred_by_default", "approved_users_only", "matched_users_only"]
           )
-        );
+        )
+      ) || (
+        // Phase 12: an admin reviews a photo — may change ONLY status + rejectionReason.
+        // Admins never alter the image bytes, owner, storage path, type, or visibility here,
+        // and clients still cannot self-approve (owner branch forces pending_review).
+        isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "rejectionReason", "updatedAt"]) &&
+        request.resource.data.status in ["pending_review", "approved", "rejected"]
+      );
 
       allow delete: if false;
+    }
+
+    // Phase 12: admin-owned user moderation records (active / warned / suspended / banned + note).
+    // Foundation only — full ban enforcement across the app is a documented TODO. Admin-only read
+    // and write; normal users can never read or write moderation records about anyone.
+    match /userModeration/{moderatedUserId} {
+      allow read, write: if isAdmin();
     }
 
     match /{document=**} {

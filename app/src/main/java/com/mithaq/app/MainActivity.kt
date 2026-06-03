@@ -79,6 +79,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Add
 import com.mithaq.app.ui.admin.AdminConsoleScreen
+import com.mithaq.app.ui.admin.AdminModerationScreen
 import com.mithaq.app.ui.limit.PremiumStoreScreen
 import com.mithaq.app.ui.match.QuestionnaireScreen
 import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
@@ -1168,6 +1169,8 @@ fun MithaqAppNavigation(
                 MithaqMainExperience(
                     currentUserId = currentUserId,
                     isArabic = isArabic,
+                    isAdmin = currentUserProfile?.isAdmin == true,
+                    onOpenAdminModeration = { currentScreen = "admin_moderation" },
                     onSignOut = {
                         authViewModel.signOut()
                         com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1229,6 +1232,8 @@ fun MithaqAppNavigation(
                     MithaqMainExperience(
                         currentUserId = currentUserId,
                         isArabic = isArabic,
+                        isAdmin = currentUserProfile?.isAdmin == true,
+                        onOpenAdminModeration = { currentScreen = "admin_moderation" },
                         onSignOut = {
                             authViewModel.signOut()
                             com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1276,6 +1281,17 @@ fun MithaqAppNavigation(
             } else {
                 currentScreen = "home"
             }
+        }
+        "admin_moderation" -> {
+            // Admin-only moderation surface. The screen itself renders a safe "Not authorized"
+            // state and loads no admin data unless the caller is an admin (gate in the ViewModel +
+            // Firestore rules), so accidental access never exposes moderation data.
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            AdminModerationScreen(
+                isAdmin = currentUserProfile?.isAdmin == true,
+                isArabic = isArabic,
+                onBack = { currentScreen = "home" }
+            )
         }
         "premium_store" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
