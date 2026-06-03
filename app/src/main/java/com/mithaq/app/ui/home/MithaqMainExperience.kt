@@ -60,6 +60,8 @@ fun MithaqMainExperience(
     currentUserId: String,
     isArabic: Boolean,
     onSignOut: () -> Unit,
+    isAdmin: Boolean = false,
+    onOpenAdminModeration: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(MithaqMainTab.Home) }
@@ -141,6 +143,8 @@ fun MithaqMainExperience(
             )
             MithaqMainTab.Profile -> MithaqProfileHubScreen(
                 isArabic = isArabic,
+                isAdmin = isAdmin,
+                onOpenAdminModeration = onOpenAdminModeration,
                 onSignOut = onSignOut,
                 modifier = screenModifier
             )

@@ -306,19 +306,28 @@ function humanizeLabel(value) {
 
 function buildPublicProfile(userId, profile, isEmailVerified) {
   const basicInfo = profile.basicInfo || {};
+  const location = profile.location || {};
   const personalStatus = profile.personalStatus || {};
   const marriageIntent = profile.marriageIntent || {};
-  const firstName = String(basicInfo.name || "").trim().split(/\s+/)[0] || "";
+  // Phase 11.12A writes a dedicated public display name; fall back to the legacy first-name-only
+  // value for older profile documents. (basicInfo.firstName stays private and is never mirrored.)
+  const legacyFirstName = String(basicInfo.name || "").trim().split(/\s+/)[0] || "";
+  const displayName = String(basicInfo.displayName || legacyFirstName || "").trim().slice(0, 30);
   const ageRaw = basicInfo.age;
   const age = typeof ageRaw === "number" ? ageRaw : (parseInt(ageRaw, 10) || null);
+  // 11.12A moved location into its own group and marital status into marriageIntent.
+  // Keep legacy fallbacks so both old and new profile shapes mirror correctly.
+  const city = String(location.city || basicInfo.city || "").trim();
+  const country = humanizeLabel(location.country || basicInfo.country);
+  const maritalStatus = humanizeLabel(marriageIntent.maritalStatus || personalStatus.maritalStatus);
   return {
     userId,
-    displayName: firstName.slice(0, 30),
+    displayName,
     age,
-    city: String(basicInfo.city || "").trim(),
-    country: humanizeLabel(basicInfo.country),
+    city,
+    country,
     accountType: humanizeLabel(basicInfo.accountType),
-    maritalStatus: humanizeLabel(personalStatus.maritalStatus),
+    maritalStatus,
     marriageTimeline: humanizeLabel(marriageIntent.timeline),
     prayerHabitPublicLabel: "Not shared",
     prayerRoutineShared: false,

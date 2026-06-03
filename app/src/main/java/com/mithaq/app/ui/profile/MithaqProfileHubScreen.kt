@@ -73,6 +73,8 @@ private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: I
 fun MithaqProfileHubScreen(
     isArabic: Boolean,
     onSignOut: () -> Unit,
+    isAdmin: Boolean = false,
+    onOpenAdminModeration: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var openItem by remember { mutableStateOf<ProfileHubItem?>(null) }
@@ -129,6 +131,12 @@ fun MithaqProfileHubScreen(
         Spacer(modifier = Modifier.height(10.dp))
         profileItems.forEach { item ->
             ProfileHubRow(item = item, isArabic = isArabic, onClick = { openItem = item })
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+        // Admin-only entry. Hidden entirely for normal users; the destination screen also
+        // re-checks admin status and renders a safe "Not authorized" state otherwise.
+        if (isAdmin) {
+            AdminModerationEntryCard(isArabic = isArabic, onClick = onOpenAdminModeration)
             Spacer(modifier = Modifier.height(10.dp))
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -233,6 +241,55 @@ private fun MyPhotosEntryCard(isArabic: Boolean, onClick: () -> Unit) {
                         "ارفع وأدِر صورك الخاصة بأمان"
                     } else {
                         "Upload and manage your private photos securely"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdminModerationEntryCard(isArabic: Boolean, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isArabic) "الإشراف والإدارة" else "Admin moderation",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = if (isArabic) {
+                        "مراجعة البلاغات والصور وإشراف الأعضاء"
+                    } else {
+                        "Review reports, photos, and user moderation"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
