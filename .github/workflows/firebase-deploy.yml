@@ -15,17 +15,16 @@ on:
       - .github/workflows/firebase-deploy.yml
   workflow_dispatch:
     inputs:
-      target:
-        description: Firebase target to deploy
+      deployTarget:
+        description: Firebase target to deploy (MANUAL). Functions can only be deployed here.
         required: true
-        default: all
+        default: rules
         type: choice
         options:
-          - all
           - rules
-          - firestore
           - storage
           - functions
+          - all
       dry_run:
         description: Validate only; do not deploy
         required: true
@@ -85,20 +84,26 @@ jobs:
       - name: Resolve deploy target
         id: deploy_target
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TARGET: ${{ inputs.deployTarget }}
         run: |
-          TARGET="${{ inputs.target }}"
-          if [ -z "$TARGET" ]; then
-            TARGET="all"
+          # Automatic push to main: SAFE target only (Firestore + Storage rules).
+          # Functions are NEVER deployed automatically — they are manual-only via
+          # workflow_dispatch. --force is applied only on manual (intentional) runs.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TARGET="${INPUT_TARGET:-rules}"
+            FORCE="--force"
+          else
+            TARGET="push_safe"
+            FORCE=""
           fi
 
           case "$TARGET" in
-            all)
-              ONLY="firestore:rules,storage,functions"
-              ;;
-            rules)
+            push_safe)
               ONLY="firestore:rules,storage"
               ;;
-            firestore)
+            rules)
               ONLY="firestore:rules"
               ;;
             storage)
@@ -107,6 +112,9 @@ jobs:
             functions)
               ONLY="functions"
               ;;
+            all)
+              ONLY="firestore:rules,storage,functions"
+              ;;
             *)
               echo "Unknown target: $TARGET" >&2
               exit 1
@@ -114,7 +122,8 @@ jobs:
           esac
 
           echo "only=$ONLY" >> "$GITHUB_OUTPUT"
-          echo "Resolved Firebase deploy target: $ONLY"
+          echo "force=$FORCE" >> "$GITHUB_OUTPUT"
+          echo "Resolved Firebase deploy: event=$EVENT_NAME target=$TARGET only=$ONLY force=${FORCE:-<none>}"
 
       - name: Validate deploy command
         if: ${{ inputs.dry_run }}
@@ -128,8 +137,9 @@ jobs:
       - name: Deploy Firebase
         if: ${{ !inputs.dry_run }}
         run: |
+          # --force is empty for automatic push deploys (rules + storage only) and is set
+          # only for manual workflow_dispatch runs (which are the only way to deploy functions).
           npx --yes firebase-tools@latest deploy \
             --only "${{ steps.deploy_target.outputs.only }}" \
             --project "$PROJECT_ID" \
-            --non-interactive \
-            --force
+            --non-interactive ${{ steps.deploy_target.outputs.force }}
