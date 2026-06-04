@@ -338,7 +338,12 @@ service cloud.firestore {
     }
 
     match /photoRequests/{requestId} {
-      allow read: if isRequestParticipant(resource.data) || isAdmin();
+      // Android performs a direct get on the deterministic outgoing request id before
+      // creating it. Allow that exact get shape without allowing broad collection reads.
+      allow get: if isOutgoingRequestId(requestId) ||
+        isRequestParticipant(resource.data) ||
+        isAdmin();
+      allow list: if isRequestParticipant(resource.data) || isAdmin();
       allow create: if isVerifiedEmailUser() &&
         request.resource.data.fromUserId == request.auth.uid &&
         request.resource.data.toUserId is string &&
@@ -377,7 +382,12 @@ service cloud.firestore {
     }
 
     match /chatRequests/{requestId} {
-      allow read: if isRequestParticipant(resource.data) || isAdmin();
+      // Android performs a direct get on the deterministic outgoing request id before
+      // creating it. Allow that exact get shape without allowing broad collection reads.
+      allow get: if isOutgoingRequestId(requestId) ||
+        isRequestParticipant(resource.data) ||
+        isAdmin();
+      allow list: if isRequestParticipant(resource.data) || isAdmin();
       allow create: if isVerifiedEmailUser() &&
         request.resource.data.fromUserId == request.auth.uid &&
         request.resource.data.toUserId is string &&
