@@ -1,5 +1,6 @@
 package com.mithaq.app.data.repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
@@ -52,6 +53,7 @@ class AdminModerationRepository(
                 .map { it.toReport() }
                 .sortedByDescending { it.createdAt }
         } catch (e: Exception) {
+            Log.w("AdminModerationRepo", "getOpenReports failed", e)
             emptyList()
         }
     }
@@ -91,6 +93,9 @@ class AdminModerationRepository(
                 .filter { it.userId.isNotBlank() && it.photoId.isNotBlank() }
                 .sortedByDescending { it.updatedAt ?: it.createdAt }
         } catch (e: Exception) {
+            // Usually a missing COLLECTION_GROUP index on photos.status — the thrown error carries a
+            // one-click "create index" link. Logged so the live smoke test can diagnose it.
+            Log.w("AdminModerationRepo", "getPendingPhotos failed (check Firestore collection-group index on photos.status)", e)
             emptyList()
         }
     }
@@ -132,6 +137,7 @@ class AdminModerationRepository(
                 .map { it.toUserModeration() }
                 .sortedByDescending { it.updatedAt }
         } catch (e: Exception) {
+            Log.w("AdminModerationRepo", "getUserModerationEntries failed", e)
             emptyList()
         }
     }
