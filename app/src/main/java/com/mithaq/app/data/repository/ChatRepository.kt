@@ -1,5 +1,6 @@
 package com.mithaq.app.data.repository
 
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
@@ -87,14 +88,8 @@ class ChatRepository(
 
     suspend fun getUserChatRooms(userId: String): List<ChatRoom> {
         if (!canReadForUser(userId)) return emptyList()
-        return firestore.collection("chats")
-            .whereArrayContains("participantIds", userId)
-            .get()
-            .await()
-            .documents
-            .map { it.toChatRoom() }
-            .filter { it.chatId.isNotBlank() && userId in it.participantIds && it.participantIds.toSet().size == 2 }
-            .sortedByDescending { it.lastMessageAt ?: it.updatedAt ?: it.createdAt }
+        val chatIds = approvedChatIdsForUser(userId)
+        return loadChatRoomsByIds(chatIds, userId)
     }
 
     fun listenToUserChatRooms(
@@ -107,22 +102,54 @@ class ChatRepository(
             return null
         }
 
-        return firestore.collection("chats")
-            .whereArrayContains("participantIds", userId)
+        var sentRequestDocs: List<DocumentSnapshot> = emptyList()
+        var receivedRequestDocs: List<DocumentSnapshot> = emptyList()
+
+        fun refreshRooms() {
+            val chatIds = approvedChatIdsFromDocuments(sentRequestDocs + receivedRequestDocs)
+            if (chatIds.isEmpty()) {
+                onRooms(emptyList())
+                return
+            }
+
+            val roomTasks = chatIds.map { firestore.collection("chats").document(it).get() }
+            Tasks.whenAllSuccess<DocumentSnapshot>(roomTasks)
+                .addOnSuccessListener { snapshots ->
+                    val rooms = snapshots
+                        .mapNotNull { snapshot -> snapshot.takeIf { it.exists() }?.toChatRoom() }
+                        .filterValidRoomForUser(userId)
+                    onRooms(rooms)
+                }
+                .addOnFailureListener { error ->
+                    onError(error.localizedMessage ?: "Could not load chats.")
+                }
+        }
+
+        val sentRegistration = firestore.collection("chatRequests")
+            .whereEqualTo("fromUserId", userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    onError(error.localizedMessage ?: "Could not listen to chats.")
+                    onError(error.localizedMessage ?: "Could not listen to sent chat requests.")
                     return@addSnapshotListener
                 }
-                val rooms = snapshot
-                    ?.documents
-                    .orEmpty()
-                    .map { it.toChatRoom() }
-                    .filter { it.chatId.isNotBlank() && userId in it.participantIds && it.participantIds.toSet().size == 2 }
-                    .distinctBy { it.chatId }
-                    .sortedByDescending { it.lastMessageAt ?: it.updatedAt ?: it.createdAt }
-                onRooms(rooms)
+                sentRequestDocs = snapshot?.documents.orEmpty()
+                refreshRooms()
             }
+
+        val receivedRegistration = firestore.collection("chatRequests")
+            .whereEqualTo("toUserId", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error.localizedMessage ?: "Could not listen to received chat requests.")
+                    return@addSnapshotListener
+                }
+                receivedRequestDocs = snapshot?.documents.orEmpty()
+                refreshRooms()
+            }
+
+        return CombinedListenerRegistration(
+            listOf(sentRegistration, receivedRegistration)
+        )
     }
 
     suspend fun getChatRoom(chatId: String): ChatRoom? {
@@ -147,19 +174,15 @@ class ChatRepository(
         val expectedParticipants = normalizedParticipantIds(userA, userB) ?: return null
         val expectedSet = expectedParticipants.toSet()
         val chatId = chatIdFor(userA, userB)
-        val deterministic = firestore.collection("chats").document(chatId).get().await()
-        if (deterministic.exists()) {
+        val deterministic = try {
+            firestore.collection("chats").document(chatId).get().await()
+        } catch (e: Exception) {
+            null
+        }
+        if (deterministic?.exists() == true) {
             return deterministic.toChatRoom().takeIf { it.participantIds.toSet() == expectedSet }
         }
-
-        val legacyMatch = firestore.collection("chats")
-            .whereArrayContains("participantIds", userA)
-            .get()
-            .await()
-            .documents
-            .map { it.toChatRoom() }
-            .firstOrNull { it.participantIds.toSet() == expectedSet }
-        return legacyMatch
+        return null
     }
 
     private fun canReadForUser(userId: String): Boolean {
@@ -177,6 +200,53 @@ class ChatRepository(
             .distinct()
             .sorted()
         return participants.takeIf { it.size == 2 }
+    }
+
+    private suspend fun approvedChatIdsForUser(userId: String): List<String> {
+        val sent = firestore.collection("chatRequests")
+            .whereEqualTo("fromUserId", userId)
+            .get()
+            .await()
+            .documents
+        val received = firestore.collection("chatRequests")
+            .whereEqualTo("toUserId", userId)
+            .get()
+            .await()
+            .documents
+        return approvedChatIdsFromDocuments(sent + received)
+    }
+
+    private fun approvedChatIdsFromDocuments(documents: List<DocumentSnapshot>): List<String> {
+        return documents
+            .filter { it.getString("status") == "approved" }
+            .mapNotNull { it.getString("createdChatId")?.takeIf(String::isNotBlank) }
+            .distinct()
+    }
+
+    private suspend fun loadChatRoomsByIds(chatIds: List<String>, userId: String): List<ChatRoom> {
+        return chatIds
+            .mapNotNull { chatId ->
+                runCatching {
+                    firestore.collection("chats").document(chatId).get().await()
+                }.getOrNull()
+                    ?.takeIf { it.exists() }
+                    ?.toChatRoom()
+            }
+            .filterValidRoomForUser(userId)
+    }
+
+    private fun List<ChatRoom>.filterValidRoomForUser(userId: String): List<ChatRoom> {
+        return filter { it.chatId.isNotBlank() && userId in it.participantIds && it.participantIds.toSet().size == 2 }
+            .distinctBy { it.chatId }
+            .sortedByDescending { it.lastMessageAt ?: it.updatedAt ?: it.createdAt }
+    }
+
+    private class CombinedListenerRegistration(
+        private val registrations: List<ListenerRegistration>
+    ) : ListenerRegistration {
+        override fun remove() {
+            registrations.forEach { it.remove() }
+        }
     }
 
     private fun PublicProfile?.toSummaryMap(userId: String): Map<String, Any?> {
