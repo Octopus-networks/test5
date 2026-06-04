@@ -634,6 +634,14 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userUid == request.auth.uid;
     }
 
+    // Phase 12.2E: collection group reads for admin photo moderation.
+    // Collection group queries such as collectionGroup("photos") need a recursive
+    // match. Normal users keep using the stricter direct userPhotos path below.
+    match /{path=**}/photos/{photoId} {
+      allow get, list: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
     // Phase 11: secure photo metadata. Owner-only writes; an approved photo request lets
     // a verified viewer read non-hidden metadata. Actual image bytes are gated separately
     // by Storage security rules. No download URLs are ever stored here.
