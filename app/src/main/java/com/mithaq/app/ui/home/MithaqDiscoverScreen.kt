@@ -406,13 +406,25 @@ fun MithaqPublicProfileCard(
                         )
                     }
                 }
-                // Favorite heart (visual state only for now; persistence is a follow-up).
-                var favorited by remember(profile.userId) { mutableStateOf(false) }
-                IconButton(onClick = { favorited = !favorited }) {
+                // Heart = express interest, using the existing Send-interest workflow
+                // (InterestRequestViewModel via onSendInterest). No separate like system.
+                // Filled once an interest request is pending/accepted; tappable only when a new
+                // interest can be sent (not self, not already sent/sending).
+                val heartStatus = interestState.sentStatusByUserId[profile.userId]
+                val heartSending = profile.userId in interestState.sendingToUserIds
+                val heartActive = heartStatus == "pending" || heartStatus == "accepted" || heartSending
+                val canHeart = currentUserId.isNotBlank() &&
+                        profile.userId != currentUserId &&
+                        !heartSending &&
+                        (heartStatus == null || heartStatus == "cancelled")
+                IconButton(
+                    onClick = { onSendInterest(profile.userId) },
+                    enabled = canHeart
+                ) {
                     Icon(
-                        imageVector = if (favorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (favorited) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = if (heartActive) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = localizedString(isArabic, R.string.discover_send_interest, R.string.discover_send_interest_ar),
+                        tint = if (heartActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
