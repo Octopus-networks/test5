@@ -60,7 +60,11 @@ class ChatMessageRepository(
 
     suspend fun sendTextMessage(chatId: String, senderId: String, text: String): ChatMessageResult {
         val cleanedText = text.trim()
-        val validationError = validateOutgoingMessage(chatId, senderId, cleanedText)
+        val validationError = try {
+            validateOutgoingMessage(chatId, senderId, cleanedText)
+        } catch (e: Exception) {
+            e.localizedMessage ?: "Could not verify this conversation before sending."
+        }
         if (validationError != null) return ChatMessageResult.Error(validationError)
 
         return try {
