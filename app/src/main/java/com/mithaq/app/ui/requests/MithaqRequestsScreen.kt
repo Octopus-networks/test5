@@ -25,6 +25,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -72,6 +73,14 @@ fun MithaqRequestsScreen(
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
     val chatState by chatRequestViewModel.state.collectAsState()
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotBlank()) {
+            interestRequestViewModel.loadForUser(currentUserId)
+            photoRequestViewModel.loadForUser(currentUserId)
+            chatRequestViewModel.loadForUser(currentUserId)
+        }
+    }
 
     Column(
         modifier = modifier
