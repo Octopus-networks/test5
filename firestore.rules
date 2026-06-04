@@ -193,6 +193,28 @@ service cloud.firestore {
         request.auth.uid in chatData(chatId).participantIds;
     }
 
+    function isRequestParticipant(data) {
+      return isVerifiedEmailUser() &&
+        (
+          data.fromUserId == request.auth.uid ||
+          data.toUserId == request.auth.uid
+        );
+    }
+
+    function isChatParticipantData(data) {
+      return isVerifiedEmailUser() &&
+        data.participantIds is list &&
+        request.auth.uid in data.participantIds;
+    }
+
+    function isBlockParticipant(data) {
+      return isAuthenticated() &&
+        (
+          data.blockerId == request.auth.uid ||
+          data.blockedId == request.auth.uid
+        );
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isAssignedWaliForUser(userId) || isAdmin();
 
@@ -252,8 +274,7 @@ service cloud.firestore {
     }
 
     match /interestRequests/{requestId} {
-      allow read: if isVerifiedEmailUser() &&
-        (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid || isAdmin());
+      allow read: if isRequestParticipant(resource.data) || isAdmin();
       allow create: if isVerifiedEmailUser() &&
         request.resource.data.fromUserId == request.auth.uid &&
         request.resource.data.toUserId is string &&
@@ -297,8 +318,7 @@ service cloud.firestore {
     }
 
     match /photoRequests/{requestId} {
-      allow read: if isVerifiedEmailUser() &&
-        (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid || isAdmin());
+      allow read: if isRequestParticipant(resource.data) || isAdmin();
       allow create: if isVerifiedEmailUser() &&
         request.resource.data.fromUserId == request.auth.uid &&
         request.resource.data.toUserId is string &&
@@ -337,8 +357,7 @@ service cloud.firestore {
     }
 
     match /chatRequests/{requestId} {
-      allow read: if isVerifiedEmailUser() &&
-        (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid || isAdmin());
+      allow read: if isRequestParticipant(resource.data) || isAdmin();
       allow create: if isVerifiedEmailUser() &&
         request.resource.data.fromUserId == request.auth.uid &&
         request.resource.data.toUserId is string &&
@@ -390,7 +409,7 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read: if isChatParticipant(chatId) || isAdmin();
+      allow read: if isChatParticipantData(resource.data) || isAdmin();
       allow create: if isVerifiedEmailUser() &&
         request.resource.data.chatId == chatId &&
         request.resource.data.participantIds is list &&
@@ -478,7 +497,9 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.keys().hasOnly(["blockerId", "blockedId", "timestamp"]) &&
         request.resource.data.blockerId == request.auth.uid;
-      allow read, delete: if isAuthenticated() && resource.data.blockerId == request.auth.uid;
+      allow get: if isBlockParticipant(resource.data);
+      allow list: if isAuthenticated() && resource.data.blockerId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.blockerId == request.auth.uid;
     }
 
     match /reports/{reportId} {
