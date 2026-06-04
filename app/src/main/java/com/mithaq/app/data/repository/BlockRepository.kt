@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.mithaq.app.domain.model.UserBlock
 import kotlinx.coroutines.tasks.await
 
@@ -67,17 +68,9 @@ class BlockRepository(
 
     suspend fun isBlockedBetweenUsers(userA: String, userB: String): Boolean {
         if (userA.isBlank() || userB.isBlank() || userA == userB) return true
-        val first = firestore.collection("blocks")
-            .document(blockIdFor(userA, userB))
-            .get()
-            .await()
-            .exists()
+        val first = blockDocumentExists(userA, userB)
         if (first) return true
-        return firestore.collection("blocks")
-            .document(blockIdFor(userB, userA))
-            .get()
-            .await()
-            .exists()
+        return blockDocumentExists(userB, userA)
     }
 
     suspend fun getBlockedUsers(userId: String): List<UserBlock> {
@@ -93,6 +86,22 @@ class BlockRepository(
 
     private fun blockIdFor(blockerUserId: String, blockedUserId: String): String {
         return "${blockerUserId.trim()}_${blockedUserId.trim()}"
+    }
+
+    private suspend fun blockDocumentExists(blockerUserId: String, blockedUserId: String): Boolean {
+        return try {
+            firestore.collection("blocks")
+                .document(blockIdFor(blockerUserId, blockedUserId))
+                .get()
+                .await()
+                .exists()
+        } catch (e: FirebaseFirestoreException) {
+            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                false
+            } else {
+                throw e
+            }
+        }
     }
 
     private fun DocumentSnapshot.toUserBlock(): UserBlock {
