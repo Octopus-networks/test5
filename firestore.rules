@@ -220,6 +220,14 @@ service cloud.firestore {
         );
     }
 
+    function isBlockIdParticipant(blockId) {
+      return isAuthenticated() &&
+        (
+          blockId.matches("^" + request.auth.uid + "_[^/]+$") ||
+          blockId.matches("^[^/]+_" + request.auth.uid + "$")
+        );
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isAssignedWaliForUser(userId) || isAdmin();
 
@@ -526,8 +534,11 @@ service cloud.firestore {
     match /blocks/{blockId} {
       allow create: if isAuthenticated() &&
         request.resource.data.keys().hasOnly(["blockerId", "blockedId", "timestamp"]) &&
-        request.resource.data.blockerId == request.auth.uid;
-      allow get: if isBlockParticipant(resource.data);
+        request.resource.data.blockerId == request.auth.uid &&
+        request.resource.data.blockedId is string &&
+        request.resource.data.blockedId != request.auth.uid &&
+        blockId == request.auth.uid + "_" + request.resource.data.blockedId;
+      allow get: if isBlockParticipant(resource.data) || isBlockIdParticipant(blockId);
       allow list: if isAuthenticated() && resource.data.blockerId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.blockerId == request.auth.uid;
     }
