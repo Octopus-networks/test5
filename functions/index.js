@@ -47,6 +47,7 @@ async function requireAdminOrAssignedWali(request, targetUid) {
   const callerEmail = String(request.auth.token.email || "").toLowerCase();
   const targetGuardianEmail = String(targetSnap.get("guardianEmail") || "").toLowerCase();
   const isAssignedWali =
+    request.auth.token.email_verified === true &&
     callerSnap.get("isWaliAccount") === true &&
     callerSnap.get("wardUid") === targetUid &&
     callerEmail &&
@@ -151,15 +152,6 @@ exports.deleteUserProfile = onCall(secureCallable, async (request) => {
   await db.collection("adminAuditLogs").add(auditPayload(request, "deleteUserProfile", targetUid));
   return { ok: true };
 });
-
-async function userName(uid) {
-  try {
-    const snap = await db.collection("users").doc(uid).get();
-    return snap.get("name") || "Mithaq member";
-  } catch (error) {
-    return "Mithaq member";
-  }
-}
 
 async function createNotification({ senderUid, recipientUid, title, body, type = "general" }) {
   if (!senderUid || !recipientUid || senderUid === recipientUid) {
@@ -277,8 +269,8 @@ exports.onChatMessageCreated = onDocumentCreated(
     const roomSnap = await db.collection("chatRooms").doc(event.params.roomId).get();
     const memberIds = roomSnap.exists ? roomSnap.get("memberIds") || [] : event.params.roomId.split("_");
     const recipientUid = memberIds.find((uid) => uid !== message.senderId);
-    const senderName = await userName(message.senderId);
-    const content = typeof message.content === "string" ? message.content.trim().slice(0, 80) : "";
+    // Notification body is intentionally generic — message content is never surfaced in
+    // push payloads for privacy.
     await createNotification({
       senderUid: message.senderId,
       recipientUid,
@@ -304,7 +296,7 @@ function humanizeLabel(value) {
     .join(" ");
 }
 
-function buildPublicProfile(userId, profile, isEmailVerified) {
+function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
   const basicInfo = profile.basicInfo || {};
   const location = profile.location || {};
   const personalStatus = profile.personalStatus || {};
@@ -320,6 +312,11 @@ function buildPublicProfile(userId, profile, isEmailVerified) {
   const city = String(location.city || basicInfo.city || "").trim();
   const country = humanizeLabel(location.country || basicInfo.country);
   const maritalStatus = humanizeLabel(marriageIntent.maritalStatus || personalStatus.maritalStatus);
+  // Identity verification and guardian status live on the server-owned users/{uid} doc,
+  // not on profiles/{uid}. Mirror them so discovery badges reflect reality. (Both are
+  // gated by Cloud Functions / rules; clients can never self-set them.)
+  const verificationStatus = String(userMeta.verificationStatus || "NONE").toUpperCase();
+  const guardianStatus = String(userMeta.guardianStatus || "NONE").toUpperCase();
   return {
     userId,
     displayName,
@@ -332,15 +329,49 @@ function buildPublicProfile(userId, profile, isEmailVerified) {
     prayerHabitPublicLabel: "Not shared",
     prayerRoutineShared: false,
     localTimeEnabled: false,
-    hasGuardian: false,
+    hasGuardian: guardianStatus == "VERIFIED",
     isEmailVerified: !!isEmailVerified,
-    isIdentityVerified: false,
+    isIdentityVerified: verificationStatus == "VERIFIED",
     photoPrivacyMode: "blurred_by_default",
     profileCompletionPercent:
       typeof profile.profileCompletionPercent === "number" ? profile.profileCompletionPercent : 0,
     lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
+}
+
+// Rebuilds publicProfiles/{userId} from the current profiles/{userId} + users/{userId}
+// state. Shared by both the profile and user-doc triggers so the discovery mirror stays
+// consistent regardless of which source document changed.
+async function syncPublicProfile(userId) {
+  const profileSnap = await db.collection("profiles").doc(userId).get();
+  if (!profileSnap.exists) {
+    // No onboarding profile -> no public discovery entry.
+    await db.collection("publicProfiles").doc(userId).delete().catch(() => {});
+    return;
+  }
+  const profile = profileSnap.data() || {};
+
+  let isEmailVerified = false;
+  try {
+    const userRecord = await admin.auth().getUser(userId);
+    isEmailVerified = !!userRecord.emailVerified;
+  } catch (error) {
+    isEmailVerified = false;
+  }
+
+  let userMeta = {};
+  try {
+    const userSnap = await db.collection("users").doc(userId).get();
+    if (userSnap.exists) {
+      userMeta = userSnap.data() || {};
+    }
+  } catch (error) {
+    userMeta = {};
+  }
+
+  const publicData = buildPublicProfile(userId, profile, isEmailVerified, userMeta);
+  await db.collection("publicProfiles").doc(userId).set(publicData, { merge: true });
 }
 
 exports.mirrorPublicProfile = onDocumentWritten(
@@ -355,17 +386,34 @@ exports.mirrorPublicProfile = onDocumentWritten(
       return;
     }
 
-    const profile = after.data() || {};
+    await syncPublicProfile(userId);
+  }
+);
 
-    let isEmailVerified = false;
-    try {
-      const userRecord = await admin.auth().getUser(userId);
-      isEmailVerified = !!userRecord.emailVerified;
-    } catch (error) {
-      isEmailVerified = false;
+// users/{uid} owns identity verification + guardian status. Re-mirror the public profile
+// when those surface-able fields change so discovery badges (isIdentityVerified, hasGuardian)
+// don't go stale waiting for the next profiles/{uid} write. Every users write invokes this,
+// so we early-return unless a mirrored field actually changed.
+exports.mirrorPublicProfileOnUserChange = onDocumentWritten(
+  { document: "users/{userId}", region },
+  async (event) => {
+    const userId = event.params.userId;
+    const before = event.data && event.data.before;
+    const after = event.data && event.data.after;
+
+    // User doc removed: the profiles trigger handles mirror cleanup on profile deletion.
+    if (!after || !after.exists) {
+      return;
     }
 
-    const publicData = buildPublicProfile(userId, profile, isEmailVerified);
-    await db.collection("publicProfiles").doc(userId).set(publicData, { merge: true });
+    const beforeData = before && before.exists ? before.data() || {} : {};
+    const afterData = after.data() || {};
+    const mirroredFields = ["verificationStatus", "guardianStatus"];
+    const changed = mirroredFields.some((key) => beforeData[key] !== afterData[key]);
+    if (!changed) {
+      return;
+    }
+
+    await syncPublicProfile(userId);
   }
 );

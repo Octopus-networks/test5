@@ -39,6 +39,7 @@ import com.mithaq.app.ui.theme.GlassSurfaceDark
 import com.mithaq.app.ui.theme.GlassSurfaceLight
 import com.mithaq.app.ui.match.IstikharaGuideDialog
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import androidx.compose.foundation.isSystemInDarkTheme
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -869,14 +870,23 @@ fun MatchDetailScreen(
                                     } else {
                                         try {
                                             val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                                            db.collection("reports").add(
+                                            val reportRef = db.collection("reports").document()
+                                            reportRef.set(
                                                 mapOf(
+                                                    "reportId" to reportRef.id,
                                                     "reporterId" to currentUser.uid,
                                                     "reportedId" to partner.uid,
+                                                    "reporterUserId" to currentUser.uid,
+                                                    "reportedUserId" to partner.uid,
+                                                    "chatId" to "",
                                                     "reason" to "Spam / Inappropriate behavior",
-                                                    "timestamp" to System.currentTimeMillis()
+                                                    "details" to "",
+                                                    "status" to "open",
+                                                    "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                                                    "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                                                    "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
                                                 )
-                                            )
+                                            ).await()
                                         } catch (e: java.lang.Exception) {
                                             e.printStackTrace()
                                         }
