@@ -66,6 +66,7 @@ service cloud.firestore {
     function validWaliClaim() {
       return isAuthenticated() &&
         request.auth.token.email != null &&
+        request.auth.token.email_verified == true &&
         changedOnly(["isWaliAccount", "wardUid"]) &&
         request.resource.data.isWaliAccount == true &&
         request.resource.data.wardUid is string &&
@@ -76,6 +77,7 @@ service cloud.firestore {
     function validGuardianConfirmation() {
       return isAuthenticated() &&
         request.auth.token.email != null &&
+        request.auth.token.email_verified == true &&
         changedOnly(["guardianStatus"]) &&
         request.resource.data.guardianStatus == "VERIFIED" &&
         resource.data.guardianEmail == request.auth.token.email;
@@ -545,7 +547,30 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow create: if isAuthenticated() &&
-        request.resource.data.reporterId == request.auth.uid;
+        request.resource.data.reporterId == request.auth.uid &&
+        request.resource.data.reporterUserId == request.auth.uid &&
+        request.resource.data.reportedId is string &&
+        request.resource.data.reportedId != request.auth.uid &&
+        request.resource.data.status == "open" &&
+        request.resource.data.reason is string &&
+        request.resource.data.reason.size() > 0 &&
+        request.resource.data.reason.size() <= 200 &&
+        request.resource.data.details is string &&
+        request.resource.data.details.size() <= 1000 &&
+        request.resource.data.keys().hasOnly([
+          "reportId",
+          "reporterId",
+          "reportedId",
+          "reporterUserId",
+          "reportedUserId",
+          "chatId",
+          "reason",
+          "details",
+          "status",
+          "timestamp",
+          "createdAt",
+          "updatedAt"
+        ]);
       allow read, delete: if isAdmin();
       // Phase 12: admins review reports (status -> reviewed/dismissed/action_taken + admin note).
       // Admin-only; normal users still cannot read or update reports.
@@ -567,6 +592,7 @@ service cloud.firestore {
       function isWaliByEmail(data) {
         return isAuthenticated() &&
           request.auth.token.email != null &&
+          request.auth.token.email_verified == true &&
           data.get("waliEmail", null) != null &&
           request.auth.token.email == data.get("waliEmail", null);
       }
@@ -592,7 +618,7 @@ service cloud.firestore {
 
         allow read: if isAuthenticated() && (
           request.auth.uid in parentRoomData().memberIds ||
-          (request.auth.token.email != null && parentRoomData().get("waliEmail", null) != null && request.auth.token.email == parentRoomData().get("waliEmail", null)) ||
+          (request.auth.token.email != null && request.auth.token.email_verified == true && parentRoomData().get("waliEmail", null) != null && request.auth.token.email == parentRoomData().get("waliEmail", null)) ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isWaliAccount == true &&
            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.wardUid in parentRoomData().memberIds) ||
@@ -641,7 +667,10 @@ service cloud.firestore {
 
     match /profile_views/{viewId} {
       allow create: if isAuthenticated() &&
-        request.resource.data.viewerUid == request.auth.uid;
+        request.resource.data.viewerUid == request.auth.uid &&
+        request.resource.data.viewedUid is string &&
+        request.resource.data.viewedUid != request.auth.uid &&
+        request.resource.data.keys().hasOnly(["viewerUid", "viewedUid", "timestamp"]);
       allow read: if isAuthenticated() &&
         (resource.data.viewerUid == request.auth.uid || resource.data.viewedUid == request.auth.uid);
     }
@@ -649,7 +678,10 @@ service cloud.firestore {
     match /favorites/{favoriteId} {
       allow create: if isAuthenticated() &&
         request.resource.data.userUid == request.auth.uid &&
-        favoriteId == request.auth.uid + "_" + request.resource.data.favoriteUserUid;
+        request.resource.data.favoriteUserUid is string &&
+        request.resource.data.favoriteUserUid != request.auth.uid &&
+        favoriteId == request.auth.uid + "_" + request.resource.data.favoriteUserUid &&
+        request.resource.data.keys().hasOnly(["userUid", "favoriteUserUid", "timestamp"]);
       allow read: if isAuthenticated() &&
         (resource.data.userUid == request.auth.uid || resource.data.favoriteUserUid == request.auth.uid);
       allow delete: if isAuthenticated() && resource.data.userUid == request.auth.uid;
