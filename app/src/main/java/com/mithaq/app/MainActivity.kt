@@ -859,14 +859,15 @@ fun MithaqAppNavigation(
     // ViewModels initialized safely
     val coroutineScope = rememberCoroutineScope()
     val authViewModel = remember { AuthViewModel(context = context) }
-    val searchViewModel = remember { SearchViewModel(context = context) }
+    val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
+    val authState by authViewModel.authState.collectAsState()
+    // Scope SearchViewModel to the signed-in user so a previous account's search results never
+    // leak into the next session on the same device (logout/login state isolation).
+    val searchViewModel = remember(currentUserProfile?.uid) { SearchViewModel(context = context) }
     val guardianViewModel = remember { GuardianViewModel() }
     val onboardingViewModel = remember {
         OnboardingViewModel(OnboardingRepository(context = context))
     }
-
-    val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
-    val authState by authViewModel.authState.collectAsState()
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
     var onboardingAnsweredCount by remember { mutableStateOf(0) }
     var onboardingCompletionPercent by remember { mutableStateOf(0) }

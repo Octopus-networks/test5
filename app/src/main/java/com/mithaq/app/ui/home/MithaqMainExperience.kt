@@ -65,9 +65,11 @@ fun MithaqMainExperience(
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(MithaqMainTab.Home) }
-    val interestRequestViewModel: InterestRequestViewModel = viewModel(key = "mithaq_interest_requests")
-    val photoRequestViewModel: PhotoRequestViewModel = viewModel(key = "mithaq_photo_requests")
-    val chatRequestViewModel: ChatRequestViewModel = viewModel(key = "mithaq_chat_requests")
+    // ViewModel keys are scoped to the signed-in user so a previous account's requests never
+    // leak into the next session on the same device (logout/login state isolation).
+    val interestRequestViewModel: InterestRequestViewModel = viewModel(key = "mithaq_interest_requests_$currentUserId")
+    val photoRequestViewModel: PhotoRequestViewModel = viewModel(key = "mithaq_photo_requests_$currentUserId")
+    val chatRequestViewModel: ChatRequestViewModel = viewModel(key = "mithaq_chat_requests_$currentUserId")
 
     LaunchedEffect(currentUserId) {
         interestRequestViewModel.loadForUser(currentUserId)

@@ -76,7 +76,7 @@ fun MithaqMessagesScreen(
     currentUserId: String,
     isArabic: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: ChatRoomsViewModel = viewModel(key = "mithaq_chat_rooms")
+    viewModel: ChatRoomsViewModel = viewModel(key = "mithaq_chat_rooms_$currentUserId")
 ) {
     val tabs = listOf(
         localizedString(isArabic, R.string.chat_tab_requests, R.string.chat_tab_requests_ar),

@@ -85,7 +85,7 @@ fun MithaqDiscoverScreen(
     currentUserId: String,
     isArabic: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: DiscoverViewModel = viewModel(key = "mithaq_discover_home"),
+    viewModel: DiscoverViewModel = viewModel(key = "mithaq_discover_home_$currentUserId"),
     interestRequestViewModel: InterestRequestViewModel,
     photoRequestViewModel: PhotoRequestViewModel,
     chatRequestViewModel: ChatRequestViewModel,
