@@ -33,6 +33,11 @@ class PublicProfileRepository(
 
     suspend fun getDiscoverProfiles(limit: Long = 20): List<PublicProfile> {
         val currentUserId = auth.currentUser?.uid
+        // Islamic matchmaking: Discover must only surface opposite-gender profiles (Search already
+        // does this). publicProfiles is the only readable source for other users, so the filter is
+        // applied here on the mirrored `gender` field. Read the current user's own gender from their
+        // own users/{uid} doc (own-doc reads are allowed by rules).
+        val oppositeGender = currentUserId?.let { resolveOppositeGender(it) }
         return firestore.collection("publicProfiles")
             .whereEqualTo("isEmailVerified", true)
             .limit(limit)
@@ -41,10 +46,33 @@ class PublicProfileRepository(
             .documents
             .map { it.toPublicProfile() }
             .filter { it.userId.isNotBlank() && it.userId != currentUserId }
+            // Keep only the opposite gender. Profiles whose gender is blank (not yet mirrored /
+            // backfilled into publicProfiles) are kept so discovery doesn't go empty during rollout;
+            // once the backfill runs, every mirror carries a gender and this fully enforces the rule.
+            .filter { oppositeGender == null || it.gender.isBlank() || it.gender == oppositeGender }
             .sortedWith(
                 compareByDescending<PublicProfile> { it.lastActiveAt }
                     .thenByDescending { it.updatedAt }
             )
+    }
+
+    /**
+     * Returns the opposite gender ("MALE"/"FEMALE") of the current user, read from their own
+     * users/{uid} document, or null when it cannot be determined (in which case discovery is not
+     * gender-filtered rather than shown empty).
+     */
+    private suspend fun resolveOppositeGender(userId: String): String? {
+        return try {
+            val gender = firestore.collection("users").document(userId).get().await()
+                .getString("gender")?.uppercase()
+            when (gender) {
+                "MALE" -> "FEMALE"
+                "FEMALE" -> "MALE"
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     suspend fun getPublicProfile(userId: String): PublicProfile? {
@@ -61,6 +89,7 @@ class PublicProfileRepository(
         return PublicProfile(
             userId = getString("userId").orEmpty(),
             displayName = getString("displayName").orEmpty(),
+            gender = getString("gender").orEmpty().uppercase(),
             age = getLong("age")?.toInt(),
             city = getString("city").orEmpty(),
             country = getString("country").orEmpty(),

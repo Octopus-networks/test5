@@ -5,6 +5,9 @@ import java.util.Date
 data class PublicProfile(
     val userId: String = "",
     val displayName: String = "",
+    // Normalized "MALE" / "FEMALE" (or "" when not yet mirrored). Used by Discover to enforce
+    // opposite-gender-only results. Mirrored server-side by the mirrorPublicProfile function.
+    val gender: String = "",
     val age: Int? = null,
     val city: String = "",
     val country: String = "",

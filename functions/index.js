@@ -317,9 +317,15 @@ function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
   // gated by Cloud Functions / rules; clients can never self-set them.)
   const verificationStatus = String(userMeta.verificationStatus || "NONE").toUpperCase();
   const guardianStatus = String(userMeta.guardianStatus || "NONE").toUpperCase();
+  // Gender is a core matchmaking attribute: Discovery must only surface opposite-gender
+  // profiles (Islamic matchmaking). Mirror a normalized MALE/FEMALE from the server-owned
+  // users doc (falling back to the onboarding basicInfo group); anything else stays "".
+  const genderRaw = String(userMeta.gender || basicInfo.gender || "").toUpperCase();
+  const gender = genderRaw === "MALE" || genderRaw === "FEMALE" ? genderRaw : "";
   return {
     userId,
     displayName,
+    gender,
     age,
     city,
     country,
@@ -408,7 +414,7 @@ exports.mirrorPublicProfileOnUserChange = onDocumentWritten(
 
     const beforeData = before && before.exists ? before.data() || {} : {};
     const afterData = after.data() || {};
-    const mirroredFields = ["verificationStatus", "guardianStatus"];
+    const mirroredFields = ["verificationStatus", "guardianStatus", "gender"];
     const changed = mirroredFields.some((key) => beforeData[key] !== afterData[key]);
     if (!changed) {
       return;

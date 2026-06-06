@@ -31,28 +31,41 @@ function humanizeLabel(value) {
     .join(" ");
 }
 
-function buildPublicProfile(userId, profile, isEmailVerified) {
+// Kept in sync with buildPublicProfile() in functions/index.js. Reads the same sources:
+// the profiles/{uid} document plus a userMeta object (the users/{uid} document) for
+// gender / verification / guardian status.
+function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
   const basicInfo = profile.basicInfo || {};
+  const location = profile.location || {};
   const personalStatus = profile.personalStatus || {};
   const marriageIntent = profile.marriageIntent || {};
-  const firstName = String(basicInfo.name || "").trim().split(/\s+/)[0] || "";
+  const legacyFirstName = String(basicInfo.name || "").trim().split(/\s+/)[0] || "";
+  const displayName = String(basicInfo.displayName || legacyFirstName || "").trim().slice(0, 30);
   const ageRaw = basicInfo.age;
   const age = typeof ageRaw === "number" ? ageRaw : (parseInt(ageRaw, 10) || null);
+  const city = String(location.city || basicInfo.city || "").trim();
+  const country = humanizeLabel(location.country || basicInfo.country);
+  const maritalStatus = humanizeLabel(marriageIntent.maritalStatus || personalStatus.maritalStatus);
+  const verificationStatus = String(userMeta.verificationStatus || "NONE").toUpperCase();
+  const guardianStatus = String(userMeta.guardianStatus || "NONE").toUpperCase();
+  const genderRaw = String(userMeta.gender || basicInfo.gender || "").toUpperCase();
+  const gender = genderRaw === "MALE" || genderRaw === "FEMALE" ? genderRaw : "";
   return {
     userId,
-    displayName: firstName.slice(0, 30),
+    displayName,
+    gender,
     age,
-    city: String(basicInfo.city || "").trim(),
-    country: humanizeLabel(basicInfo.country),
+    city,
+    country,
     accountType: humanizeLabel(basicInfo.accountType),
-    maritalStatus: humanizeLabel(personalStatus.maritalStatus),
+    maritalStatus,
     marriageTimeline: humanizeLabel(marriageIntent.timeline),
     prayerHabitPublicLabel: "Not shared",
     prayerRoutineShared: false,
     localTimeEnabled: false,
-    hasGuardian: false,
+    hasGuardian: guardianStatus === "VERIFIED",
     isEmailVerified: !!isEmailVerified,
-    isIdentityVerified: false,
+    isIdentityVerified: verificationStatus === "VERIFIED",
     photoPrivacyMode: "blurred_by_default",
     profileCompletionPercent:
       typeof profile.profileCompletionPercent === "number" ? profile.profileCompletionPercent : 0,
@@ -72,7 +85,16 @@ async function main() {
     } catch (error) {
       isEmailVerified = false;
     }
-    const publicData = buildPublicProfile(userId, doc.data() || {}, isEmailVerified);
+    let userMeta = {};
+    try {
+      const userSnap = await db.collection("users").doc(userId).get();
+      if (userSnap.exists) {
+        userMeta = userSnap.data() || {};
+      }
+    } catch (error) {
+      userMeta = {};
+    }
+    const publicData = buildPublicProfile(userId, doc.data() || {}, isEmailVerified, userMeta);
     await db.collection("publicProfiles").doc(userId).set(publicData, { merge: true });
     count += 1;
   }
