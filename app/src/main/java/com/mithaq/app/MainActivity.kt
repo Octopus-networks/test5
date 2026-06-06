@@ -570,7 +570,7 @@ private fun DashboardActionButton(
 private fun AlertsHubContent(
     currentUser: UserProfile,
     searchViewModel: SearchViewModel,
-    likesRepository: com.mithaq.app.data.LikesRepository,
+    likesRepository: com.mithaq.app.data.repository.LikesRepository,
     isArabic: Boolean,
     onSelectMatch: (UserProfile) -> Unit,
     onNavigateToUpgrade: () -> Unit
@@ -1248,7 +1248,7 @@ fun MithaqAppNavigation(
             val partner = selectedMatchProfile
             if (partner != null) {
                 val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
-                val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+                val likesRepository = remember { com.mithaq.app.data.repository.LikesRepository(context) }
                 androidx.activity.compose.BackHandler { currentScreen = "home" }
                 com.mithaq.app.ui.match.MatchDetailScreen(
                     partner = partner,
@@ -1328,7 +1328,7 @@ fun MithaqAppNavigation(
         }
         "stats" -> {
             val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
-            val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+            val likesRepository = remember { com.mithaq.app.data.repository.LikesRepository(context) }
             androidx.activity.compose.BackHandler { currentScreen = "home" }
             MyStatsScreen(
                 currentUser = profile,
@@ -1420,7 +1420,7 @@ fun HomeScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     var isOfflineSimulated by remember { mutableStateOf(false) }
 
-    val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+    val likesRepository = remember { com.mithaq.app.data.repository.LikesRepository(context) }
 
     // ── Badge Counts for Bottom Navigation ─────────────────────────────────
     val coroutineScopeHome = rememberCoroutineScope()

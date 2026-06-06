@@ -316,7 +316,7 @@ fun ChatTabContent(
 
         var activeSubTab by remember { mutableStateOf(0) } // 0: Received, 1: Sent, 2: Favorites
         var favoritesIds by remember { mutableStateOf<List<String>>(emptyList()) }
-        val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+        val likesRepository = remember { com.mithaq.app.data.repository.LikesRepository(context) }
 
         LaunchedEffect(currentUser.uid) {
             try {

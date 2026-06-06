@@ -1,4 +1,4 @@
-package com.mithaq.app.data
+package com.mithaq.app.data.repository
 
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore

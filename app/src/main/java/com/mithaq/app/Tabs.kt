@@ -469,7 +469,7 @@ fun rememberUserProfileResolver(
 fun LikesTabContent(
     currentUser: UserProfile,
     searchViewModel: SearchViewModel,
-    likesRepository: com.mithaq.app.data.LikesRepository,
+    likesRepository: com.mithaq.app.data.repository.LikesRepository,
     isArabic: Boolean,
     onSelectMatch: (UserProfile) -> Unit,
     onNavigateToUpgrade: () -> Unit = {}
@@ -863,7 +863,7 @@ fun LikesTabContent(
 fun ViewsTabContent(
     currentUser: UserProfile,
     searchViewModel: SearchViewModel,
-    likesRepository: com.mithaq.app.data.LikesRepository,
+    likesRepository: com.mithaq.app.data.repository.LikesRepository,
     isArabic: Boolean,
     onSelectMatch: (UserProfile) -> Unit
 ) {
@@ -1073,7 +1073,7 @@ fun ViewsTabContent(
 fun FavoritesTabContent(
     currentUser: UserProfile,
     searchViewModel: SearchViewModel,
-    likesRepository: com.mithaq.app.data.LikesRepository,
+    likesRepository: com.mithaq.app.data.repository.LikesRepository,
     isArabic: Boolean,
     onSelectMatch: (UserProfile) -> Unit
 ) {

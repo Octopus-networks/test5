@@ -48,7 +48,7 @@ fun MatchDetailScreen(
     partner: UserProfile,
     currentUser: UserProfile,
     isArabic: Boolean,
-    likesRepository: com.mithaq.app.data.LikesRepository,
+    likesRepository: com.mithaq.app.data.repository.LikesRepository,
     searchViewModel: com.mithaq.app.ui.filter.SearchViewModel,
     onBack: () -> Unit,
     onNavigateToChat: (UserProfile) -> Unit,

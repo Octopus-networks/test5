@@ -466,7 +466,7 @@ fun SearchTabContent(
 
                 // Mini Stats Row
                 val context2 = androidx.compose.ui.platform.LocalContext.current
-                val likesRepo2 = remember { com.mithaq.app.data.LikesRepository(context2) }
+                val likesRepo2 = remember { com.mithaq.app.data.repository.LikesRepository(context2) }
                 var statsViews by remember { mutableStateOf(0) }
                 var statsLikes by remember { mutableStateOf(0) }
                 var statsMatches by remember { mutableStateOf(0) }
@@ -926,7 +926,7 @@ fun SearchTabContent(
                                         val isBlurred = if (isCompatible) !isAccessApproved else true
 
                                         val context = androidx.compose.ui.platform.LocalContext.current
-                                        val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+                                        val likesRepository = remember { com.mithaq.app.data.repository.LikesRepository(context) }
                                         var isFav by remember { mutableStateOf(false) }
                                         var isLiked by remember { mutableStateOf(false) }
                                         
@@ -1000,7 +1000,7 @@ fun SearchTabContent(
                                 val isBlurred = if (isCompatible) !isAccessApproved else true
 
                                 val context = androidx.compose.ui.platform.LocalContext.current
-                                val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+                                val likesRepository = remember { com.mithaq.app.data.repository.LikesRepository(context) }
                                 var isFav by remember { mutableStateOf(false) }
                                 var isLiked by remember { mutableStateOf(false) }
                                 
