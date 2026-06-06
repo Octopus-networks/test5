@@ -112,6 +112,48 @@ fun ChatTabContent(
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     val coroutineScope = rememberCoroutineScope()
+
+    if (!BetaFeatureGates.LEGACY_CHATROOMS) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(36.dp)
+                    )
+                    Text(
+                        text = if (strings.appName == "ميثاق") "المحادثات القديمة غير متاحة في البيتا" else "Legacy chat is paused for beta",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = if (strings.appName == "ميثاق") "استخدم تبويب الرسائل للمحادثات الآمنة بعد الموافقة." else "Use the Messages tab for approved secure chats.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+        return
+    }
+
     val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager(context) }
     var partnerPhotoState by remember { mutableStateOf(PhotoAccessState.NONE) }
     var userPhotoStateForPartner by remember { mutableStateOf(PhotoAccessState.NONE) }
@@ -359,7 +401,7 @@ fun ChatTabContent(
             }
 
             // Premium reminder banner
-            if (!currentUser.isPremium) {
+            if (BetaFeatureGates.PREMIUM_BILLING && !currentUser.isPremium) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -521,7 +563,7 @@ fun ChatTabContent(
                         }
 
                         // Unlock Your Messages Paywall Block inside lists for Free users
-                        if (!currentUser.isPremium) {
+                        if (BetaFeatureGates.PREMIUM_BILLING && !currentUser.isPremium) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -617,7 +659,7 @@ fun ChatTabContent(
         )
     }
 
-    if (callState == CallState.ACTIVE) {
+    if (BetaFeatureGates.VOICE_CALL && callState == CallState.ACTIVE) {
         ChaperonedVoiceCallScreen(
             partnerName = targetUser.name,
             waliName = chatRoomState?.waliEmail ?: (currentUser.guardianEmail ?: "Wali"),
@@ -708,12 +750,14 @@ fun ChatTabContent(
                         }
                     }
 
-                    IconButton(onClick = { chatViewModel.requestCall() }) {
-                        Icon(
-                            imageVector = Icons.Default.Phone,
-                            contentDescription = "Voice Call",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    if (BetaFeatureGates.VOICE_CALL) {
+                        IconButton(onClick = { chatViewModel.requestCall() }) {
+                            Icon(
+                                imageVector = Icons.Default.Phone,
+                                contentDescription = "Voice Call",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                     
                     IconButton(onClick = { showChallenge = true }) {
@@ -736,7 +780,7 @@ fun ChatTabContent(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Wali request acceptance banner
-                if (callState == CallState.REQUESTED) {
+                if (BetaFeatureGates.VOICE_CALL && callState == CallState.REQUESTED) {
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
@@ -943,7 +987,7 @@ fun ChatTabContent(
                     }
                 }
 
-                if (targetUser != null && com.mithaq.app.Config.GEMINI_API_KEY.isNotEmpty() && com.mithaq.app.Config.GEMINI_API_KEY != "YOUR_GEMINI_API_KEY") {
+                if (BetaFeatureGates.GEMINI_AI && targetUser != null && com.mithaq.app.Config.GEMINI_API_KEY.isNotEmpty() && com.mithaq.app.Config.GEMINI_API_KEY != "YOUR_GEMINI_API_KEY") {
                     if (icebreakers.isNotEmpty()) {
                         Row(
                             modifier = Modifier
@@ -1041,7 +1085,7 @@ fun ChatTabContent(
         }
     }
 
-    if (callState == CallState.ENDED) {
+    if (BetaFeatureGates.VOICE_CALL && callState == CallState.ENDED) {
         AlertDialog(
             onDismissRequest = { chatViewModel.resetCall() },
             title = { Text(if (strings.appName == "ميثاق") "انتهت المكالمة" else "Call Ended") },

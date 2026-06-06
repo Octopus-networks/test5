@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.mithaq.app.BetaFeatureGates
 import com.mithaq.app.model.UserProfile
 import com.mithaq.app.ui.common.MithaqQuestionArtwork
 import com.mithaq.app.ui.common.mithaqQuestionArtworkSubtitle
@@ -415,7 +416,7 @@ fun CompatibilityBreakdownDialog(
 
     LaunchedEffect(currentUser.uid, partner.uid) {
         val apiKey = com.mithaq.app.Config.GEMINI_API_KEY
-        if (apiKey.isNotEmpty() && apiKey != "YOUR_GEMINI_API_KEY") {
+        if (BetaFeatureGates.GEMINI_AI && apiKey.isNotEmpty() && apiKey != "YOUR_GEMINI_API_KEY") {
             aiLoading = true
             try {
                 val service = com.mithaq.app.service.GeminiService(apiKey)
@@ -561,6 +562,7 @@ fun CompatibilityBreakdownDialog(
                     isArabic = isArabic
                 )
 
+                if (BetaFeatureGates.GEMINI_AI) {
                 // AI Compatibility Report
                 Spacer(modifier = Modifier.height(20.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
@@ -643,6 +645,8 @@ fun CompatibilityBreakdownDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
+                }
+
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))

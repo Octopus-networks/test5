@@ -379,30 +379,31 @@ fun SearchTabContent(
                     }
                 }
 
-                // AI Khattaba Matchmaker Card
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onNavigateToScreen("ai_matchmaker") },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
-                ) {
-                    Box(
+                if (BetaFeatureGates.GEMINI_AI) {
+                    // AI Khattaba Matchmaker Card
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(
-                                androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                        Color(0xFFE28B15).copy(alpha = 0.12f)
+                            .clickable { onNavigateToScreen("ai_matchmaker") },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                            Color(0xFFE28B15).copy(alpha = 0.12f)
+                                        )
                                     )
                                 )
-                            )
-                            .padding(16.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Box(
@@ -440,6 +441,7 @@ fun SearchTabContent(
                             )
                         }
                     }
+                }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

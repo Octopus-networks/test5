@@ -36,6 +36,7 @@ import com.mithaq.app.ui.filter.FlowRow
 import com.mithaq.app.ui.common.MithaqQuestionArtwork
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.BorderStroke
+import com.mithaq.app.BetaFeatureGates
 
 /**
  * A highly-polished Multi-Step Registration Wizard for Mithaq.
@@ -1186,6 +1187,7 @@ fun RegisterScreen(
                                     )
                                 }
 
+                                if (BetaFeatureGates.VOICE_INTRO) {
                                 // Voice Introduction
                                 Text(
                                     text = if (isArabic) "التعريف الصوتي (اختياري):" else "Voice Intro (Optional):",
@@ -1260,6 +1262,8 @@ fun RegisterScreen(
                                             )
                                         }
                                     }
+                                }
+
                                 }
 
                                 Spacer(modifier = Modifier.height(24.dp))
