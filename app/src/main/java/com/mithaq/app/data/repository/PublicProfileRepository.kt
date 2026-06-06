@@ -17,6 +17,13 @@ class PublicProfileRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
+    private enum class DiscoveryDirection {
+        MaleSeekingWife,
+        FemaleSeekingHusband,
+        Guardian,
+        Unknown
+    }
+
     /**
      * Deprecated no-op. The public discovery mirror is owned by the Cloud Function; the client
      * only writes `profiles/{userId}`. Kept for source compatibility with existing callers.
@@ -33,18 +40,21 @@ class PublicProfileRepository(
 
     suspend fun getDiscoverProfiles(limit: Long = 20): List<PublicProfile> {
         val currentUserId = auth.currentUser?.uid
+        val currentDirection = loadCurrentUserDirection(currentUserId)
         return firestore.collection("publicProfiles")
             .whereEqualTo("isEmailVerified", true)
-            .limit(limit)
+            .limit(limit * 5)
             .get()
             .await()
             .documents
             .map { it.toPublicProfile() }
             .filter { it.userId.isNotBlank() && it.userId != currentUserId }
+            .filter { it.isEligibleFor(currentDirection) }
             .sortedWith(
                 compareByDescending<PublicProfile> { it.lastActiveAt }
                     .thenByDescending { it.updatedAt }
             )
+            .take(limit.toInt())
     }
 
     suspend fun getPublicProfile(userId: String): PublicProfile? {
@@ -78,6 +88,57 @@ class PublicProfileRepository(
             lastActiveAt = getTimestamp("lastActiveAt")?.toDate(),
             updatedAt = getTimestamp("updatedAt")?.toDate()
         )
+    }
+
+    private suspend fun loadCurrentUserDirection(userId: String?): DiscoveryDirection {
+        if (userId.isNullOrBlank()) return DiscoveryDirection.Unknown
+        getPublicProfile(userId)?.accountType.toDiscoveryDirection().takeIf {
+            it != DiscoveryDirection.Unknown
+        }?.let { return it }
+
+        return try {
+            val snapshot = firestore.collection("profiles").document(userId).get().await()
+            val basicInfo = snapshot.get("basicInfo") as? Map<*, *> ?: emptyMap<Any, Any>()
+            val accountType = basicInfo["accountType"] as? String
+            val gender = basicInfo["gender"] as? String
+            accountType.toDiscoveryDirection().takeIf {
+                it != DiscoveryDirection.Unknown
+            } ?: gender.toDiscoveryDirection()
+        } catch (e: Exception) {
+            DiscoveryDirection.Unknown
+        }
+    }
+
+    private fun PublicProfile.isEligibleFor(currentDirection: DiscoveryDirection): Boolean {
+        val candidateDirection = accountType.toDiscoveryDirection()
+        return when (currentDirection) {
+            DiscoveryDirection.MaleSeekingWife -> candidateDirection == DiscoveryDirection.FemaleSeekingHusband
+            DiscoveryDirection.FemaleSeekingHusband -> candidateDirection == DiscoveryDirection.MaleSeekingWife
+            DiscoveryDirection.Guardian,
+            DiscoveryDirection.Unknown -> false
+        }
+    }
+
+    private fun String?.toDiscoveryDirection(): DiscoveryDirection {
+        val normalized = this
+            ?.trim()
+            ?.lowercase()
+            ?.replace("_", " ")
+            ?.replace("-", " ")
+            ?: return DiscoveryDirection.Unknown
+
+        return when {
+            normalized == "male" ||
+                normalized.contains("man seeking") ||
+                normalized.contains("male seeking") ||
+                normalized.contains("husband seeking") -> DiscoveryDirection.MaleSeekingWife
+            normalized == "female" ||
+                normalized.contains("woman seeking") ||
+                normalized.contains("female seeking") ||
+                normalized.contains("wife seeking") -> DiscoveryDirection.FemaleSeekingHusband
+            normalized == "guardian" || normalized.contains("wali") -> DiscoveryDirection.Guardian
+            else -> DiscoveryDirection.Unknown
+        }
     }
 }
 
