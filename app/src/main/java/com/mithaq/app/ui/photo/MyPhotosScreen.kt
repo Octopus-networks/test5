@@ -191,7 +191,7 @@ private fun MyPhotoRow(photo: UserPhoto, isArabic: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131313)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, statusColor.copy(alpha = 0.16f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

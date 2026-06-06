@@ -337,7 +337,7 @@ fun CompleteProfileScreen(
                                         enabled = !isLoading
                                     ) {
                                         if (isLoading) {
-                                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
                                         } else {
                                             Text(if (isArabic) "إكمال التسجيل" else "Complete")
                                         }
