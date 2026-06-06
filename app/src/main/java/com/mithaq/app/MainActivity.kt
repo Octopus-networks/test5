@@ -1288,6 +1288,7 @@ fun MithaqAppNavigation(
             // Firestore rules), so accidental access never exposes moderation data.
             androidx.activity.compose.BackHandler { currentScreen = "home" }
             AdminModerationScreen(
+                currentUserId = currentUserId,
                 isAdmin = currentUserProfile?.isAdmin == true,
                 isArabic = isArabic,
                 onBack = { currentScreen = "home" }

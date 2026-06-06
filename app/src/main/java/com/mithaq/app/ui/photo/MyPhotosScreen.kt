@@ -55,10 +55,11 @@ import com.mithaq.app.domain.model.UserPhoto
  */
 @Composable
 fun MyPhotosScreen(
+    currentUserId: String,
     isArabic: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: MyPhotosViewModel = viewModel()
+    viewModel: MyPhotosViewModel = viewModel(key = "mithaq_my_photos_$currentUserId")
 ) {
     val state by viewModel.state.collectAsState()
 
