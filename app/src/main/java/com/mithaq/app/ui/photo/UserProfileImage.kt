@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.mithaq.app.model.Gender
-import com.mithaq.app.security.modestyBlur
 
 // Preset modesty avatar options for Mithaq users
 val BrotherhoodAvatars = listOf(
@@ -39,8 +38,15 @@ val SisterhoodAvatars = listOf(
 
 /**
  * A beautiful, premium profile image loader.
- * Renders high-quality Compose Canvas vector drawings for privacy/modesty preset avatars
- * and uses Coil to fetch custom profile URLs. Automatically integrates modesty blur.
+ *
+ * Privacy model: the real photo URL is fetched by Coil ONLY when [isBlurred] is false (the
+ * viewer is authorized — owner / approved / matched). For an unauthorized viewer it renders a
+ * preset modesty avatar and the real image bytes are never downloaded or disk-cached. This
+ * replaces the previous cosmetic blur, which downloaded the full-resolution photo and only
+ * blurred it visually (the bytes were still recoverable from cache).
+ *
+ * @param blurRadius retained for source compatibility; no longer used (unauthorized viewers now
+ *   see a preset avatar rather than a blurred real photo).
  */
 @Composable
 fun UserProfileImage(
@@ -48,36 +54,43 @@ fun UserProfileImage(
     gender: Gender,
     isBlurred: Boolean,
     modifier: Modifier = Modifier,
-    blurRadius: Dp = 25.dp,
+    @Suppress("UNUSED_PARAMETER") blurRadius: Dp = 25.dp,
     shape: androidx.compose.ui.graphics.Shape = CircleShape
 ) {
     Box(
-        modifier = modifier
-            .clip(shape)
-            .modestyBlur(isBlurred, blurRadius)
+        modifier = modifier.clip(shape)
     ) {
-        if (imageUrl.startsWith("avatar_")) {
-            // Render custom vector modesty avatar
-            AvatarVector(avatarId = imageUrl, gender = gender, modifier = Modifier.fillMaxSize())
-        } else if (imageUrl.isNotBlank()) {
-            // Load custom web photo URL
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "Profile Photo",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                error = coil.compose.rememberAsyncImagePainter(
-                    model = null,
-                    error = null
+        val isPresetAvatar = imageUrl.startsWith("avatar_")
+        // Privacy: the real photo URL is handed to Coil ONLY when the viewer is authorized
+        // (isBlurred == false). For an unauthorized viewer we render a preset modesty avatar and
+        // never load or disk-cache the real image bytes — the blur is no longer a cosmetic overlay
+        // over a fully-downloaded photo. Owners and approved viewers pass isBlurred = false.
+        val canShowRealPhoto = !isBlurred && !isPresetAvatar && imageUrl.isNotBlank()
+        when {
+            isPresetAvatar ->
+                // Render custom vector modesty avatar
+                AvatarVector(avatarId = imageUrl, gender = gender, modifier = Modifier.fillMaxSize())
+            canShowRealPhoto ->
+                // Authorized viewer: load the custom web photo URL
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Profile Photo",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    error = coil.compose.rememberAsyncImagePainter(
+                        model = null,
+                        error = null
+                    )
                 )
-            )
-        } else {
-            // Default placeholder avatar based on gender
-            val defaultAvatarId = if (gender == Gender.MALE) "avatar_brother_green" else "avatar_sister_teal"
-            AvatarVector(avatarId = defaultAvatarId, gender = gender, modifier = Modifier.fillMaxSize())
+            else -> {
+                // Unauthorized viewer (isBlurred) or no custom photo: preset gender avatar.
+                // The real image bytes are never requested for an unauthorized viewer.
+                val defaultAvatarId = if (gender == Gender.MALE) "avatar_brother_green" else "avatar_sister_teal"
+                AvatarVector(avatarId = defaultAvatarId, gender = gender, modifier = Modifier.fillMaxSize())
+            }
         }
 
-        if (!isBlurred) {
+        if (canShowRealPhoto) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val paint = android.graphics.Paint().apply {
                     color = android.graphics.Color.WHITE
