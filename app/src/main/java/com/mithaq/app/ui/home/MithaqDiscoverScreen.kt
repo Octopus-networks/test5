@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mithaq.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.domain.model.PublicProfile
@@ -75,10 +76,25 @@ import com.mithaq.app.ui.requests.InterestRequestUiState
 import com.mithaq.app.ui.requests.InterestRequestViewModel
 import com.mithaq.app.ui.requests.PhotoRequestUiState
 import com.mithaq.app.ui.requests.PhotoRequestViewModel
+import com.mithaq.app.ui.theme.AccentGold
+import com.mithaq.app.ui.theme.AccentGoldDeep
+import com.mithaq.app.ui.theme.BackgroundDark
+import com.mithaq.app.ui.theme.ErrorRed
+import com.mithaq.app.ui.theme.OutlineWarm
+import com.mithaq.app.ui.theme.OutlineWarmVariant
+import com.mithaq.app.ui.theme.PrimaryEmeraldDark
+import com.mithaq.app.ui.theme.PrimaryEmeraldLight
+import com.mithaq.app.ui.theme.SurfaceDark
+import com.mithaq.app.ui.theme.SurfaceVariantDark
+import com.mithaq.app.ui.theme.TextSecondaryDark
 
 @Composable
 private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
     stringResource(id = if (isArabic) arabicResId else englishResId)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Discover Screen (root)
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun MithaqDiscoverScreen(
@@ -99,6 +115,7 @@ fun MithaqDiscoverScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(BackgroundDark)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 18.dp)
     ) {
@@ -106,13 +123,13 @@ fun MithaqDiscoverScreen(
             text = localizedString(isArabic, R.string.discover_title, R.string.discover_title_ar),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = AccentGold
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = localizedString(isArabic, R.string.discover_subtitle, R.string.discover_subtitle_ar),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = TextSecondaryDark
         )
         Spacer(modifier = Modifier.height(18.dp))
         PublicProfileFilterRow(
@@ -125,7 +142,7 @@ fun MithaqDiscoverScreen(
             Text(
                 text = localizedString(isArabic, R.string.discover_location_note, R.string.discover_location_note_ar),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = TextSecondaryDark
             )
         }
         Spacer(modifier = Modifier.height(18.dp))
@@ -162,6 +179,11 @@ fun MithaqDiscoverScreen(
         )
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Filter Chips
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun PublicProfileFilterRow(
     isArabic: Boolean,
@@ -180,41 +202,38 @@ fun PublicProfileFilterRow(
                 selected = selectedFilter == filter,
                 onClick = { onFilterSelected(filter) },
                 label = { Text(filter.label(isArabic)) },
+                shape = RoundedCornerShape(16.dp),
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
-                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    selectedContainerColor = AccentGoldDeep.copy(alpha = 0.32f),
+                    selectedLabelColor = AccentGold,
+                    containerColor = SurfaceVariantDark.copy(alpha = 0.5f),
+                    labelColor = TextSecondaryDark
                 )
             )
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Status Toast Cards (Interest / Photo / Chat)
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun InterestRequestMessage(state: InterestRequestUiState) {
     val message = state.errorMessage ?: state.message ?: return
     val isError = state.errorMessage != null
+    val borderColor = if (isError) ErrorRed.copy(alpha = 0.5f) else PrimaryEmeraldLight.copy(alpha = 0.4f)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isError) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.primaryContainer
-            }
-        )
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
             text = message,
             modifier = Modifier.padding(14.dp),
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isError) {
-                MaterialTheme.colorScheme.onErrorContainer
-            } else {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            }
+            color = Color(0xFFF2EFEA)
         )
     }
 }
@@ -223,26 +242,18 @@ private fun InterestRequestMessage(state: InterestRequestUiState) {
 private fun PhotoRequestMessage(state: PhotoRequestUiState) {
     val message = state.errorMessage ?: state.message ?: return
     val isError = state.errorMessage != null
+    val borderColor = if (isError) ErrorRed.copy(alpha = 0.5f) else PrimaryEmeraldLight.copy(alpha = 0.4f)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isError) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.secondaryContainer
-            }
-        )
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
             text = message,
             modifier = Modifier.padding(14.dp),
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isError) {
-                MaterialTheme.colorScheme.onErrorContainer
-            } else {
-                MaterialTheme.colorScheme.onSecondaryContainer
-            }
+            color = Color(0xFFF2EFEA)
         )
     }
 }
@@ -251,29 +262,25 @@ private fun PhotoRequestMessage(state: PhotoRequestUiState) {
 private fun ChatRequestMessage(state: ChatRequestUiState) {
     val message = state.errorMessage ?: state.message ?: return
     val isError = state.errorMessage != null
+    val borderColor = if (isError) ErrorRed.copy(alpha = 0.5f) else PrimaryEmeraldLight.copy(alpha = 0.4f)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isError) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.primaryContainer
-            }
-        )
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
             text = message,
             modifier = Modifier.padding(14.dp),
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isError) {
-                MaterialTheme.colorScheme.onErrorContainer
-            } else {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            }
+            color = Color(0xFFF2EFEA)
         )
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Content Dispatcher (loading / error / empty / list)
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun DiscoverProfileContent(
@@ -340,6 +347,10 @@ private fun DiscoverProfileContent(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Profile Card
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun MithaqPublicProfileCard(
     profile: PublicProfile,
@@ -357,10 +368,10 @@ fun MithaqPublicProfileCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.18f))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             // Phase 11: show the real photo only when this viewer holds an approved photo
             // request for the owner. Otherwise keep the privacy-aware placeholder.
             // SecurePhotoView re-checks access and Storage rules remain the real boundary.
@@ -377,7 +388,9 @@ fun MithaqPublicProfileCard(
                     isArabic = isArabic
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // ── Name, Age & Heart Row ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -388,21 +401,21 @@ fun MithaqPublicProfileCard(
                         text = profile.displayTitle(isArabic),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = AccentGold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Filled.LocationOn,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = AccentGold.copy(alpha = 0.6f),
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = profile.locationLabel(isArabic),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = TextSecondaryDark
                         )
                     }
                 }
@@ -419,27 +432,58 @@ fun MithaqPublicProfileCard(
                         (heartStatus == null || heartStatus == "cancelled")
                 IconButton(
                     onClick = { onSendInterest(profile.userId) },
-                    enabled = canHeart
+                    enabled = canHeart,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(
+                            if (heartActive) AccentGold.copy(alpha = 0.12f)
+                            else Color.Transparent
+                        )
                 ) {
                     Icon(
                         imageVector = if (heartActive) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                         contentDescription = localizedString(isArabic, R.string.discover_send_interest, R.string.discover_send_interest_ar),
-                        tint = if (heartActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = when {
+                            heartActive -> AccentGold
+                            canHeart -> OutlineWarm
+                            else -> OutlineWarm.copy(alpha = 0.38f)
+                        }
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ── Trust / Verified Signal Chips ──
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (profile.isIdentityVerified) {
-                    ProfileSignalChip(localizedString(isArabic, R.string.discover_identity_verified, R.string.discover_identity_verified_ar), Icons.Filled.CheckCircle)
+                    ProfileSignalChip(
+                        label = localizedString(isArabic, R.string.discover_identity_verified, R.string.discover_identity_verified_ar),
+                        icon = Icons.Filled.Shield,
+                        chipContainerColor = PrimaryEmeraldDark,
+                        chipLabelColor = PrimaryEmeraldLight,
+                        chipIconColor = PrimaryEmeraldLight
+                    )
                 } else if (profile.isEmailVerified) {
-                    ProfileSignalChip(localizedString(isArabic, R.string.discover_email_verified, R.string.discover_email_verified_ar), Icons.Filled.CheckCircle)
+                    ProfileSignalChip(
+                        label = localizedString(isArabic, R.string.discover_email_verified, R.string.discover_email_verified_ar),
+                        icon = Icons.Filled.CheckCircle,
+                        chipContainerColor = PrimaryEmeraldDark.copy(alpha = 0.6f),
+                        chipLabelColor = PrimaryEmeraldLight,
+                        chipIconColor = PrimaryEmeraldLight
+                    )
                 }
                 if (profile.hasGuardian) {
-                    ProfileSignalChip(localizedString(isArabic, R.string.discover_guardian_added, R.string.discover_guardian_added_ar), Icons.Filled.Person)
+                    ProfileSignalChip(
+                        label = localizedString(isArabic, R.string.discover_guardian_added, R.string.discover_guardian_added_ar),
+                        icon = Icons.Filled.Person,
+                        chipContainerColor = AccentGoldDeep.copy(alpha = 0.22f),
+                        chipLabelColor = AccentGold,
+                        chipIconColor = AccentGold
+                    )
                 }
                 if (profile.prayerRoutineShared) {
                     ProfileSignalChip(localizedString(isArabic, R.string.discover_prayer_shared, R.string.discover_prayer_shared_ar), Icons.Filled.Lock)
@@ -457,23 +501,57 @@ fun MithaqPublicProfileCard(
                     ProfileSignalChip(profile.marriageTimeline, Icons.Filled.Chat)
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // ── Subtle divider between info section and action buttons ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(OutlineWarmVariant.copy(alpha = 0.25f))
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // ── Action Buttons: Send Interest + Request Photo ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // --- Send Interest ---
                 val requestStatus = interestState.sentStatusByUserId[profile.userId]
                 val canSendInterest = currentUserId.isNotBlank() &&
                         profile.userId != currentUserId &&
                         profile.userId !in interestState.sendingToUserIds &&
                         (requestStatus == null || requestStatus == "cancelled")
+
+                // State-aware button colors (visual only, logic is unchanged)
+                val interestColors = when {
+                    profile.userId in interestState.sendingToUserIds ->
+                        AccentGold.copy(alpha = 0.6f) to BackgroundDark
+                    requestStatus == "pending" ->
+                        SurfaceVariantDark to AccentGold
+                    requestStatus == "accepted" ->
+                        PrimaryEmeraldDark to PrimaryEmeraldLight
+                    requestStatus == "declined" ->
+                        ErrorRed.copy(alpha = 0.15f) to ErrorRed
+                    canSendInterest ->
+                        AccentGold to BackgroundDark
+                    else ->
+                        SurfaceVariantDark to TextSecondaryDark.copy(alpha = 0.6f)
+                }
+
                 Button(
                     onClick = { onSendInterest(profile.userId) },
                     enabled = canSendInterest,
                     modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = interestColors.first,
+                        contentColor = interestColors.second,
+                        disabledContainerColor = interestColors.first,
+                        disabledContentColor = interestColors.second
                     )
                 ) {
                     Icon(Icons.Filled.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -487,6 +565,8 @@ fun MithaqPublicProfileCard(
                     }
                     Text(buttonText)
                 }
+
+                // --- Request Photo ---
                 val photoStatus = photoState.sentStatusByUserId[profile.userId]
                 val hasAcceptedInterest = profile.userId in interestState.acceptedWithUserIds
                 val normalizedPhotoMode = profile.photoPrivacyMode.ifBlank { "blurred_by_default" }
@@ -498,12 +578,44 @@ fun MithaqPublicProfileCard(
                         hasAcceptedInterest &&
                         photoModeAllowsRequest &&
                         (photoStatus == null || photoStatus == "cancelled")
+
+                // State-aware icon (decorative only — no logic impact)
+                val photoIcon = when {
+                    photoStatus == "approved" -> Icons.Filled.CheckCircle
+                    !photoModeAllowsRequest -> Icons.Filled.Lock
+                    !hasAcceptedInterest -> Icons.Filled.Lock
+                    else -> Icons.Filled.Visibility
+                }
+
+                // State-aware border color
+                val photoBorderColor = when {
+                    photoStatus == "approved" -> PrimaryEmeraldLight.copy(alpha = 0.5f)
+                    photoStatus == "declined" -> ErrorRed.copy(alpha = 0.4f)
+                    !canRequestPhoto -> OutlineWarmVariant.copy(alpha = 0.3f)
+                    else -> AccentGold.copy(alpha = 0.5f)
+                }
+
+                // State-aware content color
+                val photoContentColor = when {
+                    profile.userId in photoState.requestingToUserIds -> AccentGold.copy(alpha = 0.6f)
+                    photoStatus == "approved" -> PrimaryEmeraldLight
+                    photoStatus == "declined" -> ErrorRed
+                    !canRequestPhoto -> OutlineWarm.copy(alpha = 0.5f)
+                    else -> AccentGold
+                }
+
                 OutlinedButton(
                     onClick = { onRequestPhoto(profile.userId) },
                     enabled = canRequestPhoto,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, photoBorderColor),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = photoContentColor,
+                        disabledContentColor = photoContentColor
+                    )
                 ) {
-                    Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(photoIcon, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     val photoButtonText = when {
                         profile.userId in photoState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
@@ -518,7 +630,10 @@ fun MithaqPublicProfileCard(
                     Text(photoButtonText)
                 }
             }
+
             Spacer(modifier = Modifier.height(10.dp))
+
+            // --- Request Chat ---
             val chatStatus = chatState.sentStatusByUserId[profile.userId]
             val hasAcceptedInterestForChat = profile.userId in interestState.acceptedWithUserIds
             val chatApproved = chatStatus == "approved"
@@ -527,14 +642,49 @@ fun MithaqPublicProfileCard(
                     profile.userId !in chatState.requestingToUserIds &&
                     hasAcceptedInterestForChat &&
                     (chatStatus == null || chatStatus == "cancelled")
+
+            // State-aware icon (decorative only)
+            val chatIcon = when {
+                !hasAcceptedInterestForChat && !chatApproved -> Icons.Filled.Lock
+                else -> Icons.Filled.Chat
+            }
+
+            // State-aware border
+            val chatBorderColor = when {
+                chatApproved -> PrimaryEmeraldDark
+                chatStatus == "pending" -> PrimaryEmeraldLight.copy(alpha = 0.5f)
+                chatStatus == "declined" -> ErrorRed.copy(alpha = 0.4f)
+                !(canRequestChat || chatApproved) -> OutlineWarmVariant.copy(alpha = 0.3f)
+                else -> PrimaryEmeraldLight.copy(alpha = 0.5f)
+            }
+
+            // State-aware container and content colors
+            val chatContainerColor = if (chatApproved) PrimaryEmeraldDark else Color.Transparent
+            val chatContentColor = when {
+                chatApproved -> Color.White
+                profile.userId in chatState.requestingToUserIds -> PrimaryEmeraldLight.copy(alpha = 0.6f)
+                chatStatus == "pending" -> PrimaryEmeraldLight
+                chatStatus == "declined" -> ErrorRed
+                !(canRequestChat || chatApproved) -> OutlineWarm.copy(alpha = 0.5f)
+                else -> PrimaryEmeraldLight
+            }
+
             OutlinedButton(
                 onClick = {
                     if (chatApproved) onOpenChat(profile.userId) else onRequestChat(profile.userId)
                 },
                 enabled = canRequestChat || chatApproved,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.dp, chatBorderColor),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = chatContainerColor,
+                    contentColor = chatContentColor,
+                    disabledContainerColor = chatContainerColor,
+                    disabledContentColor = chatContentColor
+                )
             ) {
-                Icon(Icons.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(chatIcon, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 val chatButtonText = when {
                     profile.userId in chatState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
@@ -550,6 +700,10 @@ fun MithaqPublicProfileCard(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Photo Privacy Placeholder
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun PhotoPrivacyPlaceholder(
     mode: String,
@@ -563,17 +717,20 @@ private fun PhotoPrivacyPlaceholder(
         else -> if (isArabic) "صورة محمية" else "PHOTO PROTECTED"
     }
 
-    val softGold = Color(0xFFF2CA50)
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1.1f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF131313)) // Deep charcoal background
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(SurfaceDark, BackgroundDark),
+                    radius = 600f
+                )
+            )
             .border(
                 1.dp,
-                softGold.copy(alpha = 0.22f),
+                AccentGold.copy(alpha = 0.22f),
                 RoundedCornerShape(24.dp)
             ),
         contentAlignment = Alignment.Center
@@ -581,24 +738,44 @@ private fun PhotoPrivacyPlaceholder(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             MithaqStateIllustration(
                 type = MithaqIllustrationType.SHIELD_LOCK,
-                tint = softGold,
+                tint = AccentGold,
                 modifier = Modifier.size(100.dp)
             )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = caption,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = softGold
-            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = AccentGold.copy(alpha = 0.7f),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = caption,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentGold,
+                    letterSpacing = 1.5.sp
+                )
+            }
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Signal Chip (color-differentiated by trust level)
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun ProfileSignalChip(
     label: String,
-    icon: ImageVector
+    icon: ImageVector,
+    chipContainerColor: Color = SurfaceVariantDark,
+    chipLabelColor: Color = TextSecondaryDark,
+    chipIconColor: Color = TextSecondaryDark
 ) {
     AssistChip(
         onClick = {},
@@ -611,12 +788,16 @@ private fun ProfileSignalChip(
             )
         },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
-            labelColor = MaterialTheme.colorScheme.secondary,
-            leadingIconContentColor = MaterialTheme.colorScheme.secondary
+            containerColor = chipContainerColor,
+            labelColor = chipLabelColor,
+            leadingIconContentColor = chipIconColor
         )
     )
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Extension Helpers (logic unchanged)
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun PublicProfileFilter.label(isArabic: Boolean): String {
