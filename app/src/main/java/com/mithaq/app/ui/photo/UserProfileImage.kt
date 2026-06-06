@@ -18,9 +18,12 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.mithaq.app.model.Gender
 import com.mithaq.app.security.modestyBlur
 
@@ -51,18 +54,28 @@ fun UserProfileImage(
     blurRadius: Dp = 25.dp,
     shape: androidx.compose.ui.graphics.Shape = CircleShape
 ) {
+    val context = LocalContext.current
+    val defaultAvatarId = if (gender == Gender.MALE) "avatar_brother_green" else "avatar_sister_teal"
+    val isPresetAvatar = imageUrl.startsWith("avatar_")
+    val canLoadCustomPhoto = imageUrl.isNotBlank() && !isPresetAvatar && !isBlurred
+
     Box(
         modifier = modifier
             .clip(shape)
             .modestyBlur(isBlurred, blurRadius)
     ) {
-        if (imageUrl.startsWith("avatar_")) {
+        if (isPresetAvatar) {
             // Render custom vector modesty avatar
             AvatarVector(avatarId = imageUrl, gender = gender, modifier = Modifier.fillMaxSize())
-        } else if (imageUrl.isNotBlank()) {
-            // Load custom web photo URL
+        } else if (canLoadCustomPhoto) {
+            // Never fetch a private photo while it is still blurred/locked. This legacy URL
+            // path is used only after approval, and cache is disabled to avoid stale copies.
             AsyncImage(
-                model = imageUrl,
+                model = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .diskCachePolicy(CachePolicy.DISABLED)
+                    .memoryCachePolicy(CachePolicy.DISABLED)
+                    .build(),
                 contentDescription = "Profile Photo",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
@@ -73,7 +86,6 @@ fun UserProfileImage(
             )
         } else {
             // Default placeholder avatar based on gender
-            val defaultAvatarId = if (gender == Gender.MALE) "avatar_brother_green" else "avatar_sister_teal"
             AvatarVector(avatarId = defaultAvatarId, gender = gender, modifier = Modifier.fillMaxSize())
         }
 
