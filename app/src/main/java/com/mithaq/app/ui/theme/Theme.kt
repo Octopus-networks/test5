@@ -26,7 +26,7 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = PrimaryEmeraldLight,
     background = BackgroundDark,
     onBackground = TextPrimaryDark,
-    surface = BackgroundDark,
+    surface = SurfaceDark,
     onSurface = TextPrimaryDark,
     surfaceVariant = SurfaceVariantDark,
     onSurfaceVariant = TextSecondaryDark,
@@ -62,11 +62,11 @@ private val LightColorScheme = lightColorScheme(
  */
 @Composable
 fun MithaqTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true,
     isArabic: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = DarkColorScheme
     val view = LocalView.current
 
     if (!view.isInEditMode) {
@@ -79,8 +79,8 @@ fun MithaqTheme(
                 
                 // Adjust status bar icon colors based on theme
                 val windowInsetsController = WindowCompat.getInsetsController(window, view)
-                windowInsetsController.isAppearanceLightStatusBars = !darkTheme
-                windowInsetsController.isAppearanceLightNavigationBars = !darkTheme
+                windowInsetsController.isAppearanceLightStatusBars = false
+                windowInsetsController.isAppearanceLightNavigationBars = false
             }
         }
     }

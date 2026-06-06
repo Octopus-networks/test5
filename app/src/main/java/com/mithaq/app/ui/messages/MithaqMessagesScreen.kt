@@ -567,7 +567,7 @@ private fun InfoCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF131313)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(1.dp, accentColor.copy(alpha = 0.24f))
     ) {

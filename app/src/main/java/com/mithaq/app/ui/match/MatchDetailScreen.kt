@@ -74,9 +74,9 @@ fun MatchDetailScreen(
         isLiked = likesRepository.getLikesList(currentUser.uid).contains(partner.uid)
     }
 
-    val isDark = isSystemInDarkTheme()
-    val glassBgColor = if (isDark) GlassSurfaceDark else GlassSurfaceLight
-    val glassBorderColor = if (isDark) GlassBorderDark else GlassBorderLight
+    val isDark = true
+    val glassBgColor = GlassSurfaceDark
+    val glassBorderColor = GlassBorderDark
 
     Box(
         modifier = modifier

@@ -51,12 +51,12 @@ fun OnboardingWizardScreen(
 ) {
     var currentStep by remember { mutableStateOf(1) } // 1: Gender, 2: ID, 3: Compatibility, 4: Guardian
     val context = LocalContext.current
-    val isDark = isSystemInDarkTheme()
+    val isDark = true
     val scrollState = rememberScrollState()
 
     // Glassmorphism styling based on theme
-    val glassBgColor = if (isDark) GlassSurfaceDark else GlassSurfaceLight
-    val glassBorderColor = if (isDark) GlassBorderDark else GlassBorderLight
+    val glassBgColor = GlassSurfaceDark
+    val glassBorderColor = GlassBorderDark
 
     // Step 2 State: Verification
     var idCardUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -117,11 +117,7 @@ fun OnboardingWizardScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = if (isDark) {
-                        listOf(Color(0xFF0F1713), Color(0xFF071F15))
-                    } else {
-                        listOf(Color(0xFFFDFBF7), Color(0xFFE6F3ED))
-                    }
+                    colors = listOf(BackgroundDark, SurfaceDark)
                 )
             )
             .padding(20.dp)
