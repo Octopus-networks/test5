@@ -71,14 +71,15 @@ private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: I
 
 @Composable
 fun MithaqProfileHubScreen(
+    currentUserId: String,
     isArabic: Boolean,
     onSignOut: () -> Unit,
     isAdmin: Boolean = false,
     onOpenAdminModeration: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var openItem by remember { mutableStateOf<ProfileHubItem?>(null) }
-    var showMyPhotos by remember { mutableStateOf(false) }
+    var openItem by remember(currentUserId) { mutableStateOf<ProfileHubItem?>(null) }
+    var showMyPhotos by remember(currentUserId) { mutableStateOf(false) }
 
     BackHandler(enabled = showMyPhotos || openItem != null) {
         if (showMyPhotos) {
@@ -90,6 +91,7 @@ fun MithaqProfileHubScreen(
 
     if (showMyPhotos) {
         MyPhotosScreen(
+            currentUserId = currentUserId,
             isArabic = isArabic,
             onBack = { showMyPhotos = false },
             modifier = modifier

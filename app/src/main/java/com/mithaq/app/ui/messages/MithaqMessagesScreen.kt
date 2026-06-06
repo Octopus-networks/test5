@@ -76,14 +76,14 @@ fun MithaqMessagesScreen(
     currentUserId: String,
     isArabic: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: ChatRoomsViewModel = viewModel(key = "mithaq_chat_rooms")
+    viewModel: ChatRoomsViewModel = viewModel(key = "mithaq_chat_rooms_$currentUserId")
 ) {
     val tabs = listOf(
         localizedString(isArabic, R.string.chat_tab_requests, R.string.chat_tab_requests_ar),
         localizedString(isArabic, R.string.chat_tab_active_chats, R.string.chat_tab_active_chats_ar),
         localizedString(isArabic, R.string.chat_tab_archived, R.string.chat_tab_archived_ar)
     )
-    var selectedTab by remember { mutableIntStateOf(1) }
+    var selectedTab by remember(currentUserId) { mutableIntStateOf(1) }
     val state by viewModel.state.collectAsState()
     val selectedRoom = state.chatRooms.firstOrNull { it.chatId == state.selectedChatId }
 
@@ -292,8 +292,8 @@ private fun ChatScreen(
     isArabic: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ChatMessageViewModel = viewModel(key = "mithaq_messages_${room.chatId}"),
-    safetyViewModel: ChatSafetyViewModel = viewModel(key = "mithaq_chat_safety_${room.chatId}")
+    viewModel: ChatMessageViewModel = viewModel(key = "mithaq_messages_${currentUserId}_${room.chatId}"),
+    safetyViewModel: ChatSafetyViewModel = viewModel(key = "mithaq_chat_safety_${currentUserId}_${room.chatId}")
 ) {
     val state by viewModel.state.collectAsState()
     val safetyState by safetyViewModel.state.collectAsState()

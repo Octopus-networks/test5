@@ -52,7 +52,7 @@ fun MithaqSearchScreen(
     currentUserId: String,
     isArabic: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: DiscoverViewModel = viewModel(key = "mithaq_public_search"),
+    viewModel: DiscoverViewModel = viewModel(key = "mithaq_public_search_$currentUserId"),
     interestRequestViewModel: InterestRequestViewModel,
     photoRequestViewModel: PhotoRequestViewModel,
     chatRequestViewModel: ChatRequestViewModel,

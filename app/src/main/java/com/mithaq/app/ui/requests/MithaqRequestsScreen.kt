@@ -69,7 +69,7 @@ fun MithaqRequestsScreen(
         localizedString(isArabic, R.string.requests_tab_chat, R.string.requests_tab_chat_ar),
         localizedString(isArabic, R.string.requests_tab_guardian, R.string.requests_tab_guardian_ar)
     )
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember(currentUserId) { mutableIntStateOf(0) }
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
     val chatState by chatRequestViewModel.state.collectAsState()

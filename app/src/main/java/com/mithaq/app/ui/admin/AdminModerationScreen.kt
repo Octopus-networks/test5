@@ -63,10 +63,11 @@ import com.mithaq.app.domain.model.UserPhoto
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminModerationScreen(
+    currentUserId: String,
     isAdmin: Boolean,
     isArabic: Boolean,
     onBack: () -> Unit,
-    viewModel: AdminModerationViewModel = viewModel(key = "admin_moderation")
+    viewModel: AdminModerationViewModel = viewModel(key = "admin_moderation_$currentUserId")
 ) {
     val state by viewModel.state.collectAsState()
     LaunchedEffect(isAdmin) { viewModel.start(isAdmin) }
