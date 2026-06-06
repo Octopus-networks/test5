@@ -17,7 +17,7 @@ import com.mithaq.app.domain.model.QuestionType
  * ~49 questions grouped into 7 sections, each preceded by a break/info screen, finishing with a
  * summary. All visible copy is referenced through string resources (English + Arabic pairs); no
  * onboarding text is hardcoded here. Every step carries an [OnboardingStep.imageKey] for future
- * Stitch artwork (rendered as a placeholder for now — see STITCH_ONBOARDING_IMAGE_BRIEF.md).
+ * Stitch artwork (rendered as a placeholder for now — see docs/design/onboarding-image-brief.md).
  *
  * Privacy/storage metadata only controls what Android writes to `profiles/{userId}`. Android never
  * writes `publicProfiles`; the server Cloud Function owns that mirror.

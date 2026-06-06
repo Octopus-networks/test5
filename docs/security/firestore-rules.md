@@ -1,6 +1,21 @@
 # Security Rules Notes
 
-These notes document the recommended Firestore hardening for email verification. They are not applied yet because Phase 1 keeps rules enforcement unchanged until the app flow is tested.
+> ⚠️ **Status (updated): these rules ARE deployed.** This document began as a *design draft*
+> ("recommended, not applied yet"). That framing is now stale: the hardening described here
+> is implemented in the live [`firestore.rules`](../../firestore.rules) (and
+> [`storage.rules`](../../storage.rules)) — including `isVerifiedEmailUser()`,
+> `noPrivilegeEscalation()`, admin gating, per-collection field validation, the Phase 12
+> admin/moderation branches, and the verified-email guardian/wali binding.
+>
+> Treat the sections below as **design rationale**, not a to-do list. Where an example below
+> still shows old field names (e.g. a `blocks` rule using `blockerUserId`/`blockedUserId`),
+> the **deployed** rule is authoritative — the deployed `blocks` shape is
+> `blockerId`/`blockedId` with a strict `hasOnly([...])` allow-list. When in doubt, read
+> `firestore.rules` directly.
+
+_Original draft note (kept for history): "These notes document the recommended Firestore
+hardening for email verification. They are not applied yet because Phase 1 keeps rules
+enforcement unchanged until the app flow is tested."_
 
 ## Recommended Helper
 
@@ -269,7 +284,7 @@ Review the existing custom rules before applying this globally because Mithaq al
 
 Phase 12 adds admin-only moderation surfaces. Admin detection remains role-based via the
 server-controlled `users/{uid}.isAdmin` field (clients cannot set it; only the `setUserRole` Cloud
-Function or an existing admin can). See `ADMIN_MODERATION.md` for the full design and the recommended
+Function or an existing admin can). See [`../admin/moderation.md`](../admin/moderation.md) for the full design and the recommended
 migration to Firebase custom claims.
 
 Rule changes (all admin-gated; no broad read/write, no `if true`):

@@ -7,7 +7,23 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+> **Note on versions:** the dated `[1.0.0]`–`[2.0.0]` sections below are a documentation
+> narrative. The repository currently has **no matching git tags**, and day-to-day work is
+> tracked by the phase-based [`ROADMAP.md`](./ROADMAP.md). Treat the compare links at the
+> bottom as indicative until real tags are cut.
+
 ### Added
+- **Security hardening (guardian/wali):** guardian/wali binding now requires a **verified**
+  email (`email_verified == true`) in both Firestore rules and the
+  `requireAdminOrAssignedWali` Cloud Function, so a wali must prove inbox ownership.
+- **`mirrorPublicProfileOnUserChange` Cloud Function:** re-mirrors `publicProfiles` when a
+  user's `verificationStatus`/`guardianStatus` changes, so discovery trust badges stay current
+  (previously hardcoded to `false`).
+- **Tightened Firestore rules** for `reports`, `profile_views`, and `favorites` (strict field
+  allow-lists, self-target prevention, length caps).
+- Project documentation: [`ROADMAP.md`](./ROADMAP.md), [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md),
+  [`docs/FEATURE_STATUS.md`](./docs/FEATURE_STATUS.md), [`docs/TECH_DEBT.md`](./docs/TECH_DEBT.md);
+  per-topic docs reorganized under `docs/`.
 - `BootReceiver` - dedicated broadcast receiver for `BOOT_COMPLETED` and `LOCKED_BOOT_COMPLETED` that restores Adhan alarms and WorkManager sync automatically after device reboot.
 - `ensureBackgroundServicesRunning()` in `MainActivity` - silently re-queues WorkManager and reschedules Adhan alarms every time the app opens, recovering gracefully from a Force Stop.
 - `FOREGROUND_SERVICE_DATA_SYNC` permission for future foreground worker support.
@@ -38,7 +54,7 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **Identity verification status badge** displayed on profile cards and match detail screen.
 - **Advanced search filters**: age range, governorate, prayer frequency, beard/hijab level, relocation willingness, marital status, education level.
 - **Firebase App Check** in `MainActivity`; release builds use Play Integrity, debug builds use `DebugAppCheckProviderFactory`.
-- **Firebase Cloud Functions** (`functions/index.js`) for privileged operations: `setAdminStatus`, `setVerified`, `setPremiumStatus`, `assignGuardian`, `sendNotification`.
+- **Firebase Cloud Functions** (`functions/index.js`) for privileged operations and triggers: `setVerificationStatus`, `setUserPremium`, `setUserRole`, `deleteUserProfile` (callable, App Check enforced), plus `onLikeCreated`, `onChatMessageCreated`, and `mirrorPublicProfile` (Firestore triggers).
 - **Firestore Security Rules** v2 - granular per-collection rules blocking client-side privilege escalation.
 - **Storage Rules** - users can only write to their own `profileImages/{uid}/` path; reads require authentication.
 - **Block and Report** in `MatchDetailScreen` - writes to `blocks/{uid}/blockedUsers` and `reports` collections; blocked users hidden from search.
@@ -130,8 +146,12 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ---
 
-[Unreleased]: https://github.com/ahmedbebars/mithaq/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/ahmedbebars/mithaq/compare/v1.5.0...v2.0.0
-[1.5.0]: https://github.com/ahmedbebars/mithaq/compare/v1.2.0...v1.5.0
-[1.2.0]: https://github.com/ahmedbebars/mithaq/compare/v1.0.0...v1.2.0
-[1.0.0]: https://github.com/ahmedbebars/mithaq/releases/tag/v1.0.0
+<!--
+  These compare links assume git tags v1.0.0…v2.0.0 exist. They do NOT exist yet — cut real
+  tags before relying on them. Repo slug corrected to the actual remote.
+-->
+[Unreleased]: https://github.com/Octopus-networks/test5/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Octopus-networks/test5/compare/v1.5.0...v2.0.0
+[1.5.0]: https://github.com/Octopus-networks/test5/compare/v1.2.0...v1.5.0
+[1.2.0]: https://github.com/Octopus-networks/test5/compare/v1.0.0...v1.2.0
+[1.0.0]: https://github.com/Octopus-networks/test5/releases/tag/v1.0.0
