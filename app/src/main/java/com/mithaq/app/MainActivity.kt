@@ -1152,7 +1152,22 @@ fun MithaqAppNavigation(
             )
         }
         Routes.Home -> {
-            if (currentUserProfile?.isWaliAccount == true) {
+            if (currentUserProfile?.isWaliAccount == true && !BetaFeatureGates.LEGACY_WALI_DASHBOARD) {
+                BetaFeatureUnavailableScreen(
+                    isArabic = isArabic,
+                    titleEnglish = "Guardian dashboard is paused for beta",
+                    titleArabic = "لوحة الولي غير متاحة في النسخة التجريبية",
+                    messageEnglish = "The guardian dashboard is being rebuilt on the new secure chat system and will return after beta validation.",
+                    messageArabic = "يتم ربط لوحة الولي بنظام المحادثات الآمن الجديد، وستعود بعد التحقق التجريبي.",
+                    primaryActionEnglish = "Sign out",
+                    primaryActionArabic = "تسجيل الخروج",
+                    onPrimaryAction = {
+                        authViewModel.signOut()
+                        com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
+                        currentScreen = Routes.Login
+                    }
+                )
+            } else if (currentUserProfile?.isWaliAccount == true) {
                 WaliDashboardScreen(
                     currentUserId = currentUserId,
                     currentUserProfile = currentUserProfile,
@@ -1294,14 +1309,25 @@ fun MithaqAppNavigation(
                 onBack = { currentScreen = "home" }
             )
         }
-        "premium_store" -> {
+        "premium_store", "premium_store_platinum" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
-            PremiumStoreScreen(
-                viewModel = authViewModel,
-                isArabic = isArabic,
-                initialTab = premiumStoreInitialTab,
-                onBack = { currentScreen = "home" }
-            )
+            if (BetaFeatureGates.PREMIUM_BILLING) {
+                PremiumStoreScreen(
+                    viewModel = authViewModel,
+                    isArabic = isArabic,
+                    initialTab = premiumStoreInitialTab,
+                    onBack = { currentScreen = "home" }
+                )
+            } else {
+                BetaFeatureUnavailableScreen(
+                    isArabic = isArabic,
+                    titleEnglish = "Premium is not available in beta",
+                    titleArabic = "العضوية المميزة غير متاحة في النسخة التجريبية",
+                    messageEnglish = "Paid plans will open after Google Play Billing and backend verification are ready.",
+                    messageArabic = "سيتم فتح الاشتراكات بعد اكتمال ربط Google Play Billing والتحقق من الخادم.",
+                    onPrimaryAction = { currentScreen = "home" }
+                )
+            }
         }
         "questionnaire" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
@@ -1317,14 +1343,13 @@ fun MithaqAppNavigation(
         }
         "profile_settings" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
-            ProfileSettingsScreen(
-                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
-                onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
+            BetaFeatureUnavailableScreen(
                 isArabic = isArabic,
-                authViewModel = authViewModel,
-                guardianViewModel = guardianViewModel,
-                onNavigateToScreen = { currentScreen = it },
-                onBack = { currentScreen = "home" }
+                titleEnglish = "Legacy settings are paused for beta",
+                titleArabic = "الإعدادات القديمة غير متاحة في النسخة التجريبية",
+                messageEnglish = "Use the Profile tab for beta-safe photo, account, and moderation access.",
+                messageArabic = "استخدم تبويب حسابي للوصول الآمن إلى الصور والحساب والإشراف في النسخة التجريبية.",
+                onPrimaryAction = { currentScreen = "home" }
             )
         }
         "stats" -> {
@@ -1342,18 +1367,29 @@ fun MithaqAppNavigation(
             )
         }
         "ai_matchmaker" -> {
-            val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
             androidx.activity.compose.BackHandler { currentScreen = "home" }
-            AiMatchmakerScreen(
-                currentUser = profile,
-                searchViewModel = searchViewModel,
-                isArabic = isArabic,
-                onBack = { currentScreen = "home" },
-                onSelectMatch = { partner ->
-                    selectedMatchProfile = partner
-                    currentScreen = "match_detail"
-                }
-            )
+            if (BetaFeatureGates.GEMINI_AI) {
+                val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
+                AiMatchmakerScreen(
+                    currentUser = profile,
+                    searchViewModel = searchViewModel,
+                    isArabic = isArabic,
+                    onBack = { currentScreen = "home" },
+                    onSelectMatch = { partner ->
+                        selectedMatchProfile = partner
+                        currentScreen = "match_detail"
+                    }
+                )
+            } else {
+                BetaFeatureUnavailableScreen(
+                    isArabic = isArabic,
+                    titleEnglish = "AI matchmaker is paused for beta",
+                    titleArabic = "الخاطبة الذكية غير متاحة في النسخة التجريبية",
+                    messageEnglish = "AI guidance will return after privacy review and backend proxy support are complete.",
+                    messageArabic = "ستعود ميزة الذكاء الاصطناعي بعد اكتمال مراجعة الخصوصية وربطها عبر الخادم.",
+                    onPrimaryAction = { currentScreen = "home" }
+                )
+            }
         }
         "app_settings" -> {
             androidx.activity.compose.BackHandler { currentScreen = "profile_settings" }
@@ -1376,6 +1412,65 @@ fun MithaqAppNavigation(
                     }
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun BetaFeatureUnavailableScreen(
+    isArabic: Boolean,
+    titleEnglish: String,
+    titleArabic: String,
+    messageEnglish: String,
+    messageArabic: String,
+    primaryActionEnglish: String = "Back to home",
+    primaryActionArabic: String = "الرجوع للرئيسية",
+    onPrimaryAction: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(42.dp)
+                )
+                Text(
+                    text = if (isArabic) titleArabic else titleEnglish,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = if (isArabic) messageArabic else messageEnglish,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Button(
+                    onClick = onPrimaryAction,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(if (isArabic) primaryActionArabic else primaryActionEnglish)
+                }
+            }
         }
     }
 }
@@ -1449,7 +1544,7 @@ fun HomeScreen(
                     if (selectedTab != 3) viewsBadgeCount = maxOf(0, totalViews - seenViews)
 
                     // Chat badge: count rooms with unread messages
-                    if (selectedTab != 2) {
+                    if (BetaFeatureGates.LEGACY_CHATROOMS && selectedTab != 2) {
                         val isMockMode = com.mithaq.app.Config.isMock()
                         if (isMockMode) {
                             val chatPrefs = context.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
@@ -1673,13 +1768,26 @@ fun HomeScreen(
                         onNavigateToScreen = onNavigateToScreen,
                         initialSubTab = 1
                     )
-                    2 -> ChatTabContent(
-                        currentUser = profile,
-                        targetUser = selectedChatUser,
-                        onSelectTargetUser = { selectedChatUser = it },
-                        guardianViewModel = guardianViewModel,
-                        onNavigateToUpgrade = { onNavigateToScreen("premium_store") }
-                    )
+                    2 -> {
+                        if (BetaFeatureGates.LEGACY_CHATROOMS) {
+                            ChatTabContent(
+                                currentUser = profile,
+                                targetUser = selectedChatUser,
+                                onSelectTargetUser = { selectedChatUser = it },
+                                guardianViewModel = guardianViewModel,
+                                onNavigateToUpgrade = { onNavigateToScreen("premium_store") }
+                            )
+                        } else {
+                            BetaFeatureUnavailableScreen(
+                                isArabic = isArabic,
+                                titleEnglish = "Legacy chat is paused for beta",
+                                titleArabic = "المحادثات القديمة غير متاحة في النسخة التجريبية",
+                                messageEnglish = "Use the Messages tab in the beta experience for approved secure chats.",
+                                messageArabic = "استخدم تبويب الرسائل في تجربة البيتا للمحادثات الآمنة بعد الموافقة.",
+                                onPrimaryAction = { selectedTab = 0 }
+                            )
+                        }
+                    }
                     3 -> AlertsHubContent(
                         currentUser = profile,
                         searchViewModel = searchViewModel,
