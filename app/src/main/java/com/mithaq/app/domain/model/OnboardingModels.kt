@@ -63,7 +63,7 @@ enum class OnboardingStorageGroup(val firestoreKey: String) {
 
 /**
  * Legacy fixed illustration set used by older screens. The structured flow uses [OnboardingStep.imageKey]
- * with a placeholder until real Stitch artwork is produced (see STITCH_ONBOARDING_IMAGE_BRIEF.md).
+ * with a placeholder until real Stitch artwork is produced (see docs/design/onboarding-image-brief.md).
  */
 enum class IllustrationKey {
     LANGUAGE,

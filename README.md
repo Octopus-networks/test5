@@ -10,7 +10,7 @@
 <!-- ── UI & Architecture ────────────────────────────────────────────────── -->
 ![Jetpack Compose](https://img.shields.io/badge/Compose%20BOM-2026.03.01-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)
 ![Material 3](https://img.shields.io/badge/Material%203-UI-757575?style=for-the-badge&logo=materialdesign&logoColor=white)
-![Architecture](https://img.shields.io/badge/Architecture-MVVM%20%2B%20Clean-FF6F00?style=for-the-badge&logo=android&logoColor=white)
+![Architecture](https://img.shields.io/badge/Architecture-MVVM%20(partial)-FF6F00?style=for-the-badge&logo=android&logoColor=white)
 ![RTL](https://img.shields.io/badge/Layout-RTL%20Ready-009688?style=for-the-badge&logo=googletranslate&logoColor=white)
 
 <!-- ── Backend & Services ──────────────────────────────────────────────── -->
@@ -34,7 +34,6 @@
 ![Branch Protection](https://img.shields.io/badge/Branch-Protected%20%7C%20No%20Force%20Push-red?style=for-the-badge&logo=git&logoColor=white)
 
 <!-- ── App Metadata ────────────────────────────────────────────────────── -->
-![Debug APK](https://img.shields.io/badge/Debug%20APK-29.3%20MB-success?style=for-the-badge&logo=android&logoColor=white)
 ![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-Proprietary-lightgrey?style=for-the-badge)
 
@@ -44,6 +43,22 @@
 
 Mithaq is a Kotlin Android application for privacy-first Islamic matchmaking. It uses Jetpack Compose, Firebase, Room, ML Kit, and Android security APIs to support serious marriage workflows with profile verification, guardian oversight, modest photo controls, search filters, and secure chat.
 
+## Documentation
+
+| Doc | Purpose |
+|---|---|
+| [`ROADMAP.md`](ROADMAP.md) | Phase-based roadmap (Phase 0–21), current focus, and what's next |
+| [`HANDOFF.md`](HANDOFF.md) | Current state, roles (ChatGPT / Codex / Android Studio / Claude), and live PR status |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design — `chats/*` is the canonical messaging stack (`chatRooms/*` is legacy) |
+| [`docs/FEATURE_STATUS.md`](docs/FEATURE_STATUS.md) | Honest per-feature status (Done / Foundation / UI-only / Planned) |
+| [`docs/TECH_DEBT.md`](docs/TECH_DEBT.md) | Engineering backlog from architecture + code reviews |
+| [`docs/security/firestore-rules.md`](docs/security/firestore-rules.md) | Deployed Firestore/Storage rules rationale |
+| [`docs/admin/`](docs/admin/) · [`docs/auth/`](docs/auth/) · [`docs/ops/`](docs/ops/) · [`docs/qa/`](docs/qa/) | Admin moderation, auth flows, deploy, QA reports |
+
+> The "MVVM + (partial)" badge is deliberate: the newer feature slices follow MVVM with a
+> repository layer, but there is no DI framework or use-case layer yet, and some screens call
+> Firestore directly. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
+> [`docs/TECH_DEBT.md`](docs/TECH_DEBT.md).
 
 ## Current Status
 
@@ -58,13 +73,17 @@ Mithaq is a Kotlin Android application for privacy-first Islamic matchmaking. It
 
 ## Key Features
 
+> For the accurate, honest status of each feature (some are foundation-only or UI-only), see
+> [`docs/FEATURE_STATUS.md`](docs/FEATURE_STATUS.md).
+
 - Profile onboarding with religious, demographic, lifestyle, and guardian fields.
 - Compatibility scoring in `com.mithaq.app.ui.match`.
 - Guardian invitation and wali monitoring flows.
-- Chaperoned chat with optional wali logs.
+- Chaperoned chat with optional wali logs *(currently on the legacy `chatRooms/*` stack — see [ARCHITECTURE](docs/ARCHITECTURE.md) §3.1)*.
 - Photo privacy requests and approved-viewer lists.
 - Identity verification status and trust badges.
 - Advanced search filters for age, sect, prayer habits, modesty, relocation, and other preferences.
+- Premium store UI *(simulated checkout — no live billing yet; see FEATURE_STATUS)*.
 - Adhan scheduling with exact-alarm support.
 - Biometric app lock and screenshot protection for sensitive screens.
 
@@ -83,25 +102,35 @@ The latest cleanup hardens the app and repository:
 
 ## Repository Layout
 
+> ⚠️ This layout is mid-migration. Some large screens still live at the package root and
+> there are two `model` packages; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §3–4 and
+> [`docs/TECH_DEBT.md`](docs/TECH_DEBT.md) for the reorganization plan.
+
 ```text
 app/src/main/java/com/mithaq/app/
-  model/                  Core data models
-  data/                   Repositories and local database mapping
-  receiver/               Android broadcast receivers
-  notification/           Firebase and local notification handling
+  MainActivity.kt         App entry + navigation host (oversized; root-level)
+  Tabs.kt SearchTab.kt ChatTab.kt ProfileSettings.kt WaliDashboard.kt
+                          Legacy large screens still at package root (to be moved)
+  model/                  Legacy data models (UserProfile god class, legacy ChatRoom)
+  domain/model/           Newer focused domain models (source of truth)
+  data/local/             Room database + DAOs
+  data/repository/         Repositories (Firestore <-> domain)
+  service/                GeminiService, BackendFunctions (remote data sources)
+  navigation/             Routes, AuthGate
+  receiver/               Android broadcast receivers (Adhan, Boot)
+  notification/           Firebase + local notification handling
   security/               Biometric, screenshot, and blur helpers
-  ui/auth/                Login, registration, onboarding, profile auth state
-  ui/chat/                Secure chat, translation, ice breakers, voice call UI
-  ui/filter/              Search and filtering logic
-  ui/guardian/            Guardian invitation flow
-  ui/limit/               Free/premium chat limit logic
-  ui/match/               Compatibility score and match detail UI
   util/                   Prayer, adhan, country, and reward utilities
+  ui/auth/  ui/onboarding/  ui/home/  ui/search/  ui/filter/  ui/match/
+  ui/messages/  ui/chat/  ui/requests/  ui/photo/  ui/guardian/  ui/limit/
+  ui/profile/  ui/settings/  ui/stats/  ui/admin/  ui/verification/
+  ui/splash/  ui/components/  ui/common/  ui/theme/
 
 firestore.rules           Firestore access rules
 storage.rules             Firebase Storage rules
 app/proguard-rules.pro    Release shrinker rules
 functions/                Firebase Cloud Functions for privileged backend operations
+docs/                     Architecture, roadmap, security, admin, auth, ops, QA docs
 ```
 
 ## Build Requirements

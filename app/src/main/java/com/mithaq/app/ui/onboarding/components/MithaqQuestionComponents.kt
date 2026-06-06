@@ -168,7 +168,7 @@ fun MithaqIllustrationHeader(
 
 /**
  * Placeholder header for the structured flow. Every question and break carries an [imageKey] for
- * future Stitch artwork (see STITCH_ONBOARDING_IMAGE_BRIEF.md); until those assets exist we render a
+ * future Stitch artwork (see docs/design/onboarding-image-brief.md); until those assets exist we render a
  * calm, on-brand placeholder rather than a real drawable. [imageKey] is intentionally not shown to
  * the user — it only identifies the future asset.
  */

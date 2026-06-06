@@ -54,4 +54,4 @@ Use the real package name and signing certificate fingerprint:
 
 - Do not allow onboarding, home, chat, search, profile, guardian, photo upload, prayer settings, or admin screens for unverified email users.
 - Google sign-in is also checked. If Firebase reports the email is not verified, the same gate is shown.
-- Firestore rules should be tightened after this flow is tested in production. See `SECURITY_RULES_NOTES.md`.
+- Firestore rules are already deployed and enforce verified-email gating. See [`../security/firestore-rules.md`](../security/firestore-rules.md).
