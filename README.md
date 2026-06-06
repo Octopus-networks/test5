@@ -47,8 +47,9 @@ Mithaq is a Kotlin Android application for privacy-first Islamic matchmaking. It
 
 | Doc | Purpose |
 |---|---|
-| [`ROADMAP.md`](ROADMAP.md) | Phase-based roadmap, current focus, and what's next |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design — **read before touching chat or onboarding** (two parallel stacks exist) |
+| [`ROADMAP.md`](ROADMAP.md) | Phase-based roadmap (Phase 0–21), current focus, and what's next |
+| [`HANDOFF.md`](HANDOFF.md) | Current state, roles (ChatGPT / Codex / Android Studio / Claude), and live PR status |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design — `chats/*` is the canonical messaging stack (`chatRooms/*` is legacy) |
 | [`docs/FEATURE_STATUS.md`](docs/FEATURE_STATUS.md) | Honest per-feature status (Done / Foundation / UI-only / Planned) |
 | [`docs/TECH_DEBT.md`](docs/TECH_DEBT.md) | Engineering backlog from architecture + code reviews |
 | [`docs/security/firestore-rules.md`](docs/security/firestore-rules.md) | Deployed Firestore/Storage rules rationale |

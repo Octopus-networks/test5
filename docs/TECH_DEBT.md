@@ -29,16 +29,18 @@ has a rough priority (🔴 high / 🟠 medium / 🟡 low).
 
 ## B. Security / correctness (from code review)
 
-- 🔴 **Photo blur is UI-only.** `ui/photo/UserProfileImage.kt` loads the full-resolution
-  `imageUrl` via Coil regardless of `isBlurred`; the blur is a cosmetic modifier and the
-  original is disk-cached. Follow the `SecurePhotoView`/`PhotoRepository` pattern (fetch
-  bytes only when access level is FULL); when blurred, render an avatar, not the real photo;
-  disable disk cache for private images. Prefer per-request signed URLs over a stored
-  durable `downloadUrl`.
-- 🔴 **Cross-user state leak on sign-out.** `viewModel(key = "...")` uses static keys and
-  `signOut()` does not clear the `ViewModelStore`, so user A's request/chat lists can render
-  to user B. Key ViewModels by uid (`"...-$uid"`) or clear the store on sign-out, and reset
-  lists before each load.
+> ✅ **Phase 16 resolved (shipped, pending merge):** real photo privacy (PR #42), cross-user
+> state leak (PR #41), and the Discover gender filter (PR #40). Kept below (struck through) for
+> history. The remaining items are still outstanding.
+
+- ✅ ~~**Photo blur is UI-only.**~~ **Shipped (PR #42).** Unauthorized viewers now render a
+  preset avatar in `UserProfileImage.kt`; the real photo URL is handed to Coil only when the
+  viewer is authorized, so the bytes are never loaded or disk-cached. *Follow-up debt:* prefer
+  per-request signed Storage URLs over a stored durable `downloadUrl` so the URL string itself
+  isn't a standing leak.
+- ✅ ~~**Cross-user state leak on sign-out.**~~ **Shipped (PR #41).** Screen ViewModels are now
+  keyed by uid (`viewModel(key = "...-$uid")`) and `SearchViewModel` via
+  `remember(uid) { ... }`, so a new user gets fresh state.
 - 🔴 **Chat limit + premium are client-trusted.** `ChatLimitManager` has no call sites and
   reads `isPremium` from the client. Enforce the limit and premium check in a Cloud Function
   at chat-room creation.
@@ -48,8 +50,9 @@ has a rough priority (🔴 high / 🟠 medium / 🟡 low).
 - 🟠 **Two chat subsystems with divergent gating.** `ChaperonedChatViewModel` writes
   `chatRooms/*` directly without the email-verified/participant checks the `chats/*` path
   has; failed sends are swallowed silently. (Subsumed by the migration item in A.)
-- 🟠 **Discovery does not filter by gender** while search does; add an opposite-gender
-  constraint to `getDiscoverProfiles` (and bidirectional block filtering).
+- ✅ ~~**Discovery does not filter by gender** while search does.~~ **Shipped (PR #40).**
+  `getDiscoverProfiles` now filters to the opposite gender (mirrored into `publicProfiles`).
+  *Still outstanding:* **bidirectional block filtering** in discovery.
 - 🟠 **Swallowed exceptions** across repositories hide `PERMISSION_DENIED` from the tightened
   rules as "no data". Distinguish and surface permission errors.
 - 🟠 **Unbounded message queries** (`ChatMessageRepository`) lack `limit`; add
