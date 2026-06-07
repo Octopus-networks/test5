@@ -117,15 +117,9 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         captureVerificationDeepLink(intent)
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val manager = getSystemService(android.app.NotificationManager::class.java)
-            if (manager != null) {
-                com.mithaq.app.notification.MithaqFirebaseMessagingService.ensureMessageChannels(
-                    manager,
-                    android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-                )
-            }
-        }
+        // Ensure the messages notification channel reflects the user's selected sound
+        // (device-local). The call no-ops below Android O and handles cleanup internally.
+        com.mithaq.app.notification.NotificationSoundPreferences.ensureActiveChannel(this)
 
         // Debug-only Firebase fallback for local demo builds.
         try {

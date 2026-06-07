@@ -1,10 +1,7 @@
 package com.mithaq.app.ui.notifications
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
+import android.media.Ringtone
+import android.media.RingtoneManager
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,11 +28,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +49,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.data.repository.NotificationSettingsRepository
 import com.mithaq.app.domain.model.NotificationSettings
+import com.mithaq.app.notification.NotificationSound
+import com.mithaq.app.notification.NotificationSoundPreferences
 
 /**
  * Phase 13C — notification settings screen reached from Profile Hub → Notifications.
@@ -74,6 +80,26 @@ fun NotificationSettingsScreen(
     )
     val state by viewModel.state.collectAsState()
     val settings = state.settings
+
+    var selectedSound by remember { mutableStateOf(NotificationSoundPreferences.getSelected(context)) }
+    var showSoundDialog by remember { mutableStateOf(false) }
+    val previewHolder = remember { mutableStateOf<Ringtone?>(null) }
+    fun stopPreview() {
+        previewHolder.value?.let { ringtone ->
+            try { if (ringtone.isPlaying) ringtone.stop() } catch (_: Exception) {}
+        }
+        previewHolder.value = null
+    }
+    fun previewSound(sound: NotificationSound) {
+        stopPreview()
+        val uri = NotificationSoundPreferences.soundUri(context, sound) ?: return
+        try {
+            val ringtone = RingtoneManager.getRingtone(context, uri)
+            ringtone?.play()
+            previewHolder.value = ringtone
+        } catch (_: Exception) {}
+    }
+    DisposableEffect(Unit) { onDispose { stopPreview() } }
 
     Column(
         modifier = modifier
@@ -219,18 +245,30 @@ fun NotificationSettingsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Notification sound is owned by the Android system per channel (device-local).
-                // Open the OS notification settings so the user picks the sound there — no app
-                // storage, no backend, no channel changes.
+                // In-app, device-local notification sound (bundled app sounds). On Android 8+
+                // the choice is applied by recreating the messages channel with the selected
+                // sound. No Firestore / Functions / backend.
                 SettingActionCard(
                     title = if (isArabic) "صوت الإشعار" else "Notification sound",
-                    subtitle = if (isArabic) {
-                        "اختر صوت الإشعار من إعدادات أندرويد."
-                    } else {
-                        "Choose the notification sound in Android settings."
-                    },
-                    onClick = { openSystemNotificationSettings(context) }
+                    subtitle = soundDisplayName(selectedSound, isArabic),
+                    onClick = { showSoundDialog = true }
                 )
+
+                if (showSoundDialog) {
+                    NotificationSoundPickerDialog(
+                        isArabic = isArabic,
+                        selected = selectedSound,
+                        onSelect = { sound ->
+                            selectedSound = sound
+                            NotificationSoundPreferences.setSelected(context, sound)
+                            previewSound(sound)
+                        },
+                        onDismiss = {
+                            stopPreview()
+                            showSoundDialog = false
+                        }
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -356,30 +394,52 @@ private fun SettingActionCard(
     }
 }
 
-/**
- * Opens the Android system notification settings for this app so the user can choose the
- * notification sound natively (channel sound is system-owned on Android 8+). Device-local
- * only — nothing is stored by the app and no notification channels are modified here.
- */
-private fun openSystemNotificationSettings(context: Context) {
-    val primaryIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-    } else {
-        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-            .setData(Uri.fromParts("package", context.packageName, null))
-    }
-    try {
-        context.startActivity(primaryIntent)
-    } catch (e: Exception) {
-        // Fallback to the app details page if the notification settings screen is unavailable.
-        try {
-            context.startActivity(
-                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                    .setData(Uri.fromParts("package", context.packageName, null))
-            )
-        } catch (_: Exception) {
-            // Nothing else we can safely do.
+private fun soundDisplayName(sound: NotificationSound, isArabic: Boolean): String = when (sound) {
+    NotificationSound.DEFAULT -> if (isArabic) "افتراضي" else "Default"
+    NotificationSound.CHIME -> if (isArabic) "رنّة" else "Chime"
+    NotificationSound.DING -> if (isArabic) "دينغ" else "Ding"
+    NotificationSound.SOFT -> if (isArabic) "ناعم" else "Soft"
+    NotificationSound.SILENT -> if (isArabic) "صامت" else "Silent"
+}
+
+@Composable
+private fun NotificationSoundPickerDialog(
+    isArabic: Boolean,
+    selected: NotificationSound,
+    onSelect: (NotificationSound) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = if (isArabic) "صوت الإشعار" else "Notification sound") },
+        text = {
+            Column {
+                NotificationSound.entries.forEach { sound ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(sound) }
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        RadioButton(
+                            selected = sound == selected,
+                            onClick = { onSelect(sound) }
+                        )
+                        Text(
+                            text = soundDisplayName(sound, isArabic),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = if (isArabic) "تم" else "Done")
+            }
         }
-    }
+    )
 }
