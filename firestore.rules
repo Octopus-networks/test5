@@ -270,6 +270,13 @@ service cloud.firestore {
       match /fcmTokens/{tokenId} {
         allow read, create, update, delete: if isOwner(userId);
       }
+
+      // Phase 13C: per-user notification preferences (document: preferences). Owner-only —
+      // each user reads and writes only their own settings. Never publicly readable. The
+      // server (Admin SDK) bypasses these rules to honor the toggles before sending a push.
+      match /notificationSettings/{settingsId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /profiles/{userId} {

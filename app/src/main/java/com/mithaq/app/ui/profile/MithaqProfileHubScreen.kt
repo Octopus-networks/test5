@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
 import com.mithaq.app.ui.components.MithaqEmptyState
+import com.mithaq.app.ui.notifications.NotificationSettingsScreen
 import com.mithaq.app.ui.photo.MyPhotosScreen
 
 private data class ProfileHubItem(
@@ -82,12 +83,13 @@ fun MithaqProfileHubScreen(
 ) {
     var openItem by remember(currentUserId) { mutableStateOf<ProfileHubItem?>(null) }
     var showMyPhotos by remember(currentUserId) { mutableStateOf(false) }
+    var showNotificationSettings by remember(currentUserId) { mutableStateOf(false) }
 
-    BackHandler(enabled = showMyPhotos || openItem != null) {
-        if (showMyPhotos) {
-            showMyPhotos = false
-        } else {
-            openItem = null
+    BackHandler(enabled = showMyPhotos || showNotificationSettings || openItem != null) {
+        when {
+            showMyPhotos -> showMyPhotos = false
+            showNotificationSettings -> showNotificationSettings = false
+            else -> openItem = null
         }
     }
 
@@ -96,6 +98,16 @@ fun MithaqProfileHubScreen(
             currentUserId = currentUserId,
             isArabic = isArabic,
             onBack = { showMyPhotos = false },
+            modifier = modifier
+        )
+        return
+    }
+
+    if (showNotificationSettings) {
+        NotificationSettingsScreen(
+            currentUserId = currentUserId,
+            isArabic = isArabic,
+            onBack = { showNotificationSettings = false },
             modifier = modifier
         )
         return
@@ -134,7 +146,17 @@ fun MithaqProfileHubScreen(
         MyPhotosEntryCard(isArabic = isArabic, onClick = { showMyPhotos = true })
         Spacer(modifier = Modifier.height(10.dp))
         comingSoonProfileItems.forEach { item ->
-            ProfileHubRow(item = item, isArabic = isArabic, onClick = { openItem = item })
+            if (item.titleResId == R.string.profile_hub_notifications_title) {
+                // Phase 13C: Notifications is now a real screen (no longer "Coming Soon").
+                ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = { showNotificationSettings = true }
+                )
+            } else {
+                ProfileHubRow(item = item, isArabic = isArabic, onClick = { openItem = item })
+            }
             Spacer(modifier = Modifier.height(10.dp))
         }
         // Admin-only entry. Hidden entirely for normal users; the destination screen also
@@ -160,7 +182,8 @@ fun MithaqProfileHubScreen(
 private fun ProfileHubRow(
     item: ProfileHubItem,
     isArabic: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    showComingSoon: Boolean = true
 ) {
     Card(
         modifier = Modifier
@@ -189,17 +212,19 @@ private fun ProfileHubRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = localizedString(
-                        isArabic,
-                        R.string.profile_hub_coming_soon_badge,
-                        R.string.profile_hub_coming_soon_badge_ar
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                if (showComingSoon) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = localizedString(
+                            isArabic,
+                            R.string.profile_hub_coming_soon_badge,
+                            R.string.profile_hub_coming_soon_badge_ar
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
             }
         }
     }
