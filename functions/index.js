@@ -153,12 +153,144 @@ exports.deleteUserProfile = onCall(secureCallable, async (request) => {
   return { ok: true };
 });
 
-async function createNotification({ senderUid, recipientUid, title, body, type = "general" }) {
-  if (!senderUid || !recipientUid || senderUid === recipientUid) {
+// FCM error codes that mean a token is permanently dead and should be removed.
+const INVALID_TOKEN_CODES = new Set([
+  "messaging/registration-token-not-registered",
+  "messaging/invalid-registration-token",
+  "messaging/invalid-argument",
+]);
+
+// FCM data payload values must be strings. Coerce + drop null/undefined.
+function sanitizeData(data) {
+  const out = {};
+  Object.keys(data || {}).forEach((key) => {
+    const value = data[key];
+    if (value === undefined || value === null) {
+      return;
+    }
+    out[key] = typeof value === "string" ? value : String(value);
+  });
+  return out;
+}
+
+// Respect blocks in either direction. Best-effort: a read failure here must not
+// silently drop every notification, so we fail open (treat as not blocked).
+async function isBlockedBetween(uidA, uidB) {
+  if (!uidA || !uidB) {
+    return false;
+  }
+  try {
+    const [forward, backward] = await Promise.all([
+      db.collection("blocks").doc(`${uidA}_${uidB}`).get(),
+      db.collection("blocks").doc(`${uidB}_${uidA}`).get(),
+    ]);
+    return forward.exists || backward.exists;
+  } catch (error) {
+    console.error("Block lookup failed", { error: error && error.message ? error.message : error });
+    return false;
+  }
+}
+
+// Collect the recipient's push targets. Phase 13A stores per-device tokens under
+// users/{uid}/fcmTokens/{tokenId}; a token is active unless explicitly active === false
+// (Phase 13A docs have no active field and are therefore treated as active). The legacy
+// flat users/{uid}.fcmToken is used only as a fallback when no subcollection token exists.
+// Each target carries a `ref` (subcollection doc) or `legacy` flag so dead tokens can be
+// cleaned up later. Token values are never logged.
+async function collectRecipientTokens(recipientUid) {
+  const targets = [];
+  const seen = new Set();
+
+  const tokensSnap = await db.collection("users").doc(recipientUid).collection("fcmTokens").get();
+  tokensSnap.forEach((doc) => {
+    const data = doc.data() || {};
+    const token = typeof data.token === "string" ? data.token.trim() : "";
+    const isActive = data.active !== false;
+    if (token && isActive && !seen.has(token)) {
+      seen.add(token);
+      targets.push({ token, ref: doc.ref });
+    }
+  });
+
+  if (targets.length === 0) {
+    const userSnap = await db.collection("users").doc(recipientUid).get();
+    const legacy = userSnap.exists ? userSnap.get("fcmToken") : null;
+    if (typeof legacy === "string" && legacy.trim().length > 0) {
+      targets.push({ token: legacy.trim(), ref: null, legacy: true });
+    }
+  }
+  return targets;
+}
+
+// Fan a push out to every active device of a recipient and prune dead tokens.
+async function sendPushToRecipient(recipientUid, { title, body, data }) {
+  const targets = await collectRecipientTokens(recipientUid);
+  if (targets.length === 0) {
+    return { successCount: 0, failureCount: 0, attempted: 0 };
+  }
+
+  const response = await admin.messaging().sendEachForMulticast({
+    tokens: targets.map((target) => target.token),
+    notification: { title, body },
+    data: sanitizeData(data),
+    android: {
+      priority: "high",
+      notification: {
+        channelId: "mithaq_urgent_channel_v1",
+        sound: "default",
+      },
+    },
+  });
+
+  // Remove tokens FCM reports as permanently invalid. Never log the token itself.
+  const cleanups = [];
+  response.responses.forEach((resp, index) => {
+    if (resp.success) {
+      return;
+    }
+    const code = resp.error && resp.error.code;
+    if (!INVALID_TOKEN_CODES.has(code)) {
+      return;
+    }
+    const target = targets[index];
+    if (target.ref) {
+      cleanups.push(target.ref.delete().catch(() => {}));
+    } else if (target.legacy) {
+      cleanups.push(
+        db.collection("users").doc(recipientUid)
+          .update({ fcmToken: admin.firestore.FieldValue.delete() })
+          .catch(() => {})
+      );
+    }
+  });
+  if (cleanups.length > 0) {
+    await Promise.all(cleanups);
+  }
+
+  return {
+    successCount: response.successCount,
+    failureCount: response.failureCount,
+    attempted: targets.length,
+  };
+}
+
+// Writes a notifications/{id} record (server-owned; the Android WorkManager fallback
+// reads PENDING ones) and pushes to the recipient's devices. `senderUid` is optional —
+// omit it for system notifications (e.g. photo moderation). Notification bodies must never
+// contain sensitive/private profile data or message content.
+async function createNotification({ senderUid = null, recipientUid, title, body, type = "general", extraData = {} }) {
+  if (!recipientUid) {
     return;
   }
+  if (senderUid && senderUid === recipientUid) {
+    return;
+  }
+  if (senderUid && (await isBlockedBetween(senderUid, recipientUid))) {
+    return;
+  }
+
   const notificationRef = await db.collection("notifications").add({
-    senderUid,
+    senderUid: senderUid || "system",
     recipientUid,
     title,
     body,
@@ -168,36 +300,26 @@ async function createNotification({ senderUid, recipientUid, title, body, type =
   });
 
   try {
-    const recipientSnap = await db.collection("users").doc(recipientUid).get();
-    const token = recipientSnap.exists ? recipientSnap.get("fcmToken") : null;
-    if (typeof token !== "string" || token.trim().length === 0) {
-      return;
-    }
-
-    await admin.messaging().send({
-      token,
-      notification: { title, body },
+    const result = await sendPushToRecipient(recipientUid, {
+      title,
+      body,
       data: {
         notificationId: notificationRef.id,
-        senderUid,
+        senderUid: senderUid || "system",
         recipientUid,
         type,
         title,
         body,
-      },
-      android: {
-        priority: "high",
-        notification: {
-          channelId: "mithaq_urgent_channel_v1",
-          sound: "default",
-        },
+        ...extraData,
       },
     });
 
-    await notificationRef.update({
-      status: "PUSH_SENT",
-      pushedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    if (result.successCount > 0) {
+      await notificationRef.update({
+        status: "PUSH_SENT",
+        pushedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
   } catch (error) {
     console.error("Failed to send FCM notification", {
       notificationId: notificationRef.id,
@@ -277,6 +399,129 @@ exports.onChatMessageCreated = onDocumentCreated(
       title: "Mithaq - New message",
       body: "You have a new message.",
       type: "chat_message",
+    });
+  }
+);
+
+// ── Phase 13B: notification triggers for core Mithaq events ──────────────────
+// Each trigger reacts to a server-visible document write and pushes a privacy-safe,
+// generic notification via createNotification (active-token fan-out + block-respect).
+// Titles/bodies never contain message content or sensitive profile data.
+
+exports.onInterestRequestCreated = onDocumentCreated(
+  { document: "interestRequests/{requestId}", region },
+  async (event) => {
+    const data = event.data && event.data.data();
+    if (!data || data.status !== "pending") {
+      return;
+    }
+    await createNotification({
+      senderUid: data.fromUserId,
+      recipientUid: data.toUserId,
+      title: "Mithaq",
+      body: "You have a new interest request.",
+      type: "interest_request",
+      extraData: { requestId: event.params.requestId },
+    });
+  }
+);
+
+exports.onPhotoRequestCreated = onDocumentCreated(
+  { document: "photoRequests/{requestId}", region },
+  async (event) => {
+    const data = event.data && event.data.data();
+    if (!data || data.status !== "pending") {
+      return;
+    }
+    await createNotification({
+      senderUid: data.fromUserId,
+      recipientUid: data.toUserId,
+      title: "Mithaq",
+      body: "You have a new photo access request.",
+      type: "photo_request",
+      extraData: { requestId: event.params.requestId },
+    });
+  }
+);
+
+exports.onChatRequestCreated = onDocumentCreated(
+  { document: "chatRequests/{requestId}", region },
+  async (event) => {
+    const data = event.data && event.data.data();
+    if (!data || data.status !== "pending") {
+      return;
+    }
+    await createNotification({
+      senderUid: data.fromUserId,
+      recipientUid: data.toUserId,
+      title: "Mithaq",
+      body: "You have a new chat request.",
+      type: "chat_request",
+      extraData: { requestId: event.params.requestId },
+    });
+  }
+);
+
+// New message in the Phase 11+ chat system (chats/{chatId}/messages). The legacy
+// chatRooms path is handled separately by onChatMessageCreated above. Message text is
+// never placed in the push payload — the body stays generic for privacy.
+exports.onDirectMessageCreated = onDocumentCreated(
+  { document: "chats/{chatId}/messages/{messageId}", region },
+  async (event) => {
+    const message = event.data && event.data.data();
+    if (!message || !message.senderId) {
+      return;
+    }
+    if (message.type && message.type !== "text") {
+      return;
+    }
+    const chatSnap = await db.collection("chats").doc(event.params.chatId).get();
+    if (!chatSnap.exists) {
+      return;
+    }
+    const participantIds = chatSnap.get("participantIds") || [];
+    const recipientUid = participantIds.find((uid) => uid !== message.senderId);
+    if (!recipientUid) {
+      return;
+    }
+    await createNotification({
+      senderUid: message.senderId,
+      recipientUid,
+      title: "Mithaq - New message",
+      body: "You have a new message.",
+      type: "chat_message",
+      extraData: { chatId: event.params.chatId, messageId: event.params.messageId },
+    });
+  }
+);
+
+// Photo moderation outcome -> notify the photo owner. System notification (no sender).
+// The admin rejection reason is intentionally NOT included in the push.
+exports.onUserPhotoModerated = onDocumentWritten(
+  { document: "userPhotos/{userId}/photos/{photoId}", region },
+  async (event) => {
+    const before = event.data && event.data.before;
+    const after = event.data && event.data.after;
+    if (!after || !after.exists) {
+      return;
+    }
+    const beforeStatus = before && before.exists ? before.get("status") : null;
+    const afterStatus = after.get("status");
+    if (beforeStatus === afterStatus) {
+      return;
+    }
+    if (afterStatus !== "approved" && afterStatus !== "rejected") {
+      return;
+    }
+    const body = afterStatus === "approved"
+      ? "Your photo was approved."
+      : "Your photo needs attention. Please review it.";
+    await createNotification({
+      recipientUid: event.params.userId,
+      title: "Mithaq - Photo review",
+      body,
+      type: afterStatus === "approved" ? "photo_approved" : "photo_rejected",
+      extraData: { photoId: event.params.photoId, status: afterStatus },
     });
   }
 );
