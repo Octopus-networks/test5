@@ -1,6 +1,12 @@
 package com.mithaq.app.ui.notifications
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -210,6 +217,21 @@ fun NotificationSettingsScreen(
                     }
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Notification sound is owned by the Android system per channel (device-local).
+                // Open the OS notification settings so the user picks the sound there — no app
+                // storage, no backend, no channel changes.
+                SettingActionCard(
+                    title = if (isArabic) "صوت الإشعار" else "Notification sound",
+                    subtitle = if (isArabic) {
+                        "اختر صوت الإشعار من إعدادات أندرويد."
+                    } else {
+                        "Choose the notification sound in Android settings."
+                    },
+                    onClick = { openSystemNotificationSettings(context) }
+                )
+
                 Spacer(modifier = Modifier.height(20.dp))
 
                 state.errorMessage?.let { error ->
@@ -288,6 +310,76 @@ private fun SettingToggleCard(
                 onCheckedChange = onCheckedChange,
                 enabled = enabled
             )
+        }
+    }
+}
+
+@Composable
+private fun SettingActionCard(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * Opens the Android system notification settings for this app so the user can choose the
+ * notification sound natively (channel sound is system-owned on Android 8+). Device-local
+ * only — nothing is stored by the app and no notification channels are modified here.
+ */
+private fun openSystemNotificationSettings(context: Context) {
+    val primaryIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    } else {
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            .setData(Uri.fromParts("package", context.packageName, null))
+    }
+    try {
+        context.startActivity(primaryIntent)
+    } catch (e: Exception) {
+        // Fallback to the app details page if the notification settings screen is unavailable.
+        try {
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .setData(Uri.fromParts("package", context.packageName, null))
+            )
+        } catch (_: Exception) {
+            // Nothing else we can safely do.
         }
     }
 }
