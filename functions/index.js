@@ -274,6 +274,45 @@ async function sendPushToRecipient(recipientUid, { title, body, data }) {
   };
 }
 
+// Phase 13C: map a notification type to its per-category preference flag. Types without
+// an entry (e.g. like / mutual_like) are governed only by the master notificationsEnabled.
+const TYPE_TO_PREF = {
+  interest_request: "interestRequestNotifications",
+  photo_request: "photoRequestNotifications",
+  chat_request: "chatRequestNotifications",
+  chat_message: "messageNotifications",
+  photo_approved: "photoModerationNotifications",
+  photo_rejected: "photoModerationNotifications",
+};
+
+// Respect the recipient's notification settings (users/{uid}/notificationSettings/preferences).
+// Safe-by-default: a missing document, missing field, or read error all mean "allowed", so a
+// user is never silently muted by an error. The master notificationsEnabled gates everything.
+async function notificationsAllowed(recipientUid, type) {
+  try {
+    const snap = await db.collection("users").doc(recipientUid)
+      .collection("notificationSettings").doc("preferences").get();
+    if (!snap.exists) {
+      return true;
+    }
+    const data = snap.data() || {};
+    if (data.notificationsEnabled === false) {
+      return false;
+    }
+    const prefKey = TYPE_TO_PREF[type];
+    if (prefKey && data[prefKey] === false) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Notification settings lookup failed", {
+      recipientUid,
+      error: error && error.message ? error.message : error,
+    });
+    return true;
+  }
+}
+
 // Writes a notifications/{id} record (server-owned; the Android WorkManager fallback
 // reads PENDING ones) and pushes to the recipient's devices. `senderUid` is optional —
 // omit it for system notifications (e.g. photo moderation). Notification bodies must never
@@ -286,6 +325,9 @@ async function createNotification({ senderUid = null, recipientUid, title, body,
     return;
   }
   if (senderUid && (await isBlockedBetween(senderUid, recipientUid))) {
+    return;
+  }
+  if (!(await notificationsAllowed(recipientUid, type))) {
     return;
   }
 
