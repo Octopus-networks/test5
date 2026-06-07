@@ -77,6 +77,16 @@ class ChatMessageViewModel(
         }
     }
 
+    fun setReaction(chatId: String, messageId: String, emoji: String?) {
+        if (chatId.isBlank() || messageId.isBlank()) return
+        viewModelScope.launch {
+            val result = repository.setReaction(chatId, messageId, emoji)
+            if (result is ChatMessageResult.Error) {
+                _state.value = _state.value.copy(errorMessage = result.message)
+            }
+        }
+    }
+
     fun stopListening() {
         messagesRegistration?.remove()
         messagesRegistration = null

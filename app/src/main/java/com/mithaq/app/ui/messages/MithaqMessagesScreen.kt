@@ -2,9 +2,11 @@ package com.mithaq.app.ui.messages
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -500,7 +502,9 @@ private fun ChatScreen(
                         }
                         ChatMessageBubble(
                             message = message,
-                            isMine = message.senderId == currentUserId
+                            isMine = message.senderId == currentUserId,
+                            currentUserId = currentUserId,
+                            onReact = { emoji -> viewModel.setReaction(room.chatId, message.messageId, emoji) }
                         )
                     }
                 }
@@ -727,51 +731,136 @@ private fun ReportUserDialog(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChatMessageBubble(
     message: ChatMessage,
-    isMine: Boolean
+    isMine: Boolean,
+    currentUserId: String,
+    onReact: (String?) -> Unit
 ) {
+    var showReactionBar by remember(message.messageId) { mutableStateOf(false) }
+    val myReaction = message.reactions[currentUserId]
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
     ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .background(
-                    color = if (isMine) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    shape = if (isMine) {
-                        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
-                    } else {
-                        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp)
+        Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
+            if (showReactionBar) {
+                ReactionBar(
+                    selected = myReaction,
+                    onPick = { emoji ->
+                        showReactionBar = false
+                        onReact(if (emoji == myReaction) null else emoji)
                     }
                 )
-                .padding(12.dp)
-        ) {
-            Text(
-                text = message.text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isMine) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
-            message.createdAt?.let { createdAt ->
                 Spacer(modifier = Modifier.height(4.dp))
+            }
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .background(
+                        color = if (isMine) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        shape = if (isMine) {
+                            RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+                        } else {
+                            RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp)
+                        }
+                    )
+                    .combinedClickable(
+                        onClick = { if (showReactionBar) showReactionBar = false },
+                        onLongClick = { showReactionBar = !showReactionBar }
+                    )
+                    .padding(12.dp)
+            ) {
                 Text(
-                    text = SimpleDateFormat("h:mm a", Locale.getDefault()).format(createdAt),
-                    style = MaterialTheme.typography.labelSmall,
+                    text = message.text,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = if (isMine) {
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f)
+                        MaterialTheme.colorScheme.onPrimaryContainer
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     }
+                )
+                message.createdAt?.let { createdAt ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = SimpleDateFormat("h:mm a", Locale.getDefault()).format(createdAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isMine) {
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+                        }
+                    )
+                }
+            }
+            if (message.reactions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                ReactionChip(reactions = message.reactions)
+            }
+        }
+    }
+}
+
+/** WhatsApp-style quick-reaction bar shown when a message bubble is long-pressed. */
+@Composable
+private fun ReactionBar(selected: String?, onPick: (String) -> Unit) {
+    val quick = listOf("❤️", "👍", "😊", "🤲", "🌹", "🙏")
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 3.dp,
+        shadowElevation = 3.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            quick.forEach { emoji ->
+                Text(
+                    text = emoji,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(
+                            if (emoji == selected) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                            } else {
+                                Color.Transparent
+                            }
+                        )
+                        .clickable { onPick(emoji) }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+/** Compact chip under a bubble showing its reactions, grouped by emoji with counts. */
+@Composable
+private fun ReactionChip(reactions: Map<String, String>) {
+    val grouped = reactions.values.groupingBy { it }.eachCount()
+    if (grouped.isEmpty()) return
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            grouped.forEach { (emoji, count) ->
+                Text(
+                    text = if (count > 1) "$emoji $count" else emoji,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
