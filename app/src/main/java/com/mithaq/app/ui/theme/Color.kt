@@ -39,3 +39,8 @@ val GlassSurfaceLight = Color(0x26FFFFFF) // 15% opacity white
 val GlassSurfaceDark = Color(0x1A000000)  // 10% opacity black
 val GlassBorderLight = Color(0x33FFFFFF)  // 20% opacity white
 val GlassBorderDark = Color(0x26000000)   // 15% opacity black
+
+// Phase 12.6 UI Trial — Card polish tokens
+val CardGlowGold = Color(0x26F2CA50)      // 15% opacity gold for gradient borders
+val CardGlowEmerald = Color(0x1A8BD6B6)   // 10% opacity emerald for gradient borders
+val ShimmerHighlight = Color(0x0DFFFFFF)   // 5% white for sweep shimmer
