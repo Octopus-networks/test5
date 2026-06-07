@@ -9,6 +9,7 @@ data class ChatMessage(
     val text: String = "",
     val type: String = "text",
     val status: String = "sent",
+    val reactions: Map<String, String> = emptyMap(),
     val createdAt: Date? = null,
     val updatedAt: Date? = null,
     val editedAt: Date? = null,

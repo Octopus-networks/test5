@@ -1,7 +1,12 @@
 package com.mithaq.app.ui.messages
 
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,28 +15,37 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -46,9 +60,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -59,12 +75,21 @@ import com.mithaq.app.domain.model.ChatParticipantSummary
 import com.mithaq.app.domain.model.ChatRoom
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import com.mithaq.app.data.repository.PhotoRepository
+import com.mithaq.app.domain.model.PhotoAccessLevel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.mithaq.app.ui.components.MithaqEmptyState
 import com.mithaq.app.ui.components.MithaqStateIllustration
 import com.mithaq.app.ui.components.MithaqIllustrationType
 import com.mithaq.app.ui.components.MithaqLoadingSkeleton
 import com.mithaq.app.ui.components.SkeletonType
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -298,10 +323,13 @@ private fun ChatScreen(
     val state by viewModel.state.collectAsState()
     val safetyState by safetyViewModel.state.collectAsState()
     var draft by remember(room.chatId) { mutableStateOf("") }
+    var showEmoji by remember(room.chatId) { mutableStateOf(false) }
     var showReportDialog by remember(room.chatId) { mutableStateOf(false) }
     var showBlockDialog by remember(room.chatId) { mutableStateOf(false) }
+    var menuOpen by remember(room.chatId) { mutableStateOf(false) }
     var hasAutoScrolledInitial by remember(room.chatId) { mutableStateOf(false) }
     val messageListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val otherUserId = room.participantIds.firstOrNull { it != currentUserId }.orEmpty()
     val summary = room.participantPublicSummaries[otherUserId] ?: ChatParticipantSummary(userId = otherUserId)
     val canSend = room.status == "active" && !safetyState.isBlocked && !state.isSending && !safetyState.isCheckingBlock
@@ -322,11 +350,16 @@ private fun ChatScreen(
     LaunchedEffect(state.messages.size, state.messages.lastOrNull()?.messageId) {
         if (state.messages.isNotEmpty()) {
             val lastMessage = state.messages.last()
-            val shouldScroll = !hasAutoScrolledInitial ||
-                isNearBottom ||
-                lastMessage.senderId == currentUserId
+            val isMine = lastMessage.senderId == currentUserId
+            val shouldScroll = !hasAutoScrolledInitial || isNearBottom || isMine
             if (shouldScroll) {
-                messageListState.animateScrollToItem(state.messages.lastIndex)
+                // Snap instantly on first open AND whenever I send (so my message is always
+                // visible without manual scrolling); animate for incoming messages.
+                if (!hasAutoScrolledInitial || isMine) {
+                    messageListState.scrollToItem(state.messages.lastIndex)
+                } else {
+                    messageListState.animateScrollToItem(state.messages.lastIndex)
+                }
                 hasAutoScrolledInitial = true
             }
         }
@@ -335,45 +368,63 @@ private fun ChatScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .imePadding()
             .padding(18.dp)
     ) {
-        TextButton(onClick = onBack) {
-            Text(localizedString(isArabic, R.string.common_back, R.string.common_back_ar))
+        // Compact top bar: back, name, and an overflow menu holding Report / Block.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = localizedString(isArabic, R.string.common_back, R.string.common_back_ar)
+                )
+            }
+            ChatPartnerAvatar(
+                otherUserId = otherUserId,
+                displayName = summary.displayName,
+                photoPrivacyMode = summary.photoPrivacyMode
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = summary.displayTitle(isArabic),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = null)
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(localizedString(isArabic, R.string.chat_report, R.string.chat_report_ar)) },
+                        onClick = {
+                            menuOpen = false
+                            showReportDialog = true
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(localizedString(isArabic, R.string.chat_block, R.string.chat_block_ar)) },
+                        enabled = !safetyState.isBlocked && !safetyState.isBlocking,
+                        onClick = {
+                            menuOpen = false
+                            showBlockDialog = true
+                        }
+                    )
+                }
+            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = summary.displayTitle(isArabic),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = localizedString(isArabic, R.string.chat_screen_subtitle, R.string.chat_screen_subtitle_ar),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(10.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedButton(
-                onClick = { showReportDialog = true },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(localizedString(isArabic, R.string.chat_report, R.string.chat_report_ar))
-            }
-            OutlinedButton(
-                onClick = { showBlockDialog = true },
-                modifier = Modifier.weight(1f),
-                enabled = !safetyState.isBlocked && !safetyState.isBlocking
-            ) {
-                Text(localizedString(isArabic, R.string.chat_block, R.string.chat_block_ar))
-            }
-        }
-        Spacer(modifier = Modifier.height(12.dp))
         safetyState.message?.let { message ->
             InfoCard(text = message, isError = false)
             Spacer(modifier = Modifier.height(12.dp))
@@ -439,32 +490,75 @@ private fun ChatScreen(
                 }
             }
             else -> {
-                LazyColumn(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    state = messageListState,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .weight(1f)
                 ) {
-                    items(
-                        items = state.messages,
-                        key = { message -> message.stableMessageKey() }
-                    ) { message ->
-                        ChatMessageBubble(
-                            message = message,
-                            isMine = message.senderId == currentUserId
-                        )
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        state = messageListState,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        itemsIndexed(
+                            items = state.messages,
+                            key = { _, message -> message.stableMessageKey() }
+                        ) { index, message ->
+                            val previousAt = if (index > 0) state.messages[index - 1].createdAt else null
+                            if (shouldShowDaySeparator(previousAt, message.createdAt)) {
+                                ChatDaySeparator(date = message.createdAt)
+                            }
+                            ChatMessageBubble(
+                                message = message,
+                                isMine = message.senderId == currentUserId,
+                                currentUserId = currentUserId,
+                                onReact = { emoji -> viewModel.setReaction(room.chatId, message.messageId, emoji) }
+                            )
+                        }
+                    }
+                    // "Jump to latest" button: appears only when scrolled up from the bottom.
+                    if (!isNearBottom) {
+                        SmallFloatingActionButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    messageListState.animateScrollToItem(state.messages.lastIndex)
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 4.dp, bottom = 4.dp),
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowDown,
+                                contentDescription = if (isArabic) "آخر رسالة" else "Scroll to latest"
+                            )
+                        }
                     }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+        if (showEmoji) {
+            ChatEmojiPicker(
+                enabled = canSend,
+                onEmoji = { emoji -> if (draft.length + emoji.length <= 1000) draft += emoji }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(
+                onClick = { showEmoji = !showEmoji },
+                enabled = canSend
+            ) {
+                Text(text = "😊", style = MaterialTheme.typography.titleLarge)
+            }
             TextField(
                 value = draft,
                 onValueChange = { if (it.length <= 1000) draft = it },
@@ -478,6 +572,7 @@ private fun ChatScreen(
                 onClick = {
                     val text = draft
                     draft = ""
+                    showEmoji = false
                     viewModel.sendTextMessage(room.chatId, currentUserId, text)
                 },
                 enabled = draft.isNotBlank() && canSend
@@ -665,47 +760,136 @@ private fun ReportUserDialog(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChatMessageBubble(
     message: ChatMessage,
-    isMine: Boolean
+    isMine: Boolean,
+    currentUserId: String,
+    onReact: (String?) -> Unit
 ) {
+    var showReactionBar by remember(message.messageId) { mutableStateOf(false) }
+    val myReaction = message.reactions[currentUserId]
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
     ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .background(
-                    color = if (isMine) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .padding(12.dp)
-        ) {
-            Text(
-                text = message.text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isMine) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
-            message.createdAt?.let { createdAt ->
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = SimpleDateFormat("h:mm a", Locale.getDefault()).format(createdAt),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isMine) {
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f)
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+        Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
+            if (showReactionBar) {
+                ReactionBar(
+                    selected = myReaction,
+                    onPick = { emoji ->
+                        showReactionBar = false
+                        onReact(if (emoji == myReaction) null else emoji)
                     }
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .background(
+                        color = if (isMine) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        shape = if (isMine) {
+                            RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+                        } else {
+                            RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp)
+                        }
+                    )
+                    .combinedClickable(
+                        onClick = { if (showReactionBar) showReactionBar = false },
+                        onLongClick = { showReactionBar = !showReactionBar }
+                    )
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = message.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isMine) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+                message.createdAt?.let { createdAt ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = SimpleDateFormat("h:mm a", Locale.getDefault()).format(createdAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isMine) {
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+                        }
+                    )
+                }
+            }
+            if (message.reactions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                ReactionChip(reactions = message.reactions)
+            }
+        }
+    }
+}
+
+/** WhatsApp-style quick-reaction bar shown when a message bubble is long-pressed. */
+@Composable
+private fun ReactionBar(selected: String?, onPick: (String) -> Unit) {
+    val quick = listOf("❤️", "👍", "😊", "🤲", "🌹", "🙏")
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 3.dp,
+        shadowElevation = 3.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            quick.forEach { emoji ->
+                Text(
+                    text = emoji,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(
+                            if (emoji == selected) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                            } else {
+                                Color.Transparent
+                            }
+                        )
+                        .clickable { onPick(emoji) }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+/** Compact chip under a bubble showing its reactions, grouped by emoji with counts. */
+@Composable
+private fun ReactionChip(reactions: Map<String, String>) {
+    val grouped = reactions.values.groupingBy { it }.eachCount()
+    if (grouped.isEmpty()) return
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            grouped.forEach { (emoji, count) ->
+                Text(
+                    text = if (count > 1) "$emoji $count" else emoji,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -741,4 +925,135 @@ private fun ChatParticipantSummary.displayTitle(isArabic: Boolean): String {
     val fallback = localizedString(isArabic, R.string.chat_member_fallback, R.string.chat_member_fallback_ar)
     val name = displayName.ifBlank { fallback }
     return age?.let { "$name, $it" } ?: name
+}
+
+/**
+ * Curated emoji panel with a love / engagement / marriage focus, opened from the chat
+ * input. Tapping an emoji appends it to the draft text (handled by the caller). UI only —
+ * emoji are inserted as Unicode text into the existing text message.
+ */
+@Composable
+private fun ChatEmojiPicker(enabled: Boolean, onEmoji: (String) -> Unit) {
+    val emojis = listOf(
+        "❤️", "💖", "💕", "💗", "🌹", "💐", "💍", "🤍",
+        "🤵", "👰", "👫", "💑", "🏡", "🤲", "🕌", "🌙",
+        "😊", "🥰", "😍", "🙏", "💌", "✨", "🌸", "👪"
+    )
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            emojis.chunked(8).forEach { rowEmojis ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    rowEmojis.forEach { emoji ->
+                        Text(
+                            text = emoji,
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(enabled = enabled) { onEmoji(emoji) }
+                                .padding(6.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A centered date chip shown between messages from different days. */
+@Composable
+private fun ChatDaySeparator(date: Date?) {
+    if (date == null) return
+    val label = SimpleDateFormat("EEEE, d MMM", Locale.getDefault()).format(date)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+private val chatDayKeyFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+
+/** True when [current] starts a new calendar day relative to [previous]. */
+private fun shouldShowDaySeparator(previous: Date?, current: Date?): Boolean {
+    if (current == null) return false
+    if (previous == null) return true
+    return chatDayKeyFormat.format(previous) != chatDayKeyFormat.format(current)
+}
+
+/**
+ * Circular avatar for the chat partner. Shows the partner's REAL account photo only when the
+ * existing photo-access model grants FULL access (own photo or an approved photo request) —
+ * Storage security rules are the real boundary, so an unauthorised viewer just gets the initial
+ * fallback. No rules are weakened and no photo bytes are exposed without access.
+ */
+@Composable
+private fun ChatPartnerAvatar(
+    otherUserId: String,
+    displayName: String,
+    photoPrivacyMode: String,
+    sizeDp: Int = 40
+) {
+    var avatar by remember(otherUserId) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(otherUserId, photoPrivacyMode) {
+        avatar = null
+        if (otherUserId.isBlank()) return@LaunchedEffect
+        avatar = withContext(Dispatchers.IO) {
+            try {
+                val repo = PhotoRepository()
+                if (repo.resolveAccessLevel(otherUserId, photoPrivacyMode) == PhotoAccessLevel.FULL) {
+                    repo.loadAccessiblePhotoBytes(otherUserId)?.let { bytes ->
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                    }
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+    Box(
+        modifier = Modifier
+            .size(sizeDp.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center
+    ) {
+        val current = avatar
+        if (current != null) {
+            Image(
+                bitmap = current,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(
+                text = displayName.trim().take(1).uppercase().ifBlank { "?" },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
 }

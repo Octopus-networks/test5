@@ -124,6 +124,37 @@ class ChatMessageRepository(
         }
     }
 
+    /**
+     * Sets ([emoji] non-null) or clears ([emoji] null) the current user's emoji reaction on a
+     * message. Uses a field-path update so only reactions.<uid> changes; Firestore rules ensure
+     * a participant can only touch their own reaction, never the text or other users' reactions.
+     */
+    suspend fun setReaction(chatId: String, messageId: String, emoji: String?): ChatMessageResult {
+        val user = auth.currentUser
+        if (user?.uid == null || !user.isEmailVerified) {
+            return ChatMessageResult.Error("Please verify your email before reacting.")
+        }
+        if (chatId.isBlank() || messageId.isBlank()) {
+            return ChatMessageResult.Error("Missing message reference.")
+        }
+        return try {
+            val messageRef = firestore.collection("chats")
+                .document(chatId)
+                .collection("messages")
+                .document(messageId)
+            val reactionValue: Any = if (emoji.isNullOrBlank()) FieldValue.delete() else emoji
+            messageRef.update(
+                mapOf(
+                    "reactions.${user.uid}" to reactionValue,
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+            ChatMessageResult.Success(messageId)
+        } catch (e: Exception) {
+            ChatMessageResult.Error(e.localizedMessage ?: "Could not update reaction.")
+        }
+    }
+
     suspend fun validateUserCanSend(chatId: String, userId: String): Boolean {
         val user = auth.currentUser
         if (user?.uid != userId || !user.isEmailVerified) return false
@@ -196,6 +227,7 @@ class ChatMessageRepository(
             text = getString("text").orEmpty(),
             type = getString("type") ?: "text",
             status = getString("status") ?: "sent",
+            reactions = (get("reactions") as? Map<String, String>) ?: emptyMap(),
             createdAt = getTimestamp("createdAt")?.toDate(),
             updatedAt = getTimestamp("updatedAt")?.toDate(),
             editedAt = getTimestamp("editedAt")?.toDate(),
