@@ -1,6 +1,8 @@
 package com.mithaq.app.ui.messages
 
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,9 +14,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -66,6 +70,13 @@ import com.mithaq.app.domain.model.ChatParticipantSummary
 import com.mithaq.app.domain.model.ChatRoom
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import com.mithaq.app.data.repository.PhotoRepository
+import com.mithaq.app.domain.model.PhotoAccessLevel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.mithaq.app.ui.components.MithaqEmptyState
 import com.mithaq.app.ui.components.MithaqStateIllustration
 import com.mithaq.app.ui.components.MithaqIllustrationType
@@ -363,6 +374,12 @@ private fun ChatScreen(
                     contentDescription = localizedString(isArabic, R.string.common_back, R.string.common_back_ar)
                 )
             }
+            ChatPartnerAvatar(
+                otherUserId = otherUserId,
+                displayName = summary.displayName,
+                photoPrivacyMode = summary.photoPrivacyMode
+            )
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = summary.displayTitle(isArabic),
                 style = MaterialTheme.typography.titleLarge,
@@ -863,4 +880,62 @@ private fun shouldShowDaySeparator(previous: Date?, current: Date?): Boolean {
     if (current == null) return false
     if (previous == null) return true
     return chatDayKeyFormat.format(previous) != chatDayKeyFormat.format(current)
+}
+
+/**
+ * Circular avatar for the chat partner. Shows the partner's REAL account photo only when the
+ * existing photo-access model grants FULL access (own photo or an approved photo request) —
+ * Storage security rules are the real boundary, so an unauthorised viewer just gets the initial
+ * fallback. No rules are weakened and no photo bytes are exposed without access.
+ */
+@Composable
+private fun ChatPartnerAvatar(
+    otherUserId: String,
+    displayName: String,
+    photoPrivacyMode: String,
+    sizeDp: Int = 40
+) {
+    var avatar by remember(otherUserId) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(otherUserId, photoPrivacyMode) {
+        avatar = null
+        if (otherUserId.isBlank()) return@LaunchedEffect
+        avatar = withContext(Dispatchers.IO) {
+            try {
+                val repo = PhotoRepository()
+                if (repo.resolveAccessLevel(otherUserId, photoPrivacyMode) == PhotoAccessLevel.FULL) {
+                    repo.loadAccessiblePhotoBytes(otherUserId)?.let { bytes ->
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                    }
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+    Box(
+        modifier = Modifier
+            .size(sizeDp.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center
+    ) {
+        val current = avatar
+        if (current != null) {
+            Image(
+                bitmap = current,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(
+                text = displayName.trim().take(1).uppercase().ifBlank { "?" },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
 }
