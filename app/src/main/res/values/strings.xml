@@ -91,6 +91,20 @@
     <string name="profile_hub_security_subtitle">Email verification and safe account actions.</string>
     <string name="profile_hub_support_title">Help and support</string>
     <string name="profile_hub_support_subtitle">Get help with account or safety concerns.</string>
+    <string name="profile_hub_my_photos_title">My Photos</string>
+    <string name="profile_hub_my_photos_subtitle">Upload and manage your private photos securely.</string>
+    <string name="profile_hub_admin_title">Admin moderation</string>
+    <string name="profile_hub_admin_subtitle">Review reports, photos, and user moderation.</string>
+    <string name="profile_hub_coming_soon_badge">Coming soon</string>
+    <string name="profile_hub_coming_soon_title">Under development</string>
+    <string name="profile_hub_coming_soon_message">This area is being prepared carefully. It will be available when it is safe and complete.</string>
+    <string name="profile_hub_my_photos_title_ar">صوري</string>
+    <string name="profile_hub_my_photos_subtitle_ar">ارفع وأدر صورك الخاصة بأمان.</string>
+    <string name="profile_hub_admin_title_ar">الإشراف والإدارة</string>
+    <string name="profile_hub_admin_subtitle_ar">مراجعة البلاغات والصور وإشراف الأعضاء.</string>
+    <string name="profile_hub_coming_soon_badge_ar">قريبًا</string>
+    <string name="profile_hub_coming_soon_title_ar">قيد التطوير</string>
+    <string name="profile_hub_coming_soon_message_ar">هذا القسم يتم تجهيزه بعناية، وسيصبح متاحًا عندما يكون آمنًا ومكتملًا.</string>
 
     <string name="discover_title">Discover serious matches</string>
     <string name="discover_subtitle">Organized cards from safe public profile data only.</string>
