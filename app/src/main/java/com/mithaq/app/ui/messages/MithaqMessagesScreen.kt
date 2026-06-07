@@ -29,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
@@ -43,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -58,6 +60,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +81,7 @@ import androidx.compose.ui.layout.ContentScale
 import com.mithaq.app.data.repository.PhotoRepository
 import com.mithaq.app.domain.model.PhotoAccessLevel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.mithaq.app.ui.components.MithaqEmptyState
 import com.mithaq.app.ui.components.MithaqStateIllustration
@@ -325,6 +329,7 @@ private fun ChatScreen(
     var menuOpen by remember(room.chatId) { mutableStateOf(false) }
     var hasAutoScrolledInitial by remember(room.chatId) { mutableStateOf(false) }
     val messageListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val otherUserId = room.participantIds.firstOrNull { it != currentUserId }.orEmpty()
     val summary = room.participantPublicSummaries[otherUserId] ?: ChatParticipantSummary(userId = otherUserId)
     val canSend = room.status == "active" && !safetyState.isBlocked && !state.isSending && !safetyState.isCheckingBlock
@@ -345,17 +350,17 @@ private fun ChatScreen(
     LaunchedEffect(state.messages.size, state.messages.lastOrNull()?.messageId) {
         if (state.messages.isNotEmpty()) {
             val lastMessage = state.messages.last()
-            val shouldScroll = !hasAutoScrolledInitial ||
-                isNearBottom ||
-                lastMessage.senderId == currentUserId
+            val isMine = lastMessage.senderId == currentUserId
+            val shouldScroll = !hasAutoScrolledInitial || isNearBottom || isMine
             if (shouldScroll) {
-                // Snap instantly on first open; animate for later incoming/sent messages.
-                if (hasAutoScrolledInitial) {
-                    messageListState.animateScrollToItem(state.messages.lastIndex)
-                } else {
+                // Snap instantly on first open AND whenever I send (so my message is always
+                // visible without manual scrolling); animate for incoming messages.
+                if (!hasAutoScrolledInitial || isMine) {
                     messageListState.scrollToItem(state.messages.lastIndex)
-                    hasAutoScrolledInitial = true
+                } else {
+                    messageListState.animateScrollToItem(state.messages.lastIndex)
                 }
+                hasAutoScrolledInitial = true
             }
         }
     }
@@ -485,27 +490,51 @@ private fun ChatScreen(
                 }
             }
             else -> {
-                LazyColumn(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    state = messageListState,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .weight(1f)
                 ) {
-                    itemsIndexed(
-                        items = state.messages,
-                        key = { _, message -> message.stableMessageKey() }
-                    ) { index, message ->
-                        val previousAt = if (index > 0) state.messages[index - 1].createdAt else null
-                        if (shouldShowDaySeparator(previousAt, message.createdAt)) {
-                            ChatDaySeparator(date = message.createdAt)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        state = messageListState,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        itemsIndexed(
+                            items = state.messages,
+                            key = { _, message -> message.stableMessageKey() }
+                        ) { index, message ->
+                            val previousAt = if (index > 0) state.messages[index - 1].createdAt else null
+                            if (shouldShowDaySeparator(previousAt, message.createdAt)) {
+                                ChatDaySeparator(date = message.createdAt)
+                            }
+                            ChatMessageBubble(
+                                message = message,
+                                isMine = message.senderId == currentUserId,
+                                currentUserId = currentUserId,
+                                onReact = { emoji -> viewModel.setReaction(room.chatId, message.messageId, emoji) }
+                            )
                         }
-                        ChatMessageBubble(
-                            message = message,
-                            isMine = message.senderId == currentUserId,
-                            currentUserId = currentUserId,
-                            onReact = { emoji -> viewModel.setReaction(room.chatId, message.messageId, emoji) }
-                        )
+                    }
+                    // "Jump to latest" button: appears only when scrolled up from the bottom.
+                    if (!isNearBottom) {
+                        SmallFloatingActionButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    messageListState.animateScrollToItem(state.messages.lastIndex)
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 4.dp, bottom = 4.dp),
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowDown,
+                                contentDescription = if (isArabic) "آخر رسالة" else "Scroll to latest"
+                            )
+                        }
                     }
                 }
             }
