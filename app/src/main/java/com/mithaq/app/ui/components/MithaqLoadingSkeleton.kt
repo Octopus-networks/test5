@@ -31,6 +31,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 
 enum class SkeletonType {
@@ -59,6 +61,21 @@ fun MithaqLoadingSkeleton(
 
     when (type) {
         SkeletonType.PROFILE_CARD -> {
+            // Sweep shimmer for premium loading feel
+            val shimmerOffset by transition.animateFloat(
+                initialValue = -400f,
+                targetValue = 1200f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1800, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "skeleton_sweep"
+            )
+            val shimmerBrush = Brush.linearGradient(
+                colors = listOf(color, color.copy(alpha = 0.28f), color),
+                start = Offset(shimmerOffset, 0f),
+                end = Offset(shimmerOffset + 300f, 0f)
+            )
             Card(
                 modifier = modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -68,16 +85,16 @@ fun MithaqLoadingSkeleton(
                     MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)
                 )
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
                     // Photo Placeholder box
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1.1f)
+                            .aspectRatio(0.85f)
                             .clip(RoundedCornerShape(20.dp))
-                            .background(color)
+                            .background(shimmerBrush)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
                     // Name & Age placeholder row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -88,14 +105,14 @@ fun MithaqLoadingSkeleton(
                             modifier = Modifier
                                 .width(120.dp)
                                 .height(20.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(color)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(shimmerBrush)
                         )
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)
-                                .background(color)
+                                .background(shimmerBrush)
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -104,23 +121,23 @@ fun MithaqLoadingSkeleton(
                         modifier = Modifier
                             .width(80.dp)
                             .height(14.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(color)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(shimmerBrush)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
                     // Chips row
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         repeat(3) {
                             Box(
                                 modifier = Modifier
                                     .width(64.dp)
                                     .height(24.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(color)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(shimmerBrush)
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     // Buttons placeholders
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -129,16 +146,16 @@ fun MithaqLoadingSkeleton(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(38.dp)
+                                .height(48.dp)
                                 .clip(RoundedCornerShape(18.dp))
-                                .background(color)
+                                .background(shimmerBrush)
                         )
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(38.dp)
+                                .height(48.dp)
                                 .clip(RoundedCornerShape(18.dp))
-                                .background(color)
+                                .background(shimmerBrush)
                         )
                     }
                 }

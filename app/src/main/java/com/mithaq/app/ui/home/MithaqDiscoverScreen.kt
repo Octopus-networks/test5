@@ -87,6 +87,17 @@ import com.mithaq.app.ui.theme.PrimaryEmeraldLight
 import com.mithaq.app.ui.theme.SurfaceDark
 import com.mithaq.app.ui.theme.SurfaceVariantDark
 import com.mithaq.app.ui.theme.TextSecondaryDark
+import com.mithaq.app.ui.theme.CardGlowEmerald
+import com.mithaq.app.ui.theme.CardGlowGold
+import com.mithaq.app.ui.theme.ShimmerHighlight
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.geometry.Offset
 
 @Composable
 private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
@@ -366,12 +377,19 @@ fun MithaqPublicProfileCard(
     onOpenChat: (String) -> Unit = {}
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(CardGlowGold, CardGlowEmerald, CardGlowGold)
+                ),
+                shape = RoundedCornerShape(24.dp)
+            ),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-        border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.18f))
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
             // Phase 11: show the real photo only when this viewer holds an approved photo
             // request for the owner. Otherwise keep the privacy-aware placeholder.
             // SecurePhotoView re-checks access and Storage rules remain the real boundary.
@@ -388,7 +406,7 @@ fun MithaqPublicProfileCard(
                     isArabic = isArabic
                 )
             }
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // ── Name, Age & Heart Row ──
             Row(
@@ -403,7 +421,7 @@ fun MithaqPublicProfileCard(
                         fontWeight = FontWeight.Bold,
                         color = AccentGold
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Filled.LocationOn,
@@ -436,8 +454,8 @@ fun MithaqPublicProfileCard(
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(
-                            if (heartActive) AccentGold.copy(alpha = 0.12f)
-                            else Color.Transparent
+                            if (heartActive) AccentGold.copy(alpha = 0.15f)
+                            else SurfaceVariantDark.copy(alpha = 0.5f)
                         )
                 ) {
                     Icon(
@@ -457,7 +475,7 @@ fun MithaqPublicProfileCard(
             // ── Trust / Verified Signal Chips ──
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (profile.isIdentityVerified) {
                     ProfileSignalChip(
@@ -502,17 +520,25 @@ fun MithaqPublicProfileCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // ── Subtle divider between info section and action buttons ──
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(OutlineWarmVariant.copy(alpha = 0.25f))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                AccentGold.copy(alpha = 0.2f),
+                                Color.Transparent
+                            )
+                        )
+                    )
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // ── Action Buttons: Send Interest + Request Photo ──
             Row(
@@ -545,8 +571,9 @@ fun MithaqPublicProfileCard(
                 Button(
                     onClick = { onSendInterest(profile.userId) },
                     enabled = canSendInterest,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp),
                     shape = RoundedCornerShape(18.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = interestColors.first,
                         contentColor = interestColors.second,
@@ -554,7 +581,15 @@ fun MithaqPublicProfileCard(
                         disabledContentColor = interestColors.second
                     )
                 ) {
-                    Icon(Icons.Filled.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
+                    if (profile.userId in interestState.sendingToUserIds) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = interestColors.second
+                        )
+                    } else {
+                        Icon(Icons.Filled.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
                     Spacer(modifier = Modifier.width(6.dp))
                     val buttonText = when {
                         profile.userId in interestState.sendingToUserIds -> localizedString(isArabic, R.string.discover_sending, R.string.discover_sending_ar)
@@ -607,7 +642,7 @@ fun MithaqPublicProfileCard(
                 OutlinedButton(
                     onClick = { onRequestPhoto(profile.userId) },
                     enabled = canRequestPhoto,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp),
                     shape = RoundedCornerShape(18.dp),
                     border = BorderStroke(1.dp, photoBorderColor),
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -615,7 +650,15 @@ fun MithaqPublicProfileCard(
                         disabledContentColor = photoContentColor
                     )
                 ) {
-                    Icon(photoIcon, contentDescription = null, modifier = Modifier.size(18.dp))
+                    if (profile.userId in photoState.requestingToUserIds) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = photoContentColor
+                        )
+                    } else {
+                        Icon(photoIcon, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
                     Spacer(modifier = Modifier.width(6.dp))
                     val photoButtonText = when {
                         profile.userId in photoState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
@@ -674,7 +717,7 @@ fun MithaqPublicProfileCard(
                     if (chatApproved) onOpenChat(profile.userId) else onRequestChat(profile.userId)
                 },
                 enabled = canRequestChat || chatApproved,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp),
                 shape = RoundedCornerShape(18.dp),
                 border = BorderStroke(1.dp, chatBorderColor),
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -684,7 +727,15 @@ fun MithaqPublicProfileCard(
                     disabledContentColor = chatContentColor
                 )
             ) {
-                Icon(chatIcon, contentDescription = null, modifier = Modifier.size(18.dp))
+                if (profile.userId in chatState.requestingToUserIds) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = chatContentColor
+                    )
+                } else {
+                    Icon(chatIcon, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
                 Spacer(modifier = Modifier.width(6.dp))
                 val chatButtonText = when {
                     profile.userId in chatState.requestingToUserIds -> localizedString(isArabic, R.string.discover_requesting, R.string.discover_requesting_ar)
@@ -717,10 +768,22 @@ private fun PhotoPrivacyPlaceholder(
         else -> if (isArabic) "صورة محمية" else "PHOTO PROTECTED"
     }
 
+    // Subtle shimmer sweep animation for the photo placeholder
+    val shimmerTransition = rememberInfiniteTransition(label = "photo_placeholder_shimmer")
+    val shimmerOffset by shimmerTransition.animateFloat(
+        initialValue = -400f,
+        targetValue = 800f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "photo_shimmer_offset"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1.1f)
+            .aspectRatio(0.85f)
             .clip(RoundedCornerShape(24.dp))
             .background(
                 Brush.radialGradient(
@@ -730,18 +793,32 @@ private fun PhotoPrivacyPlaceholder(
             )
             .border(
                 1.dp,
-                AccentGold.copy(alpha = 0.22f),
+                Brush.linearGradient(
+                    colors = listOf(CardGlowGold, CardGlowEmerald, CardGlowGold)
+                ),
                 RoundedCornerShape(24.dp)
             ),
         contentAlignment = Alignment.Center
     ) {
+        // Shimmer overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(Color.Transparent, ShimmerHighlight, Color.Transparent),
+                        start = Offset(shimmerOffset, 0f),
+                        end = Offset(shimmerOffset + 250f, 250f)
+                    )
+                )
+        )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             MithaqStateIllustration(
                 type = MithaqIllustrationType.SHIELD_LOCK,
                 tint = AccentGold,
-                modifier = Modifier.size(100.dp)
+                modifier = Modifier.size(110.dp)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -758,7 +835,7 @@ private fun PhotoPrivacyPlaceholder(
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = AccentGold,
-                    letterSpacing = 1.5.sp
+                    letterSpacing = 2.sp
                 )
             }
         }
@@ -787,6 +864,8 @@ private fun ProfileSignalChip(
                 modifier = Modifier.size(16.dp)
             )
         },
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, chipLabelColor.copy(alpha = 0.15f)),
         colors = AssistChipDefaults.assistChipColors(
             containerColor = chipContainerColor,
             labelColor = chipLabelColor,
