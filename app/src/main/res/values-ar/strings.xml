@@ -87,6 +87,13 @@
     <string name="profile_hub_security_subtitle">توثيق البريد وإجراءات الحساب الآمنة.</string>
     <string name="profile_hub_support_title">المساعدة والدعم</string>
     <string name="profile_hub_support_subtitle">احصل على مساعدة للحساب أو السلامة.</string>
+    <string name="profile_hub_my_photos_title">صوري</string>
+    <string name="profile_hub_my_photos_subtitle">ارفع وأدر صورك الخاصة بأمان.</string>
+    <string name="profile_hub_admin_title">الإشراف والإدارة</string>
+    <string name="profile_hub_admin_subtitle">مراجعة البلاغات والصور وإشراف الأعضاء.</string>
+    <string name="profile_hub_coming_soon_badge">قريبًا</string>
+    <string name="profile_hub_coming_soon_title">قيد التطوير</string>
+    <string name="profile_hub_coming_soon_message">هذا القسم يتم تجهيزه بعناية، وسيصبح متاحًا عندما يكون آمنًا ومكتملًا.</string>
     <string name="discover_title">اكتشف توافقًا جادًا</string>
     <string name="discover_subtitle">بطاقات منظمة من البيانات العامة الآمنة فقط.</string>
     <string name="discover_location_note">فلتر القرب سيستخدم المدينة أو GPS لاحقًا دون عرض مسافة دقيقة الآن.</string>
@@ -212,6 +219,13 @@
     <string name="profile_hub_security_subtitle_ar">توثيق البريد وإجراءات الحساب الآمنة.</string>
     <string name="profile_hub_support_title_ar">المساعدة والدعم</string>
     <string name="profile_hub_support_subtitle_ar">احصل على مساعدة للحساب أو السلامة.</string>
+    <string name="profile_hub_my_photos_title_ar">صوري</string>
+    <string name="profile_hub_my_photos_subtitle_ar">ارفع وأدر صورك الخاصة بأمان.</string>
+    <string name="profile_hub_admin_title_ar">الإشراف والإدارة</string>
+    <string name="profile_hub_admin_subtitle_ar">مراجعة البلاغات والصور وإشراف الأعضاء.</string>
+    <string name="profile_hub_coming_soon_badge_ar">قريبًا</string>
+    <string name="profile_hub_coming_soon_title_ar">قيد التطوير</string>
+    <string name="profile_hub_coming_soon_message_ar">هذا القسم يتم تجهيزه بعناية، وسيصبح متاحًا عندما يكون آمنًا ومكتملًا.</string>
     <string name="discover_title_ar">اكتشف توافقًا جادًا</string>
     <string name="discover_subtitle_ar">بطاقات منظمة من البيانات العامة الآمنة فقط.</string>
     <string name="discover_location_note_ar">فلتر القرب سيستخدم المدينة أو GPS لاحقًا دون عرض مسافة دقيقة الآن.</string>

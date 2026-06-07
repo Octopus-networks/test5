@@ -1,8 +1,10 @@
 package com.mithaq.app.ui.profile
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,7 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
-import androidx.activity.compose.BackHandler
+import com.mithaq.app.ui.components.MithaqEmptyState
 import com.mithaq.app.ui.photo.MyPhotosScreen
 
 private data class ProfileHubItem(
@@ -53,7 +55,7 @@ private data class ProfileHubItem(
     val icon: ImageVector
 )
 
-private val profileItems = listOf(
+private val comingSoonProfileItems = listOf(
     ProfileHubItem(R.string.profile_hub_my_profile_title, R.string.profile_hub_my_profile_title_ar, R.string.profile_hub_my_profile_subtitle, R.string.profile_hub_my_profile_subtitle_ar, Icons.Filled.Person),
     ProfileHubItem(R.string.profile_hub_privacy_title, R.string.profile_hub_privacy_title_ar, R.string.profile_hub_privacy_subtitle, R.string.profile_hub_privacy_subtitle_ar, Icons.Filled.Lock),
     ProfileHubItem(R.string.profile_hub_photo_privacy_title, R.string.profile_hub_photo_privacy_title_ar, R.string.profile_hub_photo_privacy_subtitle, R.string.profile_hub_photo_privacy_subtitle_ar, Icons.Filled.Visibility),
@@ -101,7 +103,7 @@ fun MithaqProfileHubScreen(
 
     val selectedItem = openItem
     if (selectedItem != null) {
-        ProfileSectionDetail(
+        ProfileComingSoonScreen(
             item = selectedItem,
             isArabic = isArabic,
             onBack = { openItem = null },
@@ -131,7 +133,7 @@ fun MithaqProfileHubScreen(
         Spacer(modifier = Modifier.height(18.dp))
         MyPhotosEntryCard(isArabic = isArabic, onClick = { showMyPhotos = true })
         Spacer(modifier = Modifier.height(10.dp))
-        profileItems.forEach { item ->
+        comingSoonProfileItems.forEach { item ->
             ProfileHubRow(item = item, isArabic = isArabic, onClick = { openItem = item })
             Spacer(modifier = Modifier.height(10.dp))
         }
@@ -173,18 +175,7 @@ private fun ProfileHubRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = item.icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-            }
+            ProfileHubIcon(icon = item.icon)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = localizedString(isArabic, item.titleResId, item.titleArabicResId),
@@ -197,6 +188,17 @@ private fun ProfileHubRow(
                     text = localizedString(isArabic, item.subtitleResId, item.subtitleArabicResId),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = localizedString(
+                        isArabic,
+                        R.string.profile_hub_coming_soon_badge,
+                        R.string.profile_hub_coming_soon_badge_ar
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -218,32 +220,25 @@ private fun MyPhotosEntryCard(isArabic: Boolean, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Image,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-            }
+            ProfileHubIcon(icon = Icons.Filled.Image)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isArabic) "صوري" else "My Photos",
+                    text = localizedString(
+                        isArabic,
+                        R.string.profile_hub_my_photos_title,
+                        R.string.profile_hub_my_photos_title_ar
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = if (isArabic) {
-                        "ارفع وأدِر صورك الخاصة بأمان"
-                    } else {
-                        "Upload and manage your private photos securely"
-                    },
+                    text = localizedString(
+                        isArabic,
+                        R.string.profile_hub_my_photos_subtitle,
+                        R.string.profile_hub_my_photos_subtitle_ar
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -267,32 +262,25 @@ private fun AdminModerationEntryCard(isArabic: Boolean, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Lock,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-            }
+            ProfileHubIcon(icon = Icons.Filled.Lock)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isArabic) "الإشراف والإدارة" else "Admin moderation",
+                    text = localizedString(
+                        isArabic,
+                        R.string.profile_hub_admin_title,
+                        R.string.profile_hub_admin_title_ar
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = if (isArabic) {
-                        "مراجعة البلاغات والصور وإشراف الأعضاء"
-                    } else {
-                        "Review reports, photos, and user moderation"
-                    },
+                    text = localizedString(
+                        isArabic,
+                        R.string.profile_hub_admin_subtitle,
+                        R.string.profile_hub_admin_subtitle_ar
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -302,7 +290,23 @@ private fun AdminModerationEntryCard(isArabic: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ProfileSectionDetail(
+private fun ProfileHubIcon(icon: ImageVector) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .clip(CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.secondary
+        )
+    }
+}
+
+@Composable
+private fun ProfileComingSoonScreen(
     item: ProfileHubItem,
     isArabic: Boolean,
     onBack: () -> Unit,
@@ -315,21 +319,10 @@ private fun ProfileSectionDetail(
             .padding(18.dp)
     ) {
         TextButton(onClick = onBack) {
-            Text(text = if (isArabic) "‹ رجوع" else "‹ Back")
+            Text(text = localizedString(isArabic, R.string.common_back, R.string.common_back_ar))
         }
         Spacer(modifier = Modifier.height(8.dp))
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary
-            )
-        }
+        ProfileHubIcon(icon = item.icon)
         Spacer(modifier = Modifier.height(14.dp))
         Text(
             text = localizedString(isArabic, item.titleResId, item.titleArabicResId),
@@ -343,15 +336,21 @@ private fun ProfileSectionDetail(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = if (isArabic) {
-                "الإعدادات التفصيلية لهذا القسم قيد الربط وستتوفّر قريبًا."
-            } else {
-                "Detailed controls for this section are being connected and will be available soon."
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        Spacer(modifier = Modifier.height(18.dp))
+        MithaqEmptyState(
+            title = localizedString(
+                isArabic,
+                R.string.profile_hub_coming_soon_title,
+                R.string.profile_hub_coming_soon_title_ar
+            ),
+            message = localizedString(
+                isArabic,
+                R.string.profile_hub_coming_soon_message,
+                R.string.profile_hub_coming_soon_message_ar
+            ),
+            icon = Icons.Filled.Info,
+            actionLabel = localizedString(isArabic, R.string.common_back, R.string.common_back_ar),
+            onAction = onBack
         )
     }
 }
