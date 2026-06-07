@@ -2,6 +2,7 @@ package com.mithaq.app.ui.messages
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -30,8 +31,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -49,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -65,6 +69,7 @@ import com.mithaq.app.ui.components.MithaqIllustrationType
 import com.mithaq.app.ui.components.MithaqLoadingSkeleton
 import com.mithaq.app.ui.components.SkeletonType
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -298,6 +303,7 @@ private fun ChatScreen(
     val state by viewModel.state.collectAsState()
     val safetyState by safetyViewModel.state.collectAsState()
     var draft by remember(room.chatId) { mutableStateOf("") }
+    var showEmoji by remember(room.chatId) { mutableStateOf(false) }
     var showReportDialog by remember(room.chatId) { mutableStateOf(false) }
     var showBlockDialog by remember(room.chatId) { mutableStateOf(false) }
     var hasAutoScrolledInitial by remember(room.chatId) { mutableStateOf(false) }
@@ -446,10 +452,14 @@ private fun ChatScreen(
                     state = messageListState,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(
+                    itemsIndexed(
                         items = state.messages,
-                        key = { message -> message.stableMessageKey() }
-                    ) { message ->
+                        key = { _, message -> message.stableMessageKey() }
+                    ) { index, message ->
+                        val previousAt = if (index > 0) state.messages[index - 1].createdAt else null
+                        if (shouldShowDaySeparator(previousAt, message.createdAt)) {
+                            ChatDaySeparator(date = message.createdAt)
+                        }
                         ChatMessageBubble(
                             message = message,
                             isMine = message.senderId == currentUserId
@@ -460,11 +470,24 @@ private fun ChatScreen(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+        if (showEmoji) {
+            ChatEmojiPicker(
+                enabled = canSend,
+                onEmoji = { emoji -> if (draft.length + emoji.length <= 1000) draft += emoji }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(
+                onClick = { showEmoji = !showEmoji },
+                enabled = canSend
+            ) {
+                Text(text = "😊", style = MaterialTheme.typography.titleLarge)
+            }
             TextField(
                 value = draft,
                 onValueChange = { if (it.length <= 1000) draft = it },
@@ -478,6 +501,7 @@ private fun ChatScreen(
                 onClick = {
                     val text = draft
                     draft = ""
+                    showEmoji = false
                     viewModel.sendTextMessage(room.chatId, currentUserId, text)
                 },
                 enabled = draft.isNotBlank() && canSend
@@ -683,7 +707,11 @@ private fun ChatMessageBubble(
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant
                     },
-                    shape = RoundedCornerShape(16.dp)
+                    shape = if (isMine) {
+                        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+                    } else {
+                        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp)
+                    }
                 )
                 .padding(12.dp)
         ) {
@@ -741,4 +769,77 @@ private fun ChatParticipantSummary.displayTitle(isArabic: Boolean): String {
     val fallback = localizedString(isArabic, R.string.chat_member_fallback, R.string.chat_member_fallback_ar)
     val name = displayName.ifBlank { fallback }
     return age?.let { "$name, $it" } ?: name
+}
+
+/**
+ * Curated emoji panel with a love / engagement / marriage focus, opened from the chat
+ * input. Tapping an emoji appends it to the draft text (handled by the caller). UI only —
+ * emoji are inserted as Unicode text into the existing text message.
+ */
+@Composable
+private fun ChatEmojiPicker(enabled: Boolean, onEmoji: (String) -> Unit) {
+    val emojis = listOf(
+        "❤️", "💖", "💕", "💗", "🌹", "💐", "💍", "🤍",
+        "🤵", "👰", "👫", "💑", "🏡", "🤲", "🕌", "🌙",
+        "😊", "🥰", "😍", "🙏", "💌", "✨", "🌸", "👪"
+    )
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            emojis.chunked(8).forEach { rowEmojis ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    rowEmojis.forEach { emoji ->
+                        Text(
+                            text = emoji,
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(enabled = enabled) { onEmoji(emoji) }
+                                .padding(6.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A centered date chip shown between messages from different days. */
+@Composable
+private fun ChatDaySeparator(date: Date?) {
+    if (date == null) return
+    val label = SimpleDateFormat("EEEE, d MMM", Locale.getDefault()).format(date)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+private val chatDayKeyFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+
+/** True when [current] starts a new calendar day relative to [previous]. */
+private fun shouldShowDaySeparator(previous: Date?, current: Date?): Boolean {
+    if (current == null) return false
+    if (previous == null) return true
+    return chatDayKeyFormat.format(previous) != chatDayKeyFormat.format(current)
 }
