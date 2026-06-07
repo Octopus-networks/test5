@@ -52,12 +52,14 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 return
             }
 
-            // Explicit, app-scoped intent (component + package) wrapped in an IMMUTABLE
-            // PendingIntent so it can never be hijacked or redirected to another app.
-            val intent = Intent(context, MainActivity::class.java).apply {
-                setPackage(context.packageName)
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            }
+            // Build an explicit, app-scoped intent. The target component and package are set
+            // directly on the variable (not via apply) so static analysis reliably sees the
+            // explicit target. Wrapped in an IMMUTABLE PendingIntent so it can never be
+            // modified or redirected to another app.
+            val intent = Intent()
+            intent.setClassName(context, MainActivity::class.java.name)
+            intent.setPackage(context.packageName)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             val pendingIntent = PendingIntent.getActivity(
                 context, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
