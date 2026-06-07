@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
@@ -22,10 +21,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -306,6 +309,7 @@ private fun ChatScreen(
     var showEmoji by remember(room.chatId) { mutableStateOf(false) }
     var showReportDialog by remember(room.chatId) { mutableStateOf(false) }
     var showBlockDialog by remember(room.chatId) { mutableStateOf(false) }
+    var menuOpen by remember(room.chatId) { mutableStateOf(false) }
     var hasAutoScrolledInitial by remember(room.chatId) { mutableStateOf(false) }
     val messageListState = rememberLazyListState()
     val otherUserId = room.participantIds.firstOrNull { it != currentUserId }.orEmpty()
@@ -332,8 +336,13 @@ private fun ChatScreen(
                 isNearBottom ||
                 lastMessage.senderId == currentUserId
             if (shouldScroll) {
-                messageListState.animateScrollToItem(state.messages.lastIndex)
-                hasAutoScrolledInitial = true
+                // Snap instantly on first open; animate for later incoming/sent messages.
+                if (hasAutoScrolledInitial) {
+                    messageListState.animateScrollToItem(state.messages.lastIndex)
+                } else {
+                    messageListState.scrollToItem(state.messages.lastIndex)
+                    hasAutoScrolledInitial = true
+                }
             }
         }
     }
@@ -341,45 +350,57 @@ private fun ChatScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .imePadding()
             .padding(18.dp)
     ) {
-        TextButton(onClick = onBack) {
-            Text(localizedString(isArabic, R.string.common_back, R.string.common_back_ar))
+        // Compact top bar: back, name, and an overflow menu holding Report / Block.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = localizedString(isArabic, R.string.common_back, R.string.common_back_ar)
+                )
+            }
+            Text(
+                text = summary.displayTitle(isArabic),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = null)
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(localizedString(isArabic, R.string.chat_report, R.string.chat_report_ar)) },
+                        onClick = {
+                            menuOpen = false
+                            showReportDialog = true
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(localizedString(isArabic, R.string.chat_block, R.string.chat_block_ar)) },
+                        enabled = !safetyState.isBlocked && !safetyState.isBlocking,
+                        onClick = {
+                            menuOpen = false
+                            showBlockDialog = true
+                        }
+                    )
+                }
+            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = summary.displayTitle(isArabic),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = localizedString(isArabic, R.string.chat_screen_subtitle, R.string.chat_screen_subtitle_ar),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(10.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedButton(
-                onClick = { showReportDialog = true },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(localizedString(isArabic, R.string.chat_report, R.string.chat_report_ar))
-            }
-            OutlinedButton(
-                onClick = { showBlockDialog = true },
-                modifier = Modifier.weight(1f),
-                enabled = !safetyState.isBlocked && !safetyState.isBlocking
-            ) {
-                Text(localizedString(isArabic, R.string.chat_block, R.string.chat_block_ar))
-            }
-        }
-        Spacer(modifier = Modifier.height(12.dp))
         safetyState.message?.let { message ->
             InfoCard(text = message, isError = false)
             Spacer(modifier = Modifier.height(12.dp))
