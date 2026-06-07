@@ -1,7 +1,6 @@
 package com.mithaq.app.notification
 
 import android.Manifest
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -61,11 +60,11 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            val channelId = MESSAGE_CHANNEL_ID
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val soundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-
-            ensureMessageChannels(notificationManager, soundUri)
+            // Use the channel for the user's selected sound (device-local). On Android 8+ the
+            // channel owns the sound; pre-O we set it on the builder below.
+            val channelId = NotificationSoundPreferences.ensureActiveChannel(context)
+            val soundUri = NotificationSoundPreferences.soundUri(context, NotificationSoundPreferences.getSelected(context))
 
             val notificationBuilder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_email)
@@ -76,54 +75,15 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setSound(soundUri)
                 .setVibrate(longArrayOf(0, 500, 200, 500))
-                .setDefaults(NotificationCompat.DEFAULT_ALL)
+
+            // Pre-O the sound is set on the builder; on Android 8+ the channel owns it.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O && soundUri != null) {
+                notificationBuilder.setSound(soundUri)
+            }
 
             notificationManager.notify(notificationIdCounter.incrementAndGet(), notificationBuilder.build())
         }
 
-        fun ensureMessageChannels(notificationManager: NotificationManager, soundUri: android.net.Uri? = null) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-
-            val attributes = android.media.AudioAttributes.Builder()
-                .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
-                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-
-            val urgentChannel = NotificationChannel(
-                MESSAGE_CHANNEL_ID,
-                "Mithaq Messages",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Urgent alerts for messages and interactions"
-                enableLights(true)
-                enableVibration(true)
-                setShowBadge(true)
-                setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC)
-                if (soundUri != null) {
-                    setSound(soundUri, attributes)
-                }
-            }
-
-            val defaultChannel = NotificationChannel(
-                "mithaq_alerts_channel_v4",
-                "Mithaq Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Default alerts for Mithaq"
-                enableLights(true)
-                enableVibration(true)
-                setShowBadge(true)
-                if (soundUri != null) {
-                    setSound(soundUri, attributes)
-                }
-            }
-
-            notificationManager.createNotificationChannel(urgentChannel)
-            notificationManager.createNotificationChannel(defaultChannel)
-        }
-
-        const val MESSAGE_CHANNEL_ID = "mithaq_messages_channel_v2"
     }
 }
