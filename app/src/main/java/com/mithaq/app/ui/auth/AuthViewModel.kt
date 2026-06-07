@@ -1264,7 +1264,9 @@ class AuthViewModel(
 
                     try {
                         val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
-                        firestore.collection("users").document(uid).update("fcmToken", token)
+                        // Phase 13A: register under users/{uid}/fcmTokens/{tokenId} and keep the
+                        // legacy flat users/{uid}.fcmToken mirror for the existing push flow.
+                        com.mithaq.app.notification.FcmTokenRepository(firestore).registerToken(uid, token)
                         _currentUserProfile.value = _currentUserProfile.value?.copy(fcmToken = token)
                     } catch(e: Exception) {
                         // ignored
@@ -2316,9 +2318,9 @@ class AuthViewModel(
 
             if (!isMock) {
                 try {
-                    firestore.collection("users").document(currentUserId)
-                        .update("fcmToken", token)
-                        .await()
+                    // Phase 13A: register under users/{uid}/fcmTokens/{tokenId} and keep the
+                    // legacy flat users/{uid}.fcmToken mirror for the existing push flow.
+                    com.mithaq.app.notification.FcmTokenRepository(firestore).registerToken(currentUserId, token)
                     val currentProfile = _currentUserProfile.value
                     if (currentProfile != null) {
                         _currentUserProfile.value = currentProfile.copy(fcmToken = token)

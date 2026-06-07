@@ -21,12 +21,12 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
         val prefs = getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
         prefs.edit().putString("fcm_token", token).apply()
 
-        // Upload token to Firestore if current user is logged in
+        // Persist the refreshed token if a user is signed in. FcmTokenRepository writes the
+        // owner-only users/{uid}/fcmTokens/{tokenId} subcollection doc AND mirrors the legacy
+        // users/{uid}.fcmToken field so the existing push flow keeps working. (Phase 13A)
         val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         if (uid != null) {
-            com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                .collection("users").document(uid)
-                .update("fcmToken", token)
+            FcmTokenRepository().registerToken(uid, token)
         }
     }
 
