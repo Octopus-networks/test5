@@ -6,6 +6,7 @@ plugins {
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.google.services)
+  alias(libs.plugins.firebase.crashlytics)
   id("kotlin-kapt")
 }
 
@@ -137,6 +138,7 @@ dependencies {
   implementation(libs.firebase.storage)
   implementation(libs.firebase.messaging)
   implementation(libs.firebase.functions)
+  implementation(libs.firebase.crashlytics)
   implementation("com.google.firebase:firebase-appcheck-playintegrity")
   debugImplementation("com.google.firebase:firebase-appcheck-debug")
   implementation(libs.kotlinx.coroutines.play.services)
