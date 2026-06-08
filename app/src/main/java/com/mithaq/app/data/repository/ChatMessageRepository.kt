@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
 import com.mithaq.app.domain.model.ChatMessage
@@ -22,17 +23,26 @@ class ChatMessageRepository(
     suspend fun getMessages(chatId: String): List<ChatMessage> {
         val userId = auth.currentUser?.uid.orEmpty()
         if (!validateUserCanRead(chatId, userId)) return emptyList()
+        // Bounded to the most recent page; chats can grow unbounded otherwise.
         return firestore.collection("chats")
             .document(chatId)
             .collection("messages")
-            .orderBy("createdAt")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(PAGE_SIZE.toLong())
             .get()
             .await()
             .documents
             .map { it.toChatMessage(chatId) }
             .filter { it.deletedAt == null && it.type in ATTACHMENT_VISIBLE_TYPES }
+            .reversed()
     }
 
+    /**
+     * Realtime listener for the chat. Bounded to the most recent [PAGE_SIZE] messages so opening
+     * a long conversation does not download (and keep live) its entire history. New messages still
+     * arrive in realtime; older history is fetched on demand via [loadOlderMessages].
+     * Emits in ascending (oldest-first) order to match the message list UI.
+     */
     fun listenToMessages(
         chatId: String,
         onMessages: (List<ChatMessage>) -> Unit,
@@ -47,7 +57,8 @@ class ChatMessageRepository(
         return firestore.collection("chats")
             .document(chatId)
             .collection("messages")
-            .orderBy("createdAt")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(PAGE_SIZE.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     onError(error.localizedMessage ?: "Could not listen to messages.")
@@ -59,8 +70,43 @@ class ChatMessageRepository(
                     .map { it.toChatMessage(chatId) }
                     .filter { it.deletedAt == null && it.type in ATTACHMENT_VISIBLE_TYPES }
                     .distinctBy { it.messageId }
+                    .reversed()
                 onMessages(messages)
             }
+    }
+
+    /**
+     * Fetches one page of messages OLDER than [oldestLoadedMessageId] for scroll-up pagination.
+     * Returns the batch in ascending (oldest-first) order plus whether more history may remain.
+     */
+    suspend fun loadOlderMessages(chatId: String, oldestLoadedMessageId: String): MessagePage {
+        val user = auth.currentUser
+        if (chatId.isBlank() || oldestLoadedMessageId.isBlank() || user?.isEmailVerified != true) {
+            return MessagePage(emptyList(), hasMore = false)
+        }
+        return try {
+            val messagesRef = firestore.collection("chats")
+                .document(chatId)
+                .collection("messages")
+            val cursor = messagesRef.document(oldestLoadedMessageId).get().await()
+            if (!cursor.exists()) return MessagePage(emptyList(), hasMore = false)
+            val snapshot = messagesRef
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .startAfter(cursor)
+                .limit(PAGE_SIZE.toLong())
+                .get()
+                .await()
+            val older = snapshot.documents
+                .map { it.toChatMessage(chatId) }
+                .filter { it.deletedAt == null && it.type in ATTACHMENT_VISIBLE_TYPES }
+                .distinctBy { it.messageId }
+                .reversed()
+            // hasMore is based on the raw page size (before filtering) so a page made entirely of
+            // hidden messages still lets the caller keep paging.
+            MessagePage(messages = older, hasMore = snapshot.documents.size == PAGE_SIZE)
+        } catch (e: Exception) {
+            MessagePage(emptyList(), hasMore = false)
+        }
     }
 
     suspend fun sendTextMessage(chatId: String, senderId: String, text: String): ChatMessageResult {
@@ -360,11 +406,19 @@ class ChatMessageRepository(
         )
     }
 
-    private companion object {
-        val ATTACHMENT_VISIBLE_TYPES = setOf("text", "image", "voice")
-        const val MAX_ATTACHMENT_BYTES = 10L * 1024 * 1024
+    companion object {
+        /** Page size for the realtime window and for each older-history page. */
+        const val PAGE_SIZE = 30
+        private val ATTACHMENT_VISIBLE_TYPES = setOf("text", "image", "voice")
+        private const val MAX_ATTACHMENT_BYTES = 10L * 1024 * 1024
     }
 }
+
+/** A page of chat messages (ascending order) plus whether more history may remain. */
+data class MessagePage(
+    val messages: List<ChatMessage>,
+    val hasMore: Boolean
+)
 
 sealed interface ChatMessageResult {
     data class Success(val messageId: String) : ChatMessageResult
