@@ -2,6 +2,7 @@ package com.mithaq.app.ui.requests
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mithaq.app.analytics.AppAnalytics
 import com.mithaq.app.data.repository.ChatRequestRepository
 import com.mithaq.app.data.repository.ChatRequestResult
 import com.mithaq.app.data.repository.PublicProfileRepository
@@ -73,6 +74,7 @@ class ChatRequestViewModel(
         viewModelScope.launch {
             when (val result = repository.requestChat(fromUserId, toUserId)) {
                 is ChatRequestResult.Success -> {
+                    AppAnalytics.chatRequestSent()
                     _state.value = _state.value.copy(
                         requestingToUserIds = _state.value.requestingToUserIds - toUserId,
                         sentStatusByUserId = _state.value.sentStatusByUserId + (toUserId to "pending"),

@@ -147,6 +147,7 @@ dependencies {
   implementation(libs.firebase.messaging)
   implementation(libs.firebase.functions)
   implementation(libs.firebase.crashlytics)
+  implementation(libs.firebase.analytics)
   implementation("com.google.firebase:firebase-appcheck-playintegrity")
   debugImplementation("com.google.firebase:firebase-appcheck-debug")
   implementation(libs.kotlinx.coroutines.play.services)

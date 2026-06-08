@@ -54,6 +54,7 @@ firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 firebase-functions = { group = "com.google.firebase", name = "firebase-functions" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "playServicesTasks" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 play-services-mlkit-face-detection = { group = "com.google.android.gms", name = "play-services-mlkit-face-detection", version.ref = "playServicesMlkitFace" }

@@ -2,6 +2,7 @@ package com.mithaq.app
 
 import android.app.Application
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.mithaq.app.analytics.AppAnalytics
 
 /**
  * Application entry point.
@@ -15,5 +16,6 @@ class MithaqApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         FirebaseCrashlytics.getInstance().setCustomKey("build_type", BuildConfig.BUILD_TYPE)
+        AppAnalytics.init(this)
     }
 }
