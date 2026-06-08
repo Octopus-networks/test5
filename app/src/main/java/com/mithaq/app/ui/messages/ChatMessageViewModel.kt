@@ -6,6 +6,7 @@ import java.util.Date
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.ListenerRegistration
+import com.mithaq.app.analytics.AppAnalytics
 import com.mithaq.app.data.repository.ChatMessageRepository
 import com.mithaq.app.data.repository.ChatMessageResult
 import com.mithaq.app.domain.model.ChatMessage
@@ -44,6 +45,7 @@ class ChatMessageViewModel(
 
     fun listenToMessages(chatId: String) {
         if (chatId.isBlank() || listeningChatId == chatId && messagesRegistration != null) return
+        AppAnalytics.chatOpened()
         stopListening()
         listeningChatId = chatId
         loadedMessages.clear()
