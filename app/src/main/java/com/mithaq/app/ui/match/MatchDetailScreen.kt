@@ -50,6 +50,7 @@ fun MatchDetailScreen(
     isArabic: Boolean,
     likesRepository: com.mithaq.app.data.LikesRepository,
     searchViewModel: com.mithaq.app.ui.filter.SearchViewModel,
+    matchDetailViewModel: com.mithaq.app.ui.match.MatchDetailViewModel,
     onBack: () -> Unit,
     onNavigateToChat: (UserProfile) -> Unit,
     onNavigateToUpgrade: () -> Unit,
@@ -799,18 +800,7 @@ fun MatchDetailScreen(
                                         array.put(partner.uid)
                                         prefs.edit().putString("blocked_users_${currentUser.uid}", array.toString()).apply()
                                     } else {
-                                        try {
-                                            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                                            db.collection("blocks").document("${currentUser.uid}_${partner.uid}").set(
-                                                mapOf(
-                                                    "blockerId" to currentUser.uid,
-                                                    "blockedId" to partner.uid,
-                                                    "timestamp" to System.currentTimeMillis()
-                                                )
-                                            )
-                                        } catch (e: java.lang.Exception) {
-                                            e.printStackTrace()
-                                        }
+                                        matchDetailViewModel.blockUser(currentUser.uid, partner.uid)
                                     }
                                     android.widget.Toast.makeText(
                                         context,
@@ -868,28 +858,7 @@ fun MatchDetailScreen(
                                         array.put(reportObj)
                                         prefs.edit().putString("user_reports", array.toString()).apply()
                                     } else {
-                                        try {
-                                            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                                            val reportRef = db.collection("reports").document()
-                                            reportRef.set(
-                                                mapOf(
-                                                    "reportId" to reportRef.id,
-                                                    "reporterId" to currentUser.uid,
-                                                    "reportedId" to partner.uid,
-                                                    "reporterUserId" to currentUser.uid,
-                                                    "reportedUserId" to partner.uid,
-                                                    "chatId" to "",
-                                                    "reason" to "Spam / Inappropriate behavior",
-                                                    "details" to "",
-                                                    "status" to "open",
-                                                    "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
-                                                    "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
-                                                    "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-                                                )
-                                            ).await()
-                                        } catch (e: java.lang.Exception) {
-                                            e.printStackTrace()
-                                        }
+                                        matchDetailViewModel.reportUser(currentUser.uid, partner.uid)
                                     }
                                     android.widget.Toast.makeText(
                                         context,

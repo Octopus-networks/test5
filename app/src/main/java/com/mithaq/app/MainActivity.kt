@@ -1276,6 +1276,7 @@ fun MithaqAppNavigation(
             if (partner != null) {
                 val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
                 val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
+                val matchDetailViewModel = remember { com.mithaq.app.ui.match.MatchDetailViewModel() }
                 androidx.activity.compose.BackHandler { currentScreen = "home" }
                 com.mithaq.app.ui.match.MatchDetailScreen(
                     partner = partner,
@@ -1283,6 +1284,7 @@ fun MithaqAppNavigation(
                     isArabic = isArabic,
                     likesRepository = likesRepository,
                     searchViewModel = searchViewModel,
+                    matchDetailViewModel = matchDetailViewModel,
                     onBack = { currentScreen = "home" },
                     onNavigateToChat = { clickedPartner ->
                         initialTab = 2 // Chat Tab
