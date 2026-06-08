@@ -13,6 +13,17 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 > bottom as indicative until real tags are cut.
 
 ### Added
+- **Profile hub activated (PR #60):** all 10 account-settings cards in `ui/profile` are now wired —
+  edit profile, per-field **Privacy**, photo-access management, Adhan/prayer settings, notification
+  settings, language & theme, biometric app-lock setting, support (FAQ + contact), and guardian
+  (wali) invite. New screens: `PrivacySettingsScreen`, `PhotoPrivacyScreen`, `PrayerSettingsScreen`,
+  `SecuritySettingsScreen`, `SupportScreen`, `GuardianScreen` (Support & Security built with coding
+  agents). The hub raises `onOpenXxx` callbacks → `MithaqMainExperience` → `MainActivity` routes.
+- **Per-field public-profile privacy (full-stack):** users can hide age / location / marital status /
+  marriage timeline from discovery. Flags stored at `profiles/{uid}.privacyTrust`; the
+  `mirrorPublicProfile` Cloud Function now blanks the hidden fields in `publicProfiles` (deployed).
+- **Photo-access management screen:** owners can approve / reject / revoke photo-view requests
+  (`PhotoAccessManager.rejectPhotoAccess` added; owner-write only, no rules change).
 - **Security hardening (guardian/wali):** guardian/wali binding now requires a **verified**
   email (`email_verified == true`) in both Firestore rules and the
   `requireAdminOrAssignedWali` Cloud Function, so a wali must prove inbox ownership.
