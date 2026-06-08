@@ -63,6 +63,7 @@ fun MithaqMainExperience(
     isAdmin: Boolean = false,
     onOpenAdminModeration: () -> Unit = {},
     onOpenAppSettings: () -> Unit = {},
+    onOpenProfileSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember(currentUserId) { mutableStateOf(MithaqMainTab.Home) }
@@ -148,6 +149,7 @@ fun MithaqMainExperience(
                 isAdmin = isAdmin,
                 onOpenAdminModeration = onOpenAdminModeration,
                 onOpenAppSettings = onOpenAppSettings,
+                onOpenProfileSettings = onOpenProfileSettings,
                 onSignOut = onSignOut,
                 modifier = screenModifier
             )

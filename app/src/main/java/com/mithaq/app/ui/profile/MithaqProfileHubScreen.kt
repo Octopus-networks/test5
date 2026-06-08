@@ -80,6 +80,7 @@ fun MithaqProfileHubScreen(
     isAdmin: Boolean = false,
     onOpenAdminModeration: () -> Unit = {},
     onOpenAppSettings: () -> Unit = {},
+    onOpenProfileSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var openItem by remember(currentUserId) { mutableStateOf<ProfileHubItem?>(null) }
@@ -171,6 +172,13 @@ fun MithaqProfileHubScreen(
         Spacer(modifier = Modifier.height(10.dp))
         comingSoonProfileItems.forEach { item ->
             when (item.titleResId) {
+                // Phase 1: My Profile opens the full ProfileSettings editor.
+                R.string.profile_hub_my_profile_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenProfileSettings
+                )
                 // Phase 13C: Notifications is a real screen (no longer "Coming Soon").
                 R.string.profile_hub_notifications_title -> ProfileHubRow(
                     item = item,

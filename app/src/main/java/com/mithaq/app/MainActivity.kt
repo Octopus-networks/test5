@@ -1181,6 +1181,7 @@ fun MithaqAppNavigation(
                     isAdmin = currentUserProfile?.isAdmin == true,
                     onOpenAdminModeration = { currentScreen = "admin_moderation" },
                     onOpenAppSettings = { currentScreen = "app_settings" },
+                    onOpenProfileSettings = { currentScreen = "profile_settings" },
                     onSignOut = {
                         authViewModel.signOut()
                         com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1245,6 +1246,7 @@ fun MithaqAppNavigation(
                         isAdmin = currentUserProfile?.isAdmin == true,
                         onOpenAdminModeration = { currentScreen = "admin_moderation" },
                         onOpenAppSettings = { currentScreen = "app_settings" },
+                        onOpenProfileSettings = { currentScreen = "profile_settings" },
                         onSignOut = {
                             authViewModel.signOut()
                             com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1339,13 +1341,14 @@ fun MithaqAppNavigation(
         }
         "profile_settings" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
-            BetaFeatureUnavailableScreen(
+            ProfileSettingsScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
                 isArabic = isArabic,
-                titleEnglish = "Legacy settings are paused for beta",
-                titleArabic = "الإعدادات القديمة غير متاحة في النسخة التجريبية",
-                messageEnglish = "Use the Profile tab for beta-safe photo, account, and moderation access.",
-                messageArabic = "استخدم تبويب حسابي للوصول الآمن إلى الصور والحساب والإشراف في النسخة التجريبية.",
-                onPrimaryAction = { currentScreen = "home" }
+                authViewModel = authViewModel,
+                guardianViewModel = guardianViewModel,
+                onNavigateToScreen = { target -> currentScreen = target },
+                onBack = { currentScreen = "home" }
             )
         }
         "stats" -> {
