@@ -52,6 +52,30 @@ class ReportRepository(
             SafetyWriteResult.Error(e.localizedMessage ?: "Could not submit report.")
         }
     }
+
+    suspend fun reportUserDirect(reporterId: String, reportedId: String) {
+        try {
+            val reportRef = firestore.collection("reports").document()
+            reportRef.set(
+                mapOf(
+                    "reportId" to reportRef.id,
+                    "reporterId" to reporterId,
+                    "reportedId" to reportedId,
+                    "reporterUserId" to reporterId,
+                    "reportedUserId" to reportedId,
+                    "chatId" to "",
+                    "reason" to "Spam / Inappropriate behavior",
+                    "details" to "",
+                    "status" to "open",
+                    "timestamp" to FieldValue.serverTimestamp(),
+                    "createdAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }
 
 sealed interface SafetyWriteResult {

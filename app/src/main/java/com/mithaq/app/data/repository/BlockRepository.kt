@@ -114,4 +114,18 @@ class BlockRepository(
             updatedAt = getTimestamp("updatedAt")?.toDate() ?: getTimestamp("timestamp")?.toDate()
         )
     }
+
+    suspend fun blockUserDirect(blockerId: String, blockedId: String) {
+        try {
+            firestore.collection("blocks").document("${blockerId}_${blockedId}").set(
+                mapOf(
+                    "blockerId" to blockerId,
+                    "blockedId" to blockedId,
+                    "timestamp" to System.currentTimeMillis()
+                )
+            ).await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }
