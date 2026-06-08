@@ -90,6 +90,14 @@ kotlin {
     jvmToolchain(17)
 }
 
+// Export the Room schema (the DB is a disposable cache; this tracks schema history
+// under app/schemas for reference and future migration tests).
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+}
+
 dependencies {
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)

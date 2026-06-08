@@ -327,10 +327,19 @@ interface ChatDao {
     suspend fun clearMessagesForRoom(roomId: String)
 }
 
+/**
+ * Local Room database used purely as an OFFLINE CACHE of Firestore-backed data
+ * (cached users, messages, chat rooms). It holds no source-of-truth user data, so a
+ * destructive reset on a schema change is acceptable: the cache simply rebuilds from
+ * Firestore on the next sync — no user data is lost.
+ *
+ * `exportSchema = true` so the schema is tracked under `app/schemas/` for history and
+ * future migration tests (export dir is set via the `room.schemaLocation` kapt arg).
+ */
 @Database(
     entities = [CachedUserProfile::class, CachedMessage::class, CachedChatRoom::class],
     version = 8,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(MithaqConverters::class)
 abstract class MithaqDatabase : RoomDatabase() {
@@ -348,7 +357,9 @@ abstract class MithaqDatabase : RoomDatabase() {
                     MithaqDatabase::class.java,
                     "mithaq_offline_db"
                 )
+                // Cache-only DB: rebuild from Firestore instead of writing migrations.
                 .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigrationOnDowngrade()
                 .build()
                 INSTANCE = instance
                 instance
