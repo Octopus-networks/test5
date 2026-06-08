@@ -80,5 +80,24 @@ service firebase.storage {
         request.resource.contentType.matches('image/.*');
       allow delete: if false;
     }
+
+    // Chat attachments (images + voice notes). Readable/writable only by the chat's
+    // participants (or an admin, for report moderation). One object per message, stored at
+    // chat_attachments/{chatId}/{messageId}. Bytes are never public and never served via a
+    // stored URL — clients fetch them through the authenticated Storage SDK.
+    match /chat_attachments/{chatId}/{attachmentId} {
+      function isChatMember() {
+        return isAuthenticated() &&
+          request.auth.uid in firestore.get(/databases/(default)/documents/chats/$(chatId)).data.participantIds;
+      }
+      allow read: if isChatMember() || isAdmin();
+      allow create: if isChatMember() &&
+        request.resource.size < 10 * 1024 * 1024 &&
+        (
+          request.resource.contentType.matches('image/.*') ||
+          request.resource.contentType.matches('audio/.*')
+        );
+      allow update, delete: if false;
+    }
   }
 }

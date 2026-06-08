@@ -1,5 +1,6 @@
 package com.mithaq.app.ui.messages
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.ListenerRegistration
@@ -73,6 +74,18 @@ class ChatMessageViewModel(
                         errorMessage = result.message
                     )
                 }
+            }
+        }
+    }
+
+    fun sendImageMessage(chatId: String, senderId: String, imageUri: Uri, mimeType: String?) {
+        if (_state.value.isSending) return
+        _state.value = _state.value.copy(isSending = true, errorMessage = null)
+        viewModelScope.launch {
+            val result = repository.sendImageMessage(chatId, senderId, imageUri, mimeType)
+            _state.value = when (result) {
+                is ChatMessageResult.Success -> _state.value.copy(isSending = false)
+                is ChatMessageResult.Error -> _state.value.copy(isSending = false, errorMessage = result.message)
             }
         }
     }

@@ -505,26 +505,42 @@ service cloud.firestore {
         allow read: if isChatParticipant(chatId) || isAdmin();
         allow create: if isChatParticipant(chatId) &&
           chatData(chatId).status == "active" &&
-          request.resource.data.keys().hasOnly([
-            "messageId",
-            "chatId",
-            "senderId",
-            "text",
-            "type",
-            "status",
-            "createdAt",
-            "updatedAt",
-            "editedAt",
-            "deletedAt"
-          ]) &&
           request.resource.data.messageId == messageId &&
           request.resource.data.chatId == chatId &&
           request.resource.data.senderId == request.auth.uid &&
-          request.resource.data.text is string &&
-          request.resource.data.text.size() > 0 &&
-          request.resource.data.text.size() <= 1000 &&
-          request.resource.data.type == "text" &&
-          request.resource.data.status == "sent";
+          request.resource.data.status == "sent" &&
+          (
+            // Text message.
+            (
+              request.resource.data.type == "text" &&
+              request.resource.data.keys().hasOnly([
+                "messageId", "chatId", "senderId", "text", "type", "status",
+                "createdAt", "updatedAt", "editedAt", "deletedAt"
+              ]) &&
+              request.resource.data.text is string &&
+              request.resource.data.text.size() > 0 &&
+              request.resource.data.text.size() <= 1000
+            ) ||
+            // Image / voice attachment. The bytes live in Storage at the deterministic path
+            // chat_attachments/{chatId}/{messageId}; an optional text caption is allowed.
+            (
+              request.resource.data.type in ["image", "voice"] &&
+              request.resource.data.keys().hasOnly([
+                "messageId", "chatId", "senderId", "text", "type", "status",
+                "storagePath", "mimeType", "sizeBytes", "durationMs",
+                "createdAt", "updatedAt", "editedAt", "deletedAt"
+              ]) &&
+              request.resource.data.storagePath == ("chat_attachments/" + chatId + "/" + messageId) &&
+              request.resource.data.mimeType is string &&
+              request.resource.data.sizeBytes is int &&
+              request.resource.data.sizeBytes > 0 &&
+              request.resource.data.sizeBytes <= 10485760 &&
+              (
+                !("text" in request.resource.data) ||
+                (request.resource.data.text is string && request.resource.data.text.size() <= 1000)
+              )
+            )
+          );
         allow update: if (
           // Sender may mark their own message status.
           isChatParticipant(chatId) &&
