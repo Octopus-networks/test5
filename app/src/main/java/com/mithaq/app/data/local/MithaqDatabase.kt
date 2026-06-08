@@ -1,6 +1,7 @@
 package com.mithaq.app.data.local
 
 import androidx.room.*
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.mithaq.app.model.*
 import kotlinx.coroutines.flow.Flow
 
@@ -231,7 +232,7 @@ class MithaqConverters {
                 list.add(arr.getString(i))
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
         return list
     }
@@ -255,7 +256,7 @@ class MithaqConverters {
                 map[key] = obj.getString(key)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
         return map
     }

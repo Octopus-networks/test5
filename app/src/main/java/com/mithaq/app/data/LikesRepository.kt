@@ -1,6 +1,7 @@
 package com.mithaq.app.data
 
 import android.content.Context
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import org.json.JSONArray
@@ -46,7 +47,7 @@ class LikesRepository(private val context: Context) {
             )
             db.collection("notifications").add(notif).await()
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 
@@ -128,7 +129,7 @@ class LikesRepository(private val context: Context) {
                 // return value only lets the UI show an optimistic "mutual" hint.
                 return isMutual
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
                 return false
             }
         }
@@ -151,7 +152,7 @@ class LikesRepository(private val context: Context) {
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("toUid") }
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
                 return emptyList()
             }
         }
@@ -174,7 +175,7 @@ class LikesRepository(private val context: Context) {
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("fromUid") }
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
                 return emptyList()
             }
         }
@@ -205,7 +206,7 @@ class LikesRepository(private val context: Context) {
                 val list2 = snap2.documents.mapNotNull { it.getString("fromUid") }
                 return (list1 + list2).distinct()
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
                 return emptyList()
             }
         }
@@ -255,7 +256,7 @@ class LikesRepository(private val context: Context) {
                 )
                 db.collection("profile_views").add(viewData).await()
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
             }
         }
     }
@@ -277,7 +278,7 @@ class LikesRepository(private val context: Context) {
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("viewerUid") }.distinct()
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
                 return emptyList()
             }
         }
@@ -300,7 +301,7 @@ class LikesRepository(private val context: Context) {
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("viewedUid") }.distinct()
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
                 return emptyList()
             }
         }
@@ -377,7 +378,7 @@ class LikesRepository(private val context: Context) {
                     return true
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
                 return false
             }
         }
@@ -400,7 +401,7 @@ class LikesRepository(private val context: Context) {
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("favoriteUserUid") }
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
                 return emptyList()
             }
         }
@@ -423,7 +424,7 @@ class LikesRepository(private val context: Context) {
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("userUid") }
             } catch (e: Exception) {
-                e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
                 return emptyList()
             }
         }
@@ -462,7 +463,7 @@ class LikesRepository(private val context: Context) {
                 chatPrefs.edit().putString("mithaq_mock_rooms", array.toString()).apply()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 
@@ -482,7 +483,7 @@ class LikesRepository(private val context: Context) {
                 roomRef.set(roomData).await()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 
@@ -518,7 +519,7 @@ class LikesRepository(private val context: Context) {
             chatPrefs.edit().putString("mithaq_mock_rooms", roomsArray.toString()).apply()
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 
@@ -535,7 +536,7 @@ class LikesRepository(private val context: Context) {
             array.put(notifObj)
             queuePrefs.edit().putString("queue_$targetUid", array.toString()).apply()
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 }
