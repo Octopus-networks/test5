@@ -106,6 +106,7 @@ import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
 import com.mithaq.app.ui.auth.CompleteProfileScreen
 import com.mithaq.app.ui.settings.AppSettingsScreen
+import com.mithaq.app.ui.settings.PrayerSettingsScreen
 import com.mithaq.app.ui.verification.VerifyEmailScreen
 
 
@@ -1182,6 +1183,7 @@ fun MithaqAppNavigation(
                     onOpenAdminModeration = { currentScreen = "admin_moderation" },
                     onOpenAppSettings = { currentScreen = "app_settings" },
                     onOpenProfileSettings = { currentScreen = "profile_settings" },
+                    onOpenPrayerSettings = { currentScreen = "prayer_settings" },
                     onSignOut = {
                         authViewModel.signOut()
                         com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1247,6 +1249,7 @@ fun MithaqAppNavigation(
                         onOpenAdminModeration = { currentScreen = "admin_moderation" },
                         onOpenAppSettings = { currentScreen = "app_settings" },
                         onOpenProfileSettings = { currentScreen = "profile_settings" },
+                        onOpenPrayerSettings = { currentScreen = "prayer_settings" },
                         onSignOut = {
                             authViewModel.signOut()
                             com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1389,6 +1392,15 @@ fun MithaqAppNavigation(
                     onPrimaryAction = { currentScreen = "home" }
                 )
             }
+        }
+        "prayer_settings" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            PrayerSettingsScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                authViewModel = authViewModel,
+                isArabic = isArabic,
+                onBack = { currentScreen = "home" }
+            )
         }
         "app_settings" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
