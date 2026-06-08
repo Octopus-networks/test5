@@ -76,15 +76,18 @@ Mithaq is a Kotlin Android application for privacy-first Islamic matchmaking. It
 > For the accurate, honest status of each feature (some are foundation-only or UI-only), see
 > [`docs/FEATURE_STATUS.md`](docs/FEATURE_STATUS.md).
 
-- Profile onboarding with religious, demographic, lifestyle, and guardian fields.
+- Structured profile onboarding with religious, demographic, lifestyle, and guardian fields.
+- Discovery and advanced search filters (age, sect, prayer habits, modesty, relocation, and more) from a server-owned `publicProfiles` mirror.
 - Compatibility scoring in `com.mithaq.app.ui.match`.
-- Guardian invitation and wali monitoring flows.
-- Chaperoned chat with optional wali logs *(currently on the legacy `chatRooms/*` stack — see [ARCHITECTURE](docs/ARCHITECTURE.md) §3.1)*.
-- Photo privacy requests and approved-viewer lists.
-- Identity verification status and trust badges.
-- Advanced search filters for age, sect, prayer habits, modesty, relocation, and other preferences.
-- Premium store UI *(simulated checkout — no live billing yet; see FEATURE_STATUS)*.
+- Interest → photo → chat request flow with deterministic, rules-gated transitions.
+- Secure chat on the canonical `chats/*` stack with **image attachments, voice notes, and emoji reactions**.
+- Push notifications (FCM) with **per-type sounds** and granular, server-honored preferences.
+- Identity verification (ID + selfie + ML Kit) with verified / guardian trust badges.
+- Guardian (Wali) invitation and oversight flows.
+- Photo privacy: blurred-by-default with per-viewer request / approve / revoke control.
+- **Account hub** (`ui/profile`): edit profile, per-field public-visibility privacy, photo-access management, Adhan/prayer settings, notification settings, language & theme, biometric app lock, support, and guardian invite.
 - Adhan scheduling with exact-alarm support.
+- Premium store UI *(simulated checkout — no live billing yet; see FEATURE_STATUS)*.
 - Biometric app lock and screenshot protection for sensitive screens.
 
 ## Security Updates
