@@ -73,6 +73,7 @@ import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
 import com.mithaq.app.security.SecureScreen
+import com.mithaq.app.ui.profile.ProfileSettingsViewModel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.filled.ArrowBack
@@ -180,6 +181,7 @@ fun ModestyTabContent(
     onRefreshProfile: () -> Unit,
     isArabic: Boolean,
     authViewModel: AuthViewModel,
+    profileSettingsViewModel: ProfileSettingsViewModel,
     onNavigateToScreen: (String) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -259,15 +261,23 @@ fun ModestyTabContent(
                     .edit()
                     .putString("imageUrl", finalUrl)
                     .apply()
+                isUploadingImage = false
+                onRefreshProfile()
             } else {
-                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                db.collection("users")
-                    .document(currentUser.uid)
-                    .update("imageUrl", finalUrl)
-                    .await()
+                // Refresh only after the write completes, so the reloaded profile reflects the
+                // new image (preserves the original awaited ordering).
+                profileSettingsViewModel.updateImageUrl(
+                    uid = currentUser.uid,
+                    imageUrl = finalUrl,
+                    onSuccess = {
+                        isUploadingImage = false
+                        onRefreshProfile()
+                    },
+                    onError = {
+                        isUploadingImage = false
+                    }
+                )
             }
-            isUploadingImage = false
-            onRefreshProfile()
         }
     }
 
@@ -614,16 +624,14 @@ fun ModestyTabContent(
                         }
                         Button(
                             onClick = {
-                                coroutineScope.launch {
-                                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                                    db.collection("users")
-                                        .document(currentUser.uid)
-                                        .update("imageUrl", newImageUrl)
-                                        .addOnSuccessListener {
-                                            showImageEdit = false
-                                            onRefreshProfile()
-                                        }
-                                }
+                                profileSettingsViewModel.updateImageUrl(
+                                    uid = currentUser.uid,
+                                    imageUrl = newImageUrl,
+                                    onSuccess = {
+                                        showImageEdit = false
+                                        onRefreshProfile()
+                                    }
+                                )
                             }
                         ) {
                             Text(if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "حفظ" else "Save")
@@ -1253,12 +1261,7 @@ fun ModestyTabContent(
                     }
                     
                     Spacer(modifier = Modifier.height(12.dp))
-                    val isMockDatabase = try {
-                        val firestoreDb = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        firestoreDb.app?.options?.apiKey == "mock-api-key-for-testing" || firestoreDb.app?.options?.apiKey?.contains("mock") == true
-                    } catch (e: Exception) {
-                        true
-                    }
+                    val isMockDatabase = profileSettingsViewModel.isMockDatabase
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1458,6 +1461,7 @@ fun ProfileSettingsScreen(
     isArabic: Boolean,
     authViewModel: AuthViewModel,
     guardianViewModel: GuardianViewModel,
+    profileSettingsViewModel: ProfileSettingsViewModel,
     onNavigateToScreen: (String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -1491,6 +1495,7 @@ fun ProfileSettingsScreen(
                 onRefreshProfile = onRefreshProfile,
                 isArabic = isArabic,
                 authViewModel = authViewModel,
+                profileSettingsViewModel = profileSettingsViewModel,
                 onNavigateToScreen = onNavigateToScreen
             )
 

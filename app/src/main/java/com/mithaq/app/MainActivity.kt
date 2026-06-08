@@ -59,6 +59,7 @@ import com.mithaq.app.ui.chat.ChaperonedChatViewModel
 import com.mithaq.app.ui.filter.SearchFilterBottomSheet
 import com.mithaq.app.ui.filter.SearchViewModel
 import com.mithaq.app.ui.guardian.GuardianViewModel
+import com.mithaq.app.ui.profile.ProfileSettingsViewModel
 import com.mithaq.app.ui.guardian.InviteGuardianDialog
 import com.mithaq.app.ui.home.MithaqMainExperience
 import com.mithaq.app.ui.match.MatchScoreBadge
@@ -859,6 +860,7 @@ fun MithaqAppNavigation(
     val authViewModel = remember { AuthViewModel(context = context) }
     val searchViewModel = remember { SearchViewModel(context = context) }
     val guardianViewModel = remember { GuardianViewModel() }
+    val profileSettingsViewModel = remember { ProfileSettingsViewModel() }
     val onboardingViewModel = remember {
         OnboardingViewModel(OnboardingRepository(context = context))
     }
@@ -1359,6 +1361,7 @@ fun MithaqAppNavigation(
                 isArabic = isArabic,
                 authViewModel = authViewModel,
                 guardianViewModel = guardianViewModel,
+                profileSettingsViewModel = profileSettingsViewModel,
                 onNavigateToScreen = { target -> currentScreen = target },
                 onBack = { currentScreen = "home" }
             )
