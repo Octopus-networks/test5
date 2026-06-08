@@ -1,9 +1,13 @@
 package com.mithaq.app.ui.messages
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.media.MediaPlayer
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -94,6 +98,7 @@ import com.mithaq.app.ui.components.MithaqStateIllustration
 import com.mithaq.app.ui.components.MithaqIllustrationType
 import com.mithaq.app.ui.components.MithaqLoadingSkeleton
 import com.mithaq.app.ui.components.SkeletonType
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -344,6 +349,46 @@ private fun ChatScreen(
             viewModel.sendImageMessage(room.chatId, currentUserId, uri, context.contentResolver.getType(uri))
         }
     }
+    val voiceRecorder = remember { ChatVoiceRecorder(context) }
+    var isRecording by remember { mutableStateOf(false) }
+    var recordSeconds by remember { mutableIntStateOf(0) }
+    val recordPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted && voiceRecorder.start()) {
+            isRecording = true
+        }
+    }
+    fun startRecording() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            if (voiceRecorder.start()) isRecording = true
+        } else {
+            recordPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+    fun sendRecording() {
+        val result = voiceRecorder.stop()
+        isRecording = false
+        if (result != null) {
+            viewModel.sendVoiceMessage(room.chatId, currentUserId, result.first, result.second)
+        }
+    }
+    fun cancelRecording() {
+        voiceRecorder.cancel()
+        isRecording = false
+    }
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            recordSeconds = 0
+            while (isRecording) {
+                kotlinx.coroutines.delay(1000L)
+                recordSeconds += 1
+            }
+        }
+    }
+    DisposableEffect(Unit) { onDispose { voiceRecorder.cancel() } }
     val otherUserId = room.participantIds.firstOrNull { it != currentUserId }.orEmpty()
     val summary = room.participantPublicSummaries[otherUserId] ?: ChatParticipantSummary(userId = otherUserId)
     val canSend = room.status == "active" && !safetyState.isBlocked && !state.isSending && !safetyState.isCheckingBlock
@@ -555,6 +600,14 @@ private fun ChatScreen(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+        if (isRecording) {
+            VoiceRecordingBar(
+                seconds = recordSeconds,
+                canSend = canSend,
+                onCancel = { cancelRecording() },
+                onSend = { sendRecording() }
+            )
+        } else {
         if (showEmoji) {
             ChatEmojiPicker(
                 enabled = canSend,
@@ -592,16 +645,25 @@ private fun ChatScreen(
                 singleLine = false,
                 maxLines = 4
             )
-            Button(
-                onClick = {
-                    val text = draft
-                    draft = ""
-                    showEmoji = false
-                    viewModel.sendTextMessage(room.chatId, currentUserId, text)
-                },
-                enabled = draft.isNotBlank() && canSend
-            ) {
-                Icon(Icons.Filled.Send, contentDescription = null)
+            if (draft.isNotBlank()) {
+                Button(
+                    onClick = {
+                        val text = draft
+                        draft = ""
+                        showEmoji = false
+                        viewModel.sendTextMessage(room.chatId, currentUserId, text)
+                    },
+                    enabled = canSend
+                ) {
+                    Icon(Icons.Filled.Send, contentDescription = null)
+                }
+            } else {
+                IconButton(
+                    onClick = { startRecording() },
+                    enabled = canSend
+                ) {
+                    Text(text = "🎤", style = MaterialTheme.typography.titleLarge)
+                }
             }
         }
         if (draft.length >= 850) {
@@ -612,6 +674,7 @@ private fun ChatScreen(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
         }
     }
 
@@ -832,6 +895,11 @@ private fun ChatMessageBubble(
             ) {
                 if (message.type == "image") {
                     ChatImageAttachment(message = message)
+                    if (message.text.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+                } else if (message.type == "voice") {
+                    ChatVoiceAttachment(message = message, isMine = isMine)
                     if (message.text.isNotBlank()) {
                         Spacer(modifier = Modifier.height(6.dp))
                     }
@@ -1075,6 +1143,117 @@ private fun ChatImageAttachment(message: ChatMessage) {
             else -> CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
         }
     }
+}
+
+/** Composer bar shown while recording a voice note: cancel, live timer, send. */
+@Composable
+private fun VoiceRecordingBar(
+    seconds: Int,
+    canSend: Boolean,
+    onCancel: () -> Unit,
+    onSend: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onCancel) {
+            Text(text = "✕", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.error)
+        }
+        Text(
+            text = "● " + formatDuration((seconds * 1000).toLong()),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.weight(1f)
+        )
+        Button(onClick = onSend, enabled = canSend) {
+            Icon(Icons.Filled.Send, contentDescription = null)
+        }
+    }
+}
+
+/** Voice-note bubble with play/stop + duration; bytes fetched via the access-gated Storage path. */
+@Composable
+private fun ChatVoiceAttachment(message: ChatMessage, isMine: Boolean) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isPlaying by remember(message.messageId) { mutableStateOf(false) }
+    var loading by remember(message.messageId) { mutableStateOf(false) }
+    val playerHolder = remember { mutableStateOf<MediaPlayer?>(null) }
+
+    fun stopPlayback() {
+        playerHolder.value?.let { mp ->
+            try { if (mp.isPlaying) mp.stop() } catch (_: Exception) {}
+            try { mp.release() } catch (_: Exception) {}
+        }
+        playerHolder.value = null
+        isPlaying = false
+    }
+
+    DisposableEffect(message.messageId) { onDispose { stopPlayback() } }
+
+    fun togglePlay() {
+        if (isPlaying) {
+            stopPlayback()
+            return
+        }
+        loading = true
+        scope.launch {
+            val file = withContext(Dispatchers.IO) {
+                try {
+                    val bytes = ChatMessageRepository().loadAttachmentBytes(message.storagePath)
+                        ?: return@withContext null
+                    val f = File(context.cacheDir, "play_${message.messageId}.m4a")
+                    f.writeBytes(bytes)
+                    f
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            loading = false
+            if (file == null) return@launch
+            try {
+                val mp = MediaPlayer()
+                mp.setDataSource(file.absolutePath)
+                mp.setOnCompletionListener {
+                    stopPlayback()
+                    file.delete()
+                }
+                mp.prepare()
+                mp.start()
+                playerHolder.value = mp
+                isPlaying = true
+            } catch (e: Exception) {
+                isPlaying = false
+            }
+        }
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        IconButton(onClick = { togglePlay() }) {
+            when {
+                loading -> CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                isPlaying -> Text(text = "⏸", style = MaterialTheme.typography.titleLarge)
+                else -> Text(text = "▶️", style = MaterialTheme.typography.titleLarge)
+            }
+        }
+        Text(
+            text = "🎤 " + formatDuration(message.durationMs),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isMine) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+private fun formatDuration(ms: Long): String {
+    val totalSec = (ms / 1000L).toInt()
+    val minutes = totalSec / 60
+    val secs = totalSec % 60
+    return "%d:%02d".format(minutes, secs)
 }
 
 /**

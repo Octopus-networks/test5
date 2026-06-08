@@ -1,6 +1,7 @@
 package com.mithaq.app.ui.messages
 
 import android.net.Uri
+import java.io.File
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.ListenerRegistration
@@ -83,6 +84,18 @@ class ChatMessageViewModel(
         _state.value = _state.value.copy(isSending = true, errorMessage = null)
         viewModelScope.launch {
             val result = repository.sendImageMessage(chatId, senderId, imageUri, mimeType)
+            _state.value = when (result) {
+                is ChatMessageResult.Success -> _state.value.copy(isSending = false)
+                is ChatMessageResult.Error -> _state.value.copy(isSending = false, errorMessage = result.message)
+            }
+        }
+    }
+
+    fun sendVoiceMessage(chatId: String, senderId: String, audioFile: File, durationMs: Long) {
+        if (_state.value.isSending) return
+        _state.value = _state.value.copy(isSending = true, errorMessage = null)
+        viewModelScope.launch {
+            val result = repository.sendVoiceMessage(chatId, senderId, audioFile, durationMs)
             _state.value = when (result) {
                 is ChatMessageResult.Success -> _state.value.copy(isSending = false)
                 is ChatMessageResult.Error -> _state.value.copy(isSending = false, errorMessage = result.message)
