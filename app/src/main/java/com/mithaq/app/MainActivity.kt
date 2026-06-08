@@ -106,6 +106,10 @@ import com.mithaq.app.ui.stats.MyStatsScreen
 import com.mithaq.app.ui.splash.SplashScreen
 import com.mithaq.app.ui.auth.CompleteProfileScreen
 import com.mithaq.app.ui.settings.AppSettingsScreen
+import com.mithaq.app.ui.settings.PrayerSettingsScreen
+import com.mithaq.app.ui.profile.PhotoPrivacyScreen
+import com.mithaq.app.ui.profile.PrivacySettingsScreen
+import com.mithaq.app.ui.profile.GuardianScreen
 import com.mithaq.app.ui.verification.VerifyEmailScreen
 
 
@@ -1180,6 +1184,12 @@ fun MithaqAppNavigation(
                     isArabic = isArabic,
                     isAdmin = currentUserProfile?.isAdmin == true,
                     onOpenAdminModeration = { currentScreen = "admin_moderation" },
+                    onOpenAppSettings = { currentScreen = "app_settings" },
+                    onOpenProfileSettings = { currentScreen = "profile_settings" },
+                    onOpenPrayerSettings = { currentScreen = "prayer_settings" },
+                    onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
+                    onOpenPrivacy = { currentScreen = "privacy_settings" },
+                    onOpenGuardian = { currentScreen = "guardian" },
                     onSignOut = {
                         authViewModel.signOut()
                         com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1243,6 +1253,12 @@ fun MithaqAppNavigation(
                         isArabic = isArabic,
                         isAdmin = currentUserProfile?.isAdmin == true,
                         onOpenAdminModeration = { currentScreen = "admin_moderation" },
+                        onOpenAppSettings = { currentScreen = "app_settings" },
+                        onOpenProfileSettings = { currentScreen = "profile_settings" },
+                        onOpenPrayerSettings = { currentScreen = "prayer_settings" },
+                        onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
+                        onOpenPrivacy = { currentScreen = "privacy_settings" },
+                        onOpenGuardian = { currentScreen = "guardian" },
                         onSignOut = {
                             authViewModel.signOut()
                             com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1337,13 +1353,14 @@ fun MithaqAppNavigation(
         }
         "profile_settings" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
-            BetaFeatureUnavailableScreen(
+            ProfileSettingsScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
                 isArabic = isArabic,
-                titleEnglish = "Legacy settings are paused for beta",
-                titleArabic = "الإعدادات القديمة غير متاحة في النسخة التجريبية",
-                messageEnglish = "Use the Profile tab for beta-safe photo, account, and moderation access.",
-                messageArabic = "استخدم تبويب حسابي للوصول الآمن إلى الصور والحساب والإشراف في النسخة التجريبية.",
-                onPrimaryAction = { currentScreen = "home" }
+                authViewModel = authViewModel,
+                guardianViewModel = guardianViewModel,
+                onNavigateToScreen = { target -> currentScreen = target },
+                onBack = { currentScreen = "home" }
             )
         }
         "stats" -> {
@@ -1385,8 +1402,44 @@ fun MithaqAppNavigation(
                 )
             }
         }
+        "privacy_settings" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            PrivacySettingsScreen(
+                currentUserId = currentUserId,
+                isArabic = isArabic,
+                onBack = { currentScreen = "home" }
+            )
+        }
+        "guardian" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            GuardianScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                viewModel = guardianViewModel,
+                isArabic = isArabic,
+                onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
+                onBack = { currentScreen = "home" }
+            )
+        }
+        "photo_privacy" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            PhotoPrivacyScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                isArabic = isArabic,
+                onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
+                onBack = { currentScreen = "home" }
+            )
+        }
+        "prayer_settings" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            PrayerSettingsScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                authViewModel = authViewModel,
+                isArabic = isArabic,
+                onBack = { currentScreen = "home" }
+            )
+        }
         "app_settings" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "profile_settings" }
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
             AppSettingsScreen(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 authViewModel = authViewModel,
@@ -1394,7 +1447,7 @@ fun MithaqAppNavigation(
                 onLanguageChange = onLanguageChange,
                 isDarkMode = isDarkMode,
                 onDarkModeChange = onDarkModeChange,
-                onBack = { currentScreen = "profile_settings" },
+                onBack = { currentScreen = "home" },
                 onLogout = {
                     authViewModel.signOut()
                     com.mithaq.app.notification.NotificationSyncWorker.cancel(context)

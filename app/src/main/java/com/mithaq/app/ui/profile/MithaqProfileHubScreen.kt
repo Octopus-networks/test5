@@ -79,16 +79,26 @@ fun MithaqProfileHubScreen(
     onSignOut: () -> Unit,
     isAdmin: Boolean = false,
     onOpenAdminModeration: () -> Unit = {},
+    onOpenAppSettings: () -> Unit = {},
+    onOpenProfileSettings: () -> Unit = {},
+    onOpenPrayerSettings: () -> Unit = {},
+    onOpenPhotoPrivacy: () -> Unit = {},
+    onOpenPrivacy: () -> Unit = {},
+    onOpenGuardian: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var openItem by remember(currentUserId) { mutableStateOf<ProfileHubItem?>(null) }
     var showMyPhotos by remember(currentUserId) { mutableStateOf(false) }
     var showNotificationSettings by remember(currentUserId) { mutableStateOf(false) }
+    var showSecurity by remember(currentUserId) { mutableStateOf(false) }
+    var showSupport by remember(currentUserId) { mutableStateOf(false) }
 
-    BackHandler(enabled = showMyPhotos || showNotificationSettings || openItem != null) {
+    BackHandler(enabled = showMyPhotos || showNotificationSettings || showSecurity || showSupport || openItem != null) {
         when {
             showMyPhotos -> showMyPhotos = false
             showNotificationSettings -> showNotificationSettings = false
+            showSecurity -> showSecurity = false
+            showSupport -> showSupport = false
             else -> openItem = null
         }
     }
@@ -108,6 +118,25 @@ fun MithaqProfileHubScreen(
             currentUserId = currentUserId,
             isArabic = isArabic,
             onBack = { showNotificationSettings = false },
+            modifier = modifier
+        )
+        return
+    }
+
+    if (showSecurity) {
+        SecuritySettingsScreen(
+            currentUserId = currentUserId,
+            isArabic = isArabic,
+            onBack = { showSecurity = false },
+            modifier = modifier
+        )
+        return
+    }
+
+    if (showSupport) {
+        SupportScreen(
+            isArabic = isArabic,
+            onBack = { showSupport = false },
             modifier = modifier
         )
         return
@@ -146,16 +175,71 @@ fun MithaqProfileHubScreen(
         MyPhotosEntryCard(isArabic = isArabic, onClick = { showMyPhotos = true })
         Spacer(modifier = Modifier.height(10.dp))
         comingSoonProfileItems.forEach { item ->
-            if (item.titleResId == R.string.profile_hub_notifications_title) {
-                // Phase 13C: Notifications is now a real screen (no longer "Coming Soon").
-                ProfileHubRow(
+            when (item.titleResId) {
+                // Phase 1: My Profile opens the full ProfileSettings editor.
+                R.string.profile_hub_my_profile_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenProfileSettings
+                )
+                // Phase 13C: Notifications is a real screen (no longer "Coming Soon").
+                R.string.profile_hub_notifications_title -> ProfileHubRow(
                     item = item,
                     isArabic = isArabic,
                     showComingSoon = false,
                     onClick = { showNotificationSettings = true }
                 )
-            } else {
-                ProfileHubRow(item = item, isArabic = isArabic, onClick = { openItem = item })
+                // Phase 3: Guardian opens the invite/manage-guardian screen.
+                R.string.profile_hub_guardian_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenGuardian
+                )
+                // Phase 2: Privacy opens the field-visibility settings screen.
+                R.string.profile_hub_privacy_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenPrivacy
+                )
+                // Phase 2: Photo privacy opens the photo-access management screen.
+                R.string.profile_hub_photo_privacy_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenPhotoPrivacy
+                )
+                // Phase 1: Prayer settings open the dedicated Adhan/prayer screen.
+                R.string.profile_hub_prayer_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenPrayerSettings
+                )
+                // Phase 0 wiring: Language opens the existing App Settings screen.
+                R.string.profile_hub_language_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenAppSettings
+                )
+                // Phase 0 wiring: Security opens the inline Security settings screen.
+                R.string.profile_hub_security_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = { showSecurity = true }
+                )
+                // Phase 0 wiring: Support opens the inline Support screen.
+                R.string.profile_hub_support_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = { showSupport = true }
+                )
+                else -> ProfileHubRow(item = item, isArabic = isArabic, onClick = { openItem = item })
             }
             Spacer(modifier = Modifier.height(10.dp))
         }

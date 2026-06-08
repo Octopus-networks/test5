@@ -591,6 +591,14 @@ function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
   const location = profile.location || {};
   const personalStatus = profile.personalStatus || {};
   const marriageIntent = profile.marriageIntent || {};
+  // Per-field privacy: profiles/{uid}.privacyTrust holds the owner's per-field visibility flags
+  // (the privacyTrust group is already allow-listed by Firestore rules, so no rules change).
+  // Missing/undefined defaults to visible (true) so existing profiles are unaffected.
+  const privacy = profile.privacyTrust || {};
+  const showAge = privacy.showAge !== false;
+  const showLocation = privacy.showLocation !== false;
+  const showMaritalStatus = privacy.showMaritalStatus !== false;
+  const showMarriageTimeline = privacy.showMarriageTimeline !== false;
   // Phase 11.12A writes a dedicated public display name; fall back to the legacy first-name-only
   // value for older profile documents. (basicInfo.firstName stays private and is never mirrored.)
   const legacyFirstName = String(basicInfo.name || "").trim().split(/\s+/)[0] || "";
@@ -610,12 +618,12 @@ function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
   return {
     userId,
     displayName,
-    age,
-    city,
-    country,
+    age: showAge ? age : null,
+    city: showLocation ? city : "",
+    country: showLocation ? country : "",
     accountType: humanizeLabel(basicInfo.accountType),
-    maritalStatus,
-    marriageTimeline: humanizeLabel(marriageIntent.timeline),
+    maritalStatus: showMaritalStatus ? maritalStatus : "",
+    marriageTimeline: showMarriageTimeline ? humanizeLabel(marriageIntent.timeline) : "",
     prayerHabitPublicLabel: "Not shared",
     prayerRoutineShared: false,
     localTimeEnabled: false,

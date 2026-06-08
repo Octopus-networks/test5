@@ -788,7 +788,8 @@ fun ModestyTabContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Improve Bio with AI Button
+                // Improve Bio with AI Button — gated for beta (Gemini privacy review pending).
+                if (com.mithaq.app.BetaFeatureGates.GEMINI_AI) {
                 Button(
                     onClick = {
                         if (aboutYourselfText.isNotBlank()) {
@@ -820,6 +821,7 @@ fun ModestyTabContent(
                     } else {
                         Text(if (isArabic) "✨ تحسين بالذكاء الاصطناعي" else "✨ Improve with AI")
                     }
+                }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

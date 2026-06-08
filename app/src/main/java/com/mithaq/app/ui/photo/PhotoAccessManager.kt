@@ -162,6 +162,46 @@ class PhotoAccessManager(
     }
 
     /**
+     * Rejects (dismisses) a pending request to view the current user's unblurred photo,
+     * without granting access. Simply removes the requester from the pending list.
+     */
+    suspend fun rejectPhotoAccess(currentUserId: String, requestingUserId: String): Boolean {
+        if (com.mithaq.app.Config.isMock() && context != null) {
+            return try {
+                val db = MithaqDatabase.getDatabase(context)
+                val cachedUser = db.userDao().getUser(currentUserId)
+                if (cachedUser != null) {
+                    val updatedRequests = cachedUser.photoAccessRequests - requestingUserId
+                    db.userDao().insertUser(cachedUser.copy(photoAccessRequests = updatedRequests))
+                }
+
+                val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+                val loggedInUid = prefs.getString("uid", "")
+                if (currentUserId == loggedInUid) {
+                    val requestsStr = prefs.getString("photoAccessRequests", "[]") ?: "[]"
+                    val requestsArr = org.json.JSONArray(requestsStr)
+                    val requestsList = mutableListOf<String>()
+                    for (i in 0 until requestsArr.length()) { requestsList.add(requestsArr.getString(i)) }
+                    requestsList.remove(requestingUserId)
+                    prefs.edit().putString("photoAccessRequests", org.json.JSONArray(requestsList).toString()).apply()
+                }
+                true
+            } catch (e: Exception) {
+                false
+            }
+        }
+        return try {
+            firestore.collection("users")
+                .document(currentUserId)
+                .update("photoAccessRequests", FieldValue.arrayRemove(requestingUserId))
+                .await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
      * Determines whether the current user is permitted to view the target user's unblurred photo.
      */
     suspend fun checkPhotoAccessState(currentUserId: String, targetUserId: String): PhotoAccessState {
