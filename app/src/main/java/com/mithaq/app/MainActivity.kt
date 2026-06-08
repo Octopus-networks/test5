@@ -109,6 +109,7 @@ import com.mithaq.app.ui.settings.AppSettingsScreen
 import com.mithaq.app.ui.settings.PrayerSettingsScreen
 import com.mithaq.app.ui.profile.PhotoPrivacyScreen
 import com.mithaq.app.ui.profile.PrivacySettingsScreen
+import com.mithaq.app.ui.profile.GuardianScreen
 import com.mithaq.app.ui.verification.VerifyEmailScreen
 
 
@@ -1188,6 +1189,7 @@ fun MithaqAppNavigation(
                     onOpenPrayerSettings = { currentScreen = "prayer_settings" },
                     onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
                     onOpenPrivacy = { currentScreen = "privacy_settings" },
+                    onOpenGuardian = { currentScreen = "guardian" },
                     onSignOut = {
                         authViewModel.signOut()
                         com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1256,6 +1258,7 @@ fun MithaqAppNavigation(
                         onOpenPrayerSettings = { currentScreen = "prayer_settings" },
                         onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
                         onOpenPrivacy = { currentScreen = "privacy_settings" },
+                        onOpenGuardian = { currentScreen = "guardian" },
                         onSignOut = {
                             authViewModel.signOut()
                             com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1404,6 +1407,16 @@ fun MithaqAppNavigation(
             PrivacySettingsScreen(
                 currentUserId = currentUserId,
                 isArabic = isArabic,
+                onBack = { currentScreen = "home" }
+            )
+        }
+        "guardian" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            GuardianScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                viewModel = guardianViewModel,
+                isArabic = isArabic,
+                onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
                 onBack = { currentScreen = "home" }
             )
         }

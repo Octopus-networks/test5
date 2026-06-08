@@ -67,6 +67,7 @@ fun MithaqMainExperience(
     onOpenPrayerSettings: () -> Unit = {},
     onOpenPhotoPrivacy: () -> Unit = {},
     onOpenPrivacy: () -> Unit = {},
+    onOpenGuardian: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember(currentUserId) { mutableStateOf(MithaqMainTab.Home) }
@@ -156,6 +157,7 @@ fun MithaqMainExperience(
                 onOpenPrayerSettings = onOpenPrayerSettings,
                 onOpenPhotoPrivacy = onOpenPhotoPrivacy,
                 onOpenPrivacy = onOpenPrivacy,
+                onOpenGuardian = onOpenGuardian,
                 onSignOut = onSignOut,
                 modifier = screenModifier
             )

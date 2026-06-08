@@ -84,6 +84,7 @@ fun MithaqProfileHubScreen(
     onOpenPrayerSettings: () -> Unit = {},
     onOpenPhotoPrivacy: () -> Unit = {},
     onOpenPrivacy: () -> Unit = {},
+    onOpenGuardian: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var openItem by remember(currentUserId) { mutableStateOf<ProfileHubItem?>(null) }
@@ -188,6 +189,13 @@ fun MithaqProfileHubScreen(
                     isArabic = isArabic,
                     showComingSoon = false,
                     onClick = { showNotificationSettings = true }
+                )
+                // Phase 3: Guardian opens the invite/manage-guardian screen.
+                R.string.profile_hub_guardian_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenGuardian
                 )
                 // Phase 2: Privacy opens the field-visibility settings screen.
                 R.string.profile_hub_privacy_title -> ProfileHubRow(
