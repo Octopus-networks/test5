@@ -5,7 +5,9 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.functions.FirebaseFunctionsException
 import com.mithaq.app.domain.model.ChatRequest
+import com.mithaq.app.service.BackendFunctions
 import kotlinx.coroutines.tasks.await
 
 class ChatRequestRepository(
@@ -34,6 +36,19 @@ class ChatRequestRepository(
             val existing = requestRef.get().await()
             if (existing.exists() && existing.getString("status") == "pending") {
                 return ChatRequestResult.AlreadyPending
+            }
+
+            // Enforce the free-tier daily chat-initiation limit on the server (premium = unlimited).
+            // Fail OPEN on any non-limit backend error (e.g. function offline) so the request flow
+            // stays available — the cap is a soft monetization limit, not a safety boundary.
+            try {
+                BackendFunctions.recordChatInitiation()
+            } catch (e: FirebaseFunctionsException) {
+                if (e.code == FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED) {
+                    return ChatRequestResult.LimitReached
+                }
+            } catch (_: Exception) {
+                // fail open
             }
 
             val requestData = mapOf(
@@ -208,5 +223,7 @@ sealed interface ChatRequestResult {
         val createdChatId: String? = null
     ) : ChatRequestResult
     data object AlreadyPending : ChatRequestResult
+    /** The free-tier daily chat-initiation limit has been reached (upgrade to premium). */
+    data object LimitReached : ChatRequestResult
     data class Error(val message: String) : ChatRequestResult
 }

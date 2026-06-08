@@ -124,6 +124,41 @@ exports.setUserPremium = onCall(secureCallable, async (request) => {
   return { ok: true };
 });
 
+// Server-authoritative free-tier daily chat-initiation limit. The caller invokes this
+// before starting a new chat; premium users are unlimited, free users get FREE_DAILY_CHAT_LIMIT
+// per UTC day. The counter lives at users/{uid}/chatLimits/{yyyy-mm-dd} and is writable only by
+// the Admin SDK (Firestore rules deny client writes), so the count cannot be forged.
+const FREE_DAILY_CHAT_LIMIT = 3;
+exports.recordChatInitiation = onCall(secureCallable, async (request) => {
+  const uid = requireAuth(request);
+  const userSnap = await getUser(uid);
+  if (userSnap.get("isPremium") === true) {
+    return { allowed: true, remaining: -1, isPremium: true };
+  }
+
+  // UTC day key so the cap cannot be gamed by changing the device clock/timezone.
+  const dateKey = new Date().toISOString().slice(0, 10);
+  const limitRef = db.collection("users").doc(uid).collection("chatLimits").doc(dateKey);
+
+  const remaining = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(limitRef);
+    const current = Number(snap.get("count")) || 0;
+    if (current >= FREE_DAILY_CHAT_LIMIT) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Daily chat limit reached. Upgrade to Premium for unlimited chats.",
+      );
+    }
+    tx.set(limitRef, {
+      count: current + 1,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return FREE_DAILY_CHAT_LIMIT - (current + 1);
+  });
+
+  return { allowed: true, remaining, isPremium: false };
+});
+
 exports.setUserRole = onCall(secureCallable, async (request) => {
   await requireAdmin(request);
   const targetUid = requireString(request.data, "targetUid");
