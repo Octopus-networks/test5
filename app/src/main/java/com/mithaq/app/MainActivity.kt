@@ -107,6 +107,7 @@ import com.mithaq.app.ui.splash.SplashScreen
 import com.mithaq.app.ui.auth.CompleteProfileScreen
 import com.mithaq.app.ui.settings.AppSettingsScreen
 import com.mithaq.app.ui.settings.PrayerSettingsScreen
+import com.mithaq.app.ui.profile.PhotoPrivacyScreen
 import com.mithaq.app.ui.verification.VerifyEmailScreen
 
 
@@ -1184,6 +1185,7 @@ fun MithaqAppNavigation(
                     onOpenAppSettings = { currentScreen = "app_settings" },
                     onOpenProfileSettings = { currentScreen = "profile_settings" },
                     onOpenPrayerSettings = { currentScreen = "prayer_settings" },
+                    onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
                     onSignOut = {
                         authViewModel.signOut()
                         com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1250,6 +1252,7 @@ fun MithaqAppNavigation(
                         onOpenAppSettings = { currentScreen = "app_settings" },
                         onOpenProfileSettings = { currentScreen = "profile_settings" },
                         onOpenPrayerSettings = { currentScreen = "prayer_settings" },
+                        onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
                         onSignOut = {
                             authViewModel.signOut()
                             com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1392,6 +1395,15 @@ fun MithaqAppNavigation(
                     onPrimaryAction = { currentScreen = "home" }
                 )
             }
+        }
+        "photo_privacy" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            PhotoPrivacyScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                isArabic = isArabic,
+                onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
+                onBack = { currentScreen = "home" }
+            )
         }
         "prayer_settings" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }

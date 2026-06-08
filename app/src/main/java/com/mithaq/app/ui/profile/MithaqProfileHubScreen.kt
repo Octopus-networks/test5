@@ -82,6 +82,7 @@ fun MithaqProfileHubScreen(
     onOpenAppSettings: () -> Unit = {},
     onOpenProfileSettings: () -> Unit = {},
     onOpenPrayerSettings: () -> Unit = {},
+    onOpenPhotoPrivacy: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var openItem by remember(currentUserId) { mutableStateOf<ProfileHubItem?>(null) }
@@ -186,6 +187,13 @@ fun MithaqProfileHubScreen(
                     isArabic = isArabic,
                     showComingSoon = false,
                     onClick = { showNotificationSettings = true }
+                )
+                // Phase 2: Photo privacy opens the photo-access management screen.
+                R.string.profile_hub_photo_privacy_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenPhotoPrivacy
                 )
                 // Phase 1: Prayer settings open the dedicated Adhan/prayer screen.
                 R.string.profile_hub_prayer_title -> ProfileHubRow(
