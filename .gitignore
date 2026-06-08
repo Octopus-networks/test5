@@ -16,3 +16,7 @@ functions/node_modules/
 functions/.runtimeconfig.json
 firebase-debug.log
 firebase-debug.*.log
+# Local build/deploy verification logs
+/build-*.log
+/deploy-*.log
+/functions-deploy-*.log
