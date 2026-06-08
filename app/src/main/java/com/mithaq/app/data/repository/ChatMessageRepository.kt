@@ -1,16 +1,20 @@
 package com.mithaq.app.data.repository
 
+import android.net.Uri
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageMetadata
 import com.mithaq.app.domain.model.ChatMessage
 import kotlinx.coroutines.tasks.await
 
 class ChatMessageRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
     private val chatRepository: ChatRepository = ChatRepository(firestore, auth),
     private val blockRepository: BlockRepository = BlockRepository(firestore, auth)
 ) {
@@ -25,7 +29,7 @@ class ChatMessageRepository(
             .await()
             .documents
             .map { it.toChatMessage(chatId) }
-            .filter { it.deletedAt == null && it.type == "text" }
+            .filter { it.deletedAt == null && it.type in ATTACHMENT_VISIBLE_TYPES }
     }
 
     fun listenToMessages(
@@ -52,7 +56,7 @@ class ChatMessageRepository(
                     ?.documents
                     .orEmpty()
                     .map { it.toChatMessage(chatId) }
-                    .filter { it.deletedAt == null && it.type == "text" }
+                    .filter { it.deletedAt == null && it.type in ATTACHMENT_VISIBLE_TYPES }
                     .distinctBy { it.messageId }
                 onMessages(messages)
             }
@@ -155,6 +159,68 @@ class ChatMessageRepository(
         }
     }
 
+    suspend fun sendImageMessage(
+        chatId: String,
+        senderId: String,
+        imageUri: Uri,
+        mimeType: String?
+    ): ChatMessageResult {
+        if (!validateUserCanSend(chatId, senderId)) {
+            return ChatMessageResult.Error("Messaging is unavailable for this conversation.")
+        }
+        return try {
+            val messageRef = firestore.collection("chats").document(chatId)
+                .collection("messages").document()
+            val messageId = messageRef.id
+            val storagePath = "chat_attachments/$chatId/$messageId"
+            val contentType = mimeType?.takeIf { it.startsWith("image/") } ?: "image/jpeg"
+            val metadata = StorageMetadata.Builder().setContentType(contentType).build()
+            val snapshot = storage.reference.child(storagePath).putFile(imageUri, metadata).await()
+            val sizeBytes = snapshot.totalByteCount
+
+            messageRef.set(
+                mapOf(
+                    "messageId" to messageId,
+                    "chatId" to chatId,
+                    "senderId" to senderId,
+                    "text" to "",
+                    "type" to "image",
+                    "status" to "sent",
+                    "storagePath" to storagePath,
+                    "mimeType" to contentType,
+                    "sizeBytes" to sizeBytes,
+                    "durationMs" to 0L,
+                    "createdAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp(),
+                    "editedAt" to null,
+                    "deletedAt" to null
+                )
+            ).await()
+
+            firestore.collection("chats").document(chatId).update(
+                mapOf(
+                    "lastMessagePreview" to "📷 Photo",
+                    "lastMessageAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+
+            ChatMessageResult.Success(messageId)
+        } catch (e: Exception) {
+            ChatMessageResult.Error(e.localizedMessage ?: "Could not send image.")
+        }
+    }
+
+    /** Downloads attachment bytes for an authorised viewer. Storage rules are the boundary. */
+    suspend fun loadAttachmentBytes(storagePath: String): ByteArray? {
+        if (storagePath.isBlank()) return null
+        return try {
+            storage.reference.child(storagePath).getBytes(MAX_ATTACHMENT_BYTES).await()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun validateUserCanSend(chatId: String, userId: String): Boolean {
         val user = auth.currentUser
         if (user?.uid != userId || !user.isEmailVerified) return false
@@ -228,11 +294,20 @@ class ChatMessageRepository(
             type = getString("type") ?: "text",
             status = getString("status") ?: "sent",
             reactions = (get("reactions") as? Map<String, String>) ?: emptyMap(),
+            storagePath = getString("storagePath").orEmpty(),
+            mimeType = getString("mimeType").orEmpty(),
+            sizeBytes = getLong("sizeBytes") ?: 0L,
+            durationMs = getLong("durationMs") ?: 0L,
             createdAt = getTimestamp("createdAt")?.toDate(),
             updatedAt = getTimestamp("updatedAt")?.toDate(),
             editedAt = getTimestamp("editedAt")?.toDate(),
             deletedAt = getTimestamp("deletedAt")?.toDate()
         )
+    }
+
+    private companion object {
+        val ATTACHMENT_VISIBLE_TYPES = setOf("text", "image", "voice")
+        const val MAX_ATTACHMENT_BYTES = 10L * 1024 * 1024
     }
 }
 

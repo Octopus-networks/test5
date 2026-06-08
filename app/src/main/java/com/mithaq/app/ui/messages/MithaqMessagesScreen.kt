@@ -1,6 +1,9 @@
 package com.mithaq.app.ui.messages
 
 import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -18,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -78,6 +82,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import com.mithaq.app.data.repository.ChatMessageRepository
 import com.mithaq.app.data.repository.PhotoRepository
 import com.mithaq.app.domain.model.PhotoAccessLevel
 import kotlinx.coroutines.Dispatchers
@@ -330,6 +336,14 @@ private fun ChatScreen(
     var hasAutoScrolledInitial by remember(room.chatId) { mutableStateOf(false) }
     val messageListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.sendImageMessage(room.chatId, currentUserId, uri, context.contentResolver.getType(uri))
+        }
+    }
     val otherUserId = room.participantIds.firstOrNull { it != currentUserId }.orEmpty()
     val summary = room.participantPublicSummaries[otherUserId] ?: ChatParticipantSummary(userId = otherUserId)
     val canSend = room.status == "active" && !safetyState.isBlocked && !state.isSending && !safetyState.isCheckingBlock
@@ -553,6 +567,16 @@ private fun ChatScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(
+                onClick = {
+                    imagePickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                enabled = canSend
+            ) {
+                Text(text = "📷", style = MaterialTheme.typography.titleLarge)
+            }
             IconButton(
                 onClick = { showEmoji = !showEmoji },
                 enabled = canSend
@@ -806,15 +830,23 @@ private fun ChatMessageBubble(
                     )
                     .padding(12.dp)
             ) {
-                Text(
-                    text = message.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isMine) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                if (message.type == "image") {
+                    ChatImageAttachment(message = message)
+                    if (message.text.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
                     }
-                )
+                }
+                if (message.text.isNotBlank()) {
+                    Text(
+                        text = message.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isMine) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
                 message.createdAt?.let { createdAt ->
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -998,6 +1030,51 @@ private fun shouldShowDaySeparator(previous: Date?, current: Date?): Boolean {
     if (current == null) return false
     if (previous == null) return true
     return chatDayKeyFormat.format(previous) != chatDayKeyFormat.format(current)
+}
+
+/** Renders an image attachment in a chat bubble; bytes are fetched via the access-gated Storage path. */
+@Composable
+private fun ChatImageAttachment(message: ChatMessage) {
+    var bitmap by remember(message.messageId) { mutableStateOf<ImageBitmap?>(null) }
+    var failed by remember(message.messageId) { mutableStateOf(false) }
+    LaunchedEffect(message.storagePath) {
+        bitmap = null
+        failed = false
+        if (message.storagePath.isBlank()) {
+            failed = true
+            return@LaunchedEffect
+        }
+        val loaded = withContext(Dispatchers.IO) {
+            try {
+                ChatMessageRepository().loadAttachmentBytes(message.storagePath)?.let { bytes ->
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+        if (loaded != null) bitmap = loaded else failed = true
+    }
+    Box(
+        modifier = Modifier
+            .widthIn(max = 240.dp)
+            .heightIn(min = 120.dp, max = 320.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)),
+        contentAlignment = Alignment.Center
+    ) {
+        val current = bitmap
+        when {
+            current != null -> Image(
+                bitmap = current,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth()
+            )
+            failed -> Text(text = "🖼️", style = MaterialTheme.typography.headlineMedium)
+            else -> CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
+        }
+    }
 }
 
 /**

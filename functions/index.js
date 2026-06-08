@@ -514,9 +514,6 @@ exports.onDirectMessageCreated = onDocumentCreated(
     if (!message || !message.senderId) {
       return;
     }
-    if (message.type && message.type !== "text") {
-      return;
-    }
     const chatSnap = await db.collection("chats").doc(event.params.chatId).get();
     if (!chatSnap.exists) {
       return;
@@ -526,11 +523,17 @@ exports.onDirectMessageCreated = onDocumentCreated(
     if (!recipientUid) {
       return;
     }
+    // Type-aware but content-free body (no message text or media is ever surfaced).
+    const body = message.type === "image"
+      ? "📷 Photo"
+      : message.type === "voice"
+        ? "🎤 Voice message"
+        : "You have a new message.";
     await createNotification({
       senderUid: message.senderId,
       recipientUid,
       title: "Mithaq - New message",
-      body: "You have a new message.",
+      body,
       type: "chat_message",
       extraData: { chatId: event.params.chatId, messageId: event.params.messageId },
     });
