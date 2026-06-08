@@ -10,6 +10,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
 import com.mithaq.app.domain.model.ChatMessage
 import kotlinx.coroutines.tasks.await
+import java.io.File
 
 class ChatMessageRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
@@ -208,6 +209,60 @@ class ChatMessageRepository(
             ChatMessageResult.Success(messageId)
         } catch (e: Exception) {
             ChatMessageResult.Error(e.localizedMessage ?: "Could not send image.")
+        }
+    }
+
+    suspend fun sendVoiceMessage(
+        chatId: String,
+        senderId: String,
+        audioFile: File,
+        durationMs: Long
+    ): ChatMessageResult {
+        if (!validateUserCanSend(chatId, senderId)) {
+            return ChatMessageResult.Error("Messaging is unavailable for this conversation.")
+        }
+        return try {
+            val messageRef = firestore.collection("chats").document(chatId)
+                .collection("messages").document()
+            val messageId = messageRef.id
+            val storagePath = "chat_attachments/$chatId/$messageId"
+            val contentType = "audio/mp4"
+            val metadata = StorageMetadata.Builder().setContentType(contentType).build()
+            val snapshot = storage.reference.child(storagePath)
+                .putFile(Uri.fromFile(audioFile), metadata).await()
+            val sizeBytes = snapshot.totalByteCount
+
+            messageRef.set(
+                mapOf(
+                    "messageId" to messageId,
+                    "chatId" to chatId,
+                    "senderId" to senderId,
+                    "text" to "",
+                    "type" to "voice",
+                    "status" to "sent",
+                    "storagePath" to storagePath,
+                    "mimeType" to contentType,
+                    "sizeBytes" to sizeBytes,
+                    "durationMs" to durationMs,
+                    "createdAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp(),
+                    "editedAt" to null,
+                    "deletedAt" to null
+                )
+            ).await()
+
+            firestore.collection("chats").document(chatId).update(
+                mapOf(
+                    "lastMessagePreview" to "🎤 Voice message",
+                    "lastMessageAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+
+            audioFile.delete()
+            ChatMessageResult.Success(messageId)
+        } catch (e: Exception) {
+            ChatMessageResult.Error(e.localizedMessage ?: "Could not send voice message.")
         }
     }
 
