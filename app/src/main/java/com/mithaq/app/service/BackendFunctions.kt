@@ -34,4 +34,16 @@ object BackendFunctions {
             .call(mapOf("targetUid" to targetUid))
             .await()
     }
+
+    /**
+     * Records a new chat initiation against the caller's server-side daily limit. Throws a
+     * [com.google.firebase.functions.FirebaseFunctionsException] with code RESOURCE_EXHAUSTED
+     * when a free user is over the daily cap; premium users are unlimited.
+     */
+    suspend fun recordChatInitiation() {
+        functions
+            .getHttpsCallable("recordChatInitiation")
+            .call()
+            .await()
+    }
 }

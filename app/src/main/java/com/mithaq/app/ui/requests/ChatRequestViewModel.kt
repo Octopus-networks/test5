@@ -89,6 +89,13 @@ class ChatRequestViewModel(
                         errorMessage = null
                     )
                 }
+                ChatRequestResult.LimitReached -> {
+                    _state.value = _state.value.copy(
+                        requestingToUserIds = _state.value.requestingToUserIds - toUserId,
+                        errorMessage = "You've reached today's free chat limit (3). " +
+                            "Upgrade to Premium for unlimited chats."
+                    )
+                }
                 is ChatRequestResult.Error -> {
                     _state.value = _state.value.copy(
                         requestingToUserIds = _state.value.requestingToUserIds - toUserId,
@@ -117,6 +124,7 @@ class ChatRequestViewModel(
                     loadForUser(currentUserId)
                 }
                 ChatRequestResult.AlreadyPending -> Unit
+                ChatRequestResult.LimitReached -> Unit
                 is ChatRequestResult.Error -> {
                     _state.value = _state.value.copy(
                         cancellingRequestIds = _state.value.cancellingRequestIds - requestId,
@@ -145,6 +153,7 @@ class ChatRequestViewModel(
                     loadForUser(currentUserId)
                 }
                 ChatRequestResult.AlreadyPending -> Unit
+                ChatRequestResult.LimitReached -> Unit
                 is ChatRequestResult.Error -> {
                     _state.value = _state.value.copy(
                         respondingRequestIds = _state.value.respondingRequestIds - requestId,
