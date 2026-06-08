@@ -398,15 +398,31 @@ private fun ChatScreen(
             lastVisibleIndex >= state.messages.lastIndex - 2
         }
     }
+    // Trigger loading older history once the user scrolls to the very top of the list.
+    val isAtTop by remember {
+        derivedStateOf {
+            messageListState.firstVisibleItemIndex == 0 &&
+                messageListState.firstVisibleItemScrollOffset == 0
+        }
+    }
 
     LaunchedEffect(room.chatId, currentUserId, otherUserId) {
         viewModel.listenToMessages(room.chatId)
         safetyViewModel.loadBlockState(currentUserId, otherUserId)
     }
+    LaunchedEffect(isAtTop, state.hasMoreOlder, state.isLoadingOlder, hasAutoScrolledInitial) {
+        if (isAtTop && hasAutoScrolledInitial && state.hasMoreOlder &&
+            !state.isLoadingOlder && state.messages.isNotEmpty()
+        ) {
+            viewModel.loadOlderMessages(room.chatId)
+        }
+    }
     DisposableEffect(room.chatId) {
         onDispose { viewModel.stopListening() }
     }
-    LaunchedEffect(state.messages.size, state.messages.lastOrNull()?.messageId) {
+    // Keyed on the newest message id only (not list size) so prepending older history during
+    // scroll-up pagination does not yank the view back to the bottom.
+    LaunchedEffect(state.messages.lastOrNull()?.messageId) {
         if (state.messages.isNotEmpty()) {
             val lastMessage = state.messages.last()
             val isMine = lastMessage.senderId == currentUserId
@@ -559,6 +575,21 @@ private fun ChatScreen(
                         state = messageListState,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        if (state.isLoadingOlder) {
+                            item(key = "older_messages_loading") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                            }
+                        }
                         itemsIndexed(
                             items = state.messages,
                             key = { _, message -> message.stableMessageKey() }
