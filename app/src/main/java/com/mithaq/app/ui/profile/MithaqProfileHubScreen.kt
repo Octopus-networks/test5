@@ -83,6 +83,7 @@ fun MithaqProfileHubScreen(
     onOpenProfileSettings: () -> Unit = {},
     onOpenPrayerSettings: () -> Unit = {},
     onOpenPhotoPrivacy: () -> Unit = {},
+    onOpenPrivacy: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var openItem by remember(currentUserId) { mutableStateOf<ProfileHubItem?>(null) }
@@ -187,6 +188,13 @@ fun MithaqProfileHubScreen(
                     isArabic = isArabic,
                     showComingSoon = false,
                     onClick = { showNotificationSettings = true }
+                )
+                // Phase 2: Privacy opens the field-visibility settings screen.
+                R.string.profile_hub_privacy_title -> ProfileHubRow(
+                    item = item,
+                    isArabic = isArabic,
+                    showComingSoon = false,
+                    onClick = onOpenPrivacy
                 )
                 // Phase 2: Photo privacy opens the photo-access management screen.
                 R.string.profile_hub_photo_privacy_title -> ProfileHubRow(

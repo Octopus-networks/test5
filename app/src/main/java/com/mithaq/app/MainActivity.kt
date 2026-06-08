@@ -108,6 +108,7 @@ import com.mithaq.app.ui.auth.CompleteProfileScreen
 import com.mithaq.app.ui.settings.AppSettingsScreen
 import com.mithaq.app.ui.settings.PrayerSettingsScreen
 import com.mithaq.app.ui.profile.PhotoPrivacyScreen
+import com.mithaq.app.ui.profile.PrivacySettingsScreen
 import com.mithaq.app.ui.verification.VerifyEmailScreen
 
 
@@ -1186,6 +1187,7 @@ fun MithaqAppNavigation(
                     onOpenProfileSettings = { currentScreen = "profile_settings" },
                     onOpenPrayerSettings = { currentScreen = "prayer_settings" },
                     onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
+                    onOpenPrivacy = { currentScreen = "privacy_settings" },
                     onSignOut = {
                         authViewModel.signOut()
                         com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1253,6 +1255,7 @@ fun MithaqAppNavigation(
                         onOpenProfileSettings = { currentScreen = "profile_settings" },
                         onOpenPrayerSettings = { currentScreen = "prayer_settings" },
                         onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
+                        onOpenPrivacy = { currentScreen = "privacy_settings" },
                         onSignOut = {
                             authViewModel.signOut()
                             com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1395,6 +1398,14 @@ fun MithaqAppNavigation(
                     onPrimaryAction = { currentScreen = "home" }
                 )
             }
+        }
+        "privacy_settings" -> {
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
+            PrivacySettingsScreen(
+                currentUserId = currentUserId,
+                isArabic = isArabic,
+                onBack = { currentScreen = "home" }
+            )
         }
         "photo_privacy" -> {
             androidx.activity.compose.BackHandler { currentScreen = "home" }
