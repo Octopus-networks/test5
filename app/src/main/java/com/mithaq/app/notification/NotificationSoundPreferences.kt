@@ -13,14 +13,14 @@ import com.mithaq.app.R
 /**
  * In-app notification sound selection (device-local).
  *
- * Lets the user pick the sound used for the app's locally-posted notifications (foreground
- * FCM messages + the WorkManager fallback). On Android 8+ a channel's sound is immutable, so
- * each sound gets its own channel id and switching sounds recreates the channel. The choice
- * is stored only on this device — no Firestore, Cloud Functions, or backend involvement.
+ * A single app-wide default sound (GENERAL) plus an optional per-category override, applied to
+ * the app's locally-posted notifications (foreground FCM + the WorkManager fallback). On
+ * Android 8+ a channel's sound is immutable, so every category has its own channel keyed by its
+ * effective sound; switching a sound recreates that channel. Stored only on this device — no
+ * Firestore, Cloud Functions, or backend.
  *
- * Note: notifications delivered by the system while the app is killed follow the channel in
- * the FCM payload, not this selection (that would require a server change, intentionally out
- * of scope for this device-local feature).
+ * Notifications shown by the system while the app is killed follow the FCM payload's channel,
+ * not this selection (that would require a server change, intentionally out of scope).
  */
 enum class NotificationSound(val key: String, val rawResId: Int?) {
     DEFAULT("default", null),
@@ -34,73 +34,139 @@ enum class NotificationSound(val key: String, val rawResId: Int?) {
     }
 }
 
+/**
+ * Notification categories mirror the Phase 13B server notification types. GENERAL is the app-wide
+ * default; the [overridable] categories may each pick their own sound or follow the default.
+ */
+enum class NotificationCategory(val key: String, val channelName: String) {
+    GENERAL("general", "Mithaq"),
+    INTEREST("interest", "Interest requests"),
+    PHOTO_REQUEST("photo_request", "Photo requests"),
+    CHAT_REQUEST("chat_request", "Chat requests"),
+    MESSAGE("message", "Messages"),
+    PHOTO_MODERATION("photo_review", "Photo review");
+
+    companion object {
+        fun fromType(type: String?): NotificationCategory = when (type) {
+            "interest_request" -> INTEREST
+            "photo_request" -> PHOTO_REQUEST
+            "chat_request" -> CHAT_REQUEST
+            "chat_message" -> MESSAGE
+            "photo_approved", "photo_rejected" -> PHOTO_MODERATION
+            else -> GENERAL
+        }
+
+        val overridable: List<NotificationCategory> =
+            listOf(INTEREST, PHOTO_REQUEST, CHAT_REQUEST, MESSAGE, PHOTO_MODERATION)
+    }
+}
+
 object NotificationSoundPreferences {
     private const val PREFS = "mithaq_notification_sound"
-    private const val KEY_SELECTED = "selected_sound"
-    private const val CHANNEL_PREFIX = "mithaq_messages_snd_"
-    private const val CHANNEL_NAME = "Mithaq Messages"
+    private const val KEY_DEFAULT = "selected_sound"
+    private const val CHANNEL_PREFIX = "mithaq_"
 
-    // Older fixed channels are retired so System settings shows a single messages channel.
-    private val LEGACY_CHANNEL_IDS = listOf("mithaq_messages_channel_v2", "mithaq_alerts_channel_v4")
+    // Retired channel ids from earlier versions, removed so System settings stays clean.
+    private val LEGACY_CHANNEL_IDS = listOf(
+        "mithaq_messages_channel_v2",
+        "mithaq_alerts_channel_v4",
+        "mithaq_messages_snd_default",
+        "mithaq_messages_snd_chime",
+        "mithaq_messages_snd_ding",
+        "mithaq_messages_snd_soft",
+        "mithaq_messages_snd_silent"
+    )
 
+    // ── App-wide default (GENERAL) ──────────────────────────────────────────────
     fun getSelected(context: Context): NotificationSound {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        return NotificationSound.fromKey(prefs.getString(KEY_SELECTED, NotificationSound.DEFAULT.key))
+        return NotificationSound.fromKey(prefs.getString(KEY_DEFAULT, NotificationSound.DEFAULT.key))
     }
 
     fun setSelected(context: Context, sound: NotificationSound) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(KEY_SELECTED, sound.key)
+            .putString(KEY_DEFAULT, sound.key)
             .apply()
-        // Recreate the channel so the new sound takes effect on Android 8+.
-        ensureActiveChannel(context)
+        ensureAllChannels(context)
     }
 
-    /** Resolves the playable Uri for a sound (null == silent). */
+    // ── Per-category override ────────────────────────────────────────────────────
+    private fun overrideKey(category: NotificationCategory) = "sound_${category.key}"
+
+    /** The override for [category], or null when it follows the app default. GENERAL never overrides. */
+    fun getOverride(context: Context, category: NotificationCategory): NotificationSound? {
+        if (category == NotificationCategory.GENERAL) return null
+        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(overrideKey(category), null)
+        return raw?.let { NotificationSound.fromKey(it) }
+    }
+
+    /** Set ([sound] non-null) or clear ([sound] == null → follow default) the override for [category]. */
+    fun setOverride(context: Context, category: NotificationCategory, sound: NotificationSound?) {
+        if (category == NotificationCategory.GENERAL) {
+            if (sound != null) setSelected(context, sound)
+            return
+        }
+        val editor = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        if (sound == null) editor.remove(overrideKey(category)) else editor.putString(overrideKey(category), sound.key)
+        editor.apply()
+        ensureAllChannels(context)
+    }
+
+    /** The effective sound for [category]: its override, else the app default. */
+    fun effectiveSound(context: Context, category: NotificationCategory): NotificationSound =
+        getOverride(context, category) ?: getSelected(context)
+
     fun soundUri(context: Context, sound: NotificationSound): Uri? = when (sound) {
         NotificationSound.SILENT -> null
         NotificationSound.DEFAULT -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         else -> sound.rawResId?.let { Uri.parse("android.resource://${context.packageName}/$it") }
     }
 
-    fun channelId(sound: NotificationSound): String = CHANNEL_PREFIX + sound.key
+    private fun channelId(category: NotificationCategory, sound: NotificationSound): String =
+        "$CHANNEL_PREFIX${category.key}_${sound.key}"
 
-    /**
-     * Ensures the channel for the currently-selected sound exists with that sound, and removes
-     * stale per-sound channels plus the legacy channels so the system list stays clean. Returns
-     * the active channel id. Safe to call repeatedly; a no-op below Android O.
-     */
-    fun ensureActiveChannel(context: Context): String {
-        val selected = getSelected(context)
-        val activeId = channelId(selected)
+    /** Ensures the channel for [category] (with its effective sound) exists and returns its id. */
+    fun ensureChannel(context: Context, category: NotificationCategory): String {
+        val sound = effectiveSound(context, category)
+        val activeId = channelId(category, sound)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return activeId
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return activeId
 
-        // Clean up other per-sound channels and the retired legacy channels.
+        // A channel's sound is immutable, so remove this category's channels for other sounds.
         for (other in NotificationSound.entries) {
-            if (other != selected) nm.deleteNotificationChannel(channelId(other))
+            val id = channelId(category, other)
+            if (id != activeId) nm.deleteNotificationChannel(id)
         }
-        for (legacy in LEGACY_CHANNEL_IDS) nm.deleteNotificationChannel(legacy)
 
-        val channel = NotificationChannel(activeId, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Message and interaction alerts"
+        val channel = NotificationChannel(activeId, category.channelName, NotificationManager.IMPORTANCE_HIGH).apply {
             enableLights(true)
             enableVibration(true)
             setShowBadge(true)
             setLockscreenVisibility(Notification.VISIBILITY_PUBLIC)
             vibrationPattern = longArrayOf(0, 500, 200, 500)
-            val uri = soundUri(context, selected)
+            val uri = soundUri(context, sound)
             if (uri == null) {
                 setSound(null, null)
             } else {
-                val attributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-                setSound(uri, attributes)
+                setSound(
+                    uri,
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
             }
         }
         nm.createNotificationChannel(channel)
         return activeId
+    }
+
+    /** Ensures every category channel and removes retired legacy channels. Call on startup + changes. */
+    fun ensureAllChannels(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        for (legacy in LEGACY_CHANNEL_IDS) nm.deleteNotificationChannel(legacy)
+        for (category in NotificationCategory.entries) ensureChannel(context, category)
     }
 }

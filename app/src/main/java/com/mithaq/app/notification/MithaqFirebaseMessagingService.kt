@@ -34,18 +34,24 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
 
         val title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "ميثاق - Mithaq"
         val body = remoteMessage.notification?.body ?: remoteMessage.data["body"] ?: "رسالة جديدة"
+        val category = NotificationCategory.fromType(remoteMessage.data["type"])
 
-        showNotification(title, body)
+        showNotification(title, body, category)
     }
 
-    private fun showNotification(title: String, body: String) {
-        showLocalNotification(this, title, body)
+    private fun showNotification(title: String, body: String, category: NotificationCategory) {
+        showLocalNotification(this, title, body, category)
     }
 
     companion object {
         private val notificationIdCounter = java.util.concurrent.atomic.AtomicInteger((System.currentTimeMillis() % 100000).toInt())
 
-        fun showLocalNotification(context: Context, title: String, body: String) {
+        fun showLocalNotification(
+            context: Context,
+            title: String,
+            body: String,
+            category: NotificationCategory = NotificationCategory.GENERAL
+        ) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
             ) {
@@ -68,8 +74,11 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             // Use the channel for the user's selected sound (device-local). On Android 8+ the
             // channel owns the sound; pre-O we set it on the builder below.
-            val channelId = NotificationSoundPreferences.ensureActiveChannel(context)
-            val soundUri = NotificationSoundPreferences.soundUri(context, NotificationSoundPreferences.getSelected(context))
+            val channelId = NotificationSoundPreferences.ensureChannel(context, category)
+            val soundUri = NotificationSoundPreferences.soundUri(
+                context,
+                NotificationSoundPreferences.effectiveSound(context, category)
+            )
 
             val notificationBuilder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_email)

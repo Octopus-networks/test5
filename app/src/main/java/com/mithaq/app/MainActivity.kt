@@ -119,7 +119,7 @@ class MainActivity : FragmentActivity() {
 
         // Ensure the messages notification channel reflects the user's selected sound
         // (device-local). The call no-ops below Android O and handles cleanup internally.
-        com.mithaq.app.notification.NotificationSoundPreferences.ensureActiveChannel(this)
+        com.mithaq.app.notification.NotificationSoundPreferences.ensureAllChannels(this)
 
         // Debug-only Firebase fallback for local demo builds.
         try {
