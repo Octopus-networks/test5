@@ -7,6 +7,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import org.json.JSONArray
 import java.util.concurrent.TimeUnit
 
@@ -32,7 +33,7 @@ class NotificationSyncWorker(
             checkNewChatMessages()
             Result.success()
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
             Result.retry()
         }
     }

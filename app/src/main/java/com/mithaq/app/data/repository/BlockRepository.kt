@@ -1,6 +1,7 @@
 package com.mithaq.app.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -125,7 +126,7 @@ class BlockRepository(
                 )
             ).await()
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 }

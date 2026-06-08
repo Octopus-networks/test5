@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import java.io.File
 import java.io.IOException
 
@@ -29,7 +30,7 @@ class VoiceRecorderManager(private val context: Context) {
             rec.start()
             recorder = rec
         } catch (e: IOException) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 
@@ -37,7 +38,7 @@ class VoiceRecorderManager(private val context: Context) {
         try {
             recorder?.stop()
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         } finally {
             recorder?.release()
             recorder = null
@@ -57,7 +58,7 @@ class VoiceRecorderManager(private val context: Context) {
             mp.start()
             player = mp
         } catch (e: IOException) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 
@@ -65,7 +66,7 @@ class VoiceRecorderManager(private val context: Context) {
         try {
             player?.stop()
         } catch (e: Exception) {
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         } finally {
             player?.release()
             player = null

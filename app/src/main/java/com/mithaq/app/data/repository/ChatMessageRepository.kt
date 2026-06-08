@@ -2,6 +2,7 @@ package com.mithaq.app.data.repository
 
 import android.net.Uri
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -382,7 +383,7 @@ class ChatMessageRepository(
             ).await()
         } catch (e: Exception) {
             // Message delivery must not fail just because notification queuing failed.
-            e.printStackTrace()
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 
