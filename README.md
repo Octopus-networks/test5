@@ -188,4 +188,4 @@ Do not commit generated build outputs or local IDE state. The repository ignores
 - Android Studio `.idea/` metadata
 - Local machine files such as `local.properties`
 
-Release artifacts should be uploaded through GitHub Releases or CI output, not stored in the source tree.
+Release artifacts should be uploaded through GitHub Releases or CI output, not stored in the source tree. To publish a downloadable APK, push a `v*` tag (or run the **Release APK** workflow manually) — see [`docs/ops/release.md`](docs/ops/release.md).

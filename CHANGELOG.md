@@ -41,6 +41,7 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `directBootAware="true"` on `BootReceiver` so it fires before the first unlock screen on Android 7+.
 - Language badges and technology stack shields in `README.md`.
 - Branch protection workflow in `.github/workflows/protect-main.yml` to block force-pushes on main.
+- **`Release APK` workflow** (`.github/workflows/release.yml`): builds and attaches a downloadable APK to a GitHub Release on a `v*` tag or manual dispatch (debug-signed pre-release for now; see [`docs/ops/release.md`](./docs/ops/release.md)).
 
 ### Changed
 - `AdhanReceiver` is now `exported="false"` and only handles `ADHAN_ALARM` actions (Boot recovery delegated to `BootReceiver`).
