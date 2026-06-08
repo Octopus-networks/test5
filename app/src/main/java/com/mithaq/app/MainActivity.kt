@@ -1180,6 +1180,7 @@ fun MithaqAppNavigation(
                     isArabic = isArabic,
                     isAdmin = currentUserProfile?.isAdmin == true,
                     onOpenAdminModeration = { currentScreen = "admin_moderation" },
+                    onOpenAppSettings = { currentScreen = "app_settings" },
                     onSignOut = {
                         authViewModel.signOut()
                         com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1243,6 +1244,7 @@ fun MithaqAppNavigation(
                         isArabic = isArabic,
                         isAdmin = currentUserProfile?.isAdmin == true,
                         onOpenAdminModeration = { currentScreen = "admin_moderation" },
+                        onOpenAppSettings = { currentScreen = "app_settings" },
                         onSignOut = {
                             authViewModel.signOut()
                             com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1386,7 +1388,7 @@ fun MithaqAppNavigation(
             }
         }
         "app_settings" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "profile_settings" }
+            androidx.activity.compose.BackHandler { currentScreen = "home" }
             AppSettingsScreen(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 authViewModel = authViewModel,
@@ -1394,7 +1396,7 @@ fun MithaqAppNavigation(
                 onLanguageChange = onLanguageChange,
                 isDarkMode = isDarkMode,
                 onDarkModeChange = onDarkModeChange,
-                onBack = { currentScreen = "profile_settings" },
+                onBack = { currentScreen = "home" },
                 onLogout = {
                     authViewModel.signOut()
                     com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
