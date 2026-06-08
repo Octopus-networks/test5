@@ -49,6 +49,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.data.repository.NotificationSettingsRepository
 import com.mithaq.app.domain.model.NotificationSettings
+import com.mithaq.app.notification.NotificationCategory
 import com.mithaq.app.notification.NotificationSound
 import com.mithaq.app.notification.NotificationSoundPreferences
 
@@ -83,6 +84,12 @@ fun NotificationSettingsScreen(
 
     var selectedSound by remember { mutableStateOf(NotificationSoundPreferences.getSelected(context)) }
     var showSoundDialog by remember { mutableStateOf(false) }
+    var soundDialogCategory by remember { mutableStateOf<NotificationCategory?>(null) }
+    var categoryOverrides by remember {
+        mutableStateOf(
+            NotificationCategory.overridable.associateWith { NotificationSoundPreferences.getOverride(context, it) }
+        )
+    }
     val previewHolder = remember { mutableStateOf<Ringtone?>(null) }
     fun stopPreview() {
         previewHolder.value?.let { ringtone ->
@@ -270,6 +277,46 @@ fun NotificationSettingsScreen(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Per-type sound: each category may override the app default sound above.
+                Text(
+                    text = if (isArabic) "صوت لكل نوع" else "Sound per type",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                NotificationCategory.overridable.forEach { category ->
+                    val override = categoryOverrides[category]
+                    SettingActionCard(
+                        title = categoryDisplayName(category, isArabic),
+                        subtitle = if (override == null) {
+                            (if (isArabic) "الافتراضي: " else "Default: ") + soundDisplayName(selectedSound, isArabic)
+                        } else {
+                            soundDisplayName(override, isArabic)
+                        },
+                        onClick = { soundDialogCategory = category }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                soundDialogCategory?.let { category ->
+                    CategorySoundPickerDialog(
+                        isArabic = isArabic,
+                        selected = categoryOverrides[category],
+                        onSelect = { sound ->
+                            categoryOverrides = categoryOverrides + (category to sound)
+                            NotificationSoundPreferences.setOverride(context, category, sound)
+                            previewSound(sound ?: selectedSound)
+                        },
+                        onDismiss = {
+                            stopPreview()
+                            soundDialogCategory = null
+                        }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(20.dp))
 
                 state.errorMessage?.let { error ->
@@ -400,6 +447,70 @@ private fun soundDisplayName(sound: NotificationSound, isArabic: Boolean): Strin
     NotificationSound.DING -> if (isArabic) "دينغ" else "Ding"
     NotificationSound.SOFT -> if (isArabic) "ناعم" else "Soft"
     NotificationSound.SILENT -> if (isArabic) "صامت" else "Silent"
+}
+
+private fun categoryDisplayName(category: NotificationCategory, isArabic: Boolean): String = when (category) {
+    NotificationCategory.INTEREST -> if (isArabic) "طلبات الاهتمام" else "Interest requests"
+    NotificationCategory.PHOTO_REQUEST -> if (isArabic) "طلبات الصور" else "Photo requests"
+    NotificationCategory.CHAT_REQUEST -> if (isArabic) "طلبات المحادثة" else "Chat requests"
+    NotificationCategory.MESSAGE -> if (isArabic) "الرسائل" else "Messages"
+    NotificationCategory.PHOTO_MODERATION -> if (isArabic) "مراجعة الصور" else "Photo review"
+    NotificationCategory.GENERAL -> if (isArabic) "عام" else "General"
+}
+
+/** Sound picker for a category: includes a "Follow default" option (maps to a null override). */
+@Composable
+private fun CategorySoundPickerDialog(
+    isArabic: Boolean,
+    selected: NotificationSound?,
+    onSelect: (NotificationSound?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = if (isArabic) "صوت الإشعار" else "Notification sound") },
+        text = {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect(null) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    RadioButton(selected = selected == null, onClick = { onSelect(null) })
+                    Text(
+                        text = if (isArabic) "اتبع الافتراضي" else "Follow default",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                NotificationSound.entries.forEach { sound ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(sound) }
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        RadioButton(selected = sound == selected, onClick = { onSelect(sound) })
+                        Text(
+                            text = soundDisplayName(sound, isArabic),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = if (isArabic) "تم" else "Done")
+            }
+        }
+    )
 }
 
 @Composable

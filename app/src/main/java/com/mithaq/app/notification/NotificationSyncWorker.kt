@@ -114,7 +114,8 @@ class NotificationSyncWorker(
                             MithaqFirebaseMessagingService.showLocalNotification(
                                 context,
                                 "ميثاق - رسالة جديدة 💬",
-                                latestContent
+                                latestContent,
+                                NotificationCategory.MESSAGE
                             )
                         }
                     }
@@ -134,7 +135,8 @@ class NotificationSyncWorker(
                         for (doc in snapshot.documents) {
                             val title = doc.getString("title") ?: "ميثاق"
                             val body = doc.getString("body") ?: ""
-                            MithaqFirebaseMessagingService.showLocalNotification(context, title, body)
+                            val category = NotificationCategory.fromType(doc.getString("type"))
+                            MithaqFirebaseMessagingService.showLocalNotification(context, title, body, category)
                             doc.reference.update("status", "DELIVERED")
                         }
                     }
