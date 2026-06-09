@@ -867,6 +867,28 @@ fun MithaqAppNavigation(
 
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
     val authState by authViewModel.authState.collectAsState()
+
+    val prefs = remember { context.getSharedPreferences("mithaq_prefs", android.content.Context.MODE_PRIVATE) }
+    var locationPrompted by remember { mutableStateOf(prefs.getBoolean("location_prompted", false)) }
+
+    val appStartupLocationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        prefs.edit().putBoolean("location_prompted", true).apply()
+        locationPrompted = true
+        coroutineScope.launch {
+            if (currentUserProfile != null) {
+                com.mithaq.app.util.AdhanScheduler.enableAndScheduleAdhan(
+                    context = context,
+                    currentUser = currentUserProfile!!,
+                    authViewModel = authViewModel,
+                    isEnabled = true,
+                    calcMethod = currentUserProfile!!.adhanCalculationMethod.ifEmpty { "MUSLIM_WORLD_LEAGUE" },
+                    soundPattern = currentUserProfile!!.adhanSoundPattern.ifEmpty { "TAKBEER" }
+                )
+            }
+        }
+    }
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
     var onboardingAnsweredCount by remember { mutableStateOf(0) }
     var onboardingCompletionPercent by remember { mutableStateOf(0) }
@@ -1181,6 +1203,33 @@ fun MithaqAppNavigation(
                     }
                 )
             } else if (hasDismissedOnboarding) {
+                LaunchedEffect(locationPrompted) {
+                    if (!locationPrompted) {
+                        val hasPerm = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+                                      androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        if (!hasPerm) {
+                            appStartupLocationPermissionLauncher.launch(
+                                arrayOf(
+                                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                    android.Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
+                            )
+                        } else {
+                            prefs.edit().putBoolean("location_prompted", true).apply()
+                            locationPrompted = true
+                            if (currentUserProfile != null) {
+                                com.mithaq.app.util.AdhanScheduler.enableAndScheduleAdhan(
+                                    context = context,
+                                    currentUser = currentUserProfile!!,
+                                    authViewModel = authViewModel,
+                                    isEnabled = true,
+                                    calcMethod = currentUserProfile!!.adhanCalculationMethod.ifEmpty { "MUSLIM_WORLD_LEAGUE" },
+                                    soundPattern = currentUserProfile!!.adhanSoundPattern.ifEmpty { "TAKBEER" }
+                                )
+                            }
+                        }
+                    }
+                }
                 MithaqMainExperience(
                     currentUserId = currentUserId,
                     isArabic = isArabic,
@@ -1231,6 +1280,33 @@ fun MithaqAppNavigation(
                         onLanguageChange = onLanguageChange
                     )
                 } else {
+                    LaunchedEffect(locationPrompted) {
+                        if (!locationPrompted) {
+                            val hasPerm = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+                                          androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            if (!hasPerm) {
+                                appStartupLocationPermissionLauncher.launch(
+                                    arrayOf(
+                                        android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                        android.Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            } else {
+                                prefs.edit().putBoolean("location_prompted", true).apply()
+                                locationPrompted = true
+                                if (currentUserProfile != null) {
+                                    com.mithaq.app.util.AdhanScheduler.enableAndScheduleAdhan(
+                                        context = context,
+                                        currentUser = currentUserProfile!!,
+                                        authViewModel = authViewModel,
+                                        isEnabled = true,
+                                        calcMethod = currentUserProfile!!.adhanCalculationMethod.ifEmpty { "MUSLIM_WORLD_LEAGUE" },
+                                        soundPattern = currentUserProfile!!.adhanSoundPattern.ifEmpty { "TAKBEER" }
+                                    )
+                                }
+                            }
+                        }
+                    }
                     MithaqMainExperience(
                         currentUserId = currentUserId,
                         isArabic = isArabic,
