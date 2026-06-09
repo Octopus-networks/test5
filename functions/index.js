@@ -750,3 +750,97 @@ exports.mirrorPublicProfileOnUserChange = onDocumentWritten(
     await syncPublicProfile(userId);
   }
 );
+
+// ── Mirror onboarding answers (profiles/{uid}) into the matchable UserProfile (users/{uid}) ──
+// The onboarding engine writes structured groups to profiles/{uid}, but matching/search read the
+// flat UserProfile at users/{uid}. This translates the onboarding option-ids into the UserProfile
+// enum/value vocabulary and writes the matchable fields. Display-only fields are copied as-is.
+// Writing users/{uid} triggers mirrorPublicProfileOnUserChange (publicProfiles rebuild) — no loop,
+// because this function only fires on profiles writes.
+const ONBOARDING_VALUE_MAP = {
+  gender: { male: "MALE", female: "FEMALE" },
+  sect: { sunni: "SUNNI", just_muslim: "OTHER", other: "OTHER" },
+  prayerFrequency: { five_daily: "ALWAYS", most: "USUALLY", sometimes: "SOMETIMES", working_on: "SOMETIMES" },
+  religiousValues: { very: "very_religious", practicing: "religious", moderate: "religious", learning: "not_religious" },
+  familyValue: { traditional: "conservative", balanced: "moderate", modern: "liberal" },
+  modestyPreference: { niqab: "NIQAB", hijab: "HIJAB", modest_dress: "HIJAB", beard_sunnah: "NONE" },
+  relocationWillingness: { yes: "YES", no: "NO", maybe: "OPEN" },
+};
+
+exports.mirrorProfileToUser = onDocumentWritten(
+  { document: "profiles/{userId}", region },
+  async (event) => {
+    const userId = event.params.userId;
+    const after = event.data && event.data.after;
+    if (!after || !after.exists) return;
+
+    const p = after.data() || {};
+    const basic = p.basicInfo || {};
+    const loc = p.location || {};
+    const rel = p.religiousPractice || {};
+    const marr = p.marriageIntent || {};
+    const fam = p.family || {};
+    const edu = p.educationWork || {};
+    const app = p.appearance || {};
+    const life = p.lifestyle || {};
+    const per = p.personality || {};
+
+    const update = {};
+    const str = (k, v) => { if (typeof v === "string" && v.trim() !== "") update[k] = v.trim(); };
+    const num = (k, v) => { if (typeof v === "number") update[k] = v; };
+    const arr = (k, v) => { if (Array.isArray(v)) update[k] = v; };
+    const enumMap = (k, table, v) => { if (v != null && table[v] != null) update[k] = table[v]; };
+
+    // Identity / basic
+    str("name", basic.firstName);
+    str("username", basic.displayName);
+    str("nationality", basic.nationality);
+    num("age", basic.age);
+    enumMap("gender", ONBOARDING_VALUE_MAP.gender, basic.gender);
+
+    // Location
+    str("country", loc.country);
+    str("city", loc.city);
+    enumMap("relocationWillingness", ONBOARDING_VALUE_MAP.relocationWillingness, loc.willingToRelocate);
+
+    // Religious practice (matching-critical)
+    enumMap("sect", ONBOARDING_VALUE_MAP.sect, rel.sect);
+    enumMap("prayerFrequency", ONBOARDING_VALUE_MAP.prayerFrequency, rel.prayerHabit);
+    enumMap("religiousValues", ONBOARDING_VALUE_MAP.religiousValues, rel.commitment);
+    enumMap("familyValue", ONBOARDING_VALUE_MAP.familyValue, rel.familyValues);
+    enumMap("modestyPreference", ONBOARDING_VALUE_MAP.modestyPreference, rel.modesty);
+
+    // Marriage / family
+    str("maritalStatus", marr.maritalStatus); // single/divorced/widowed already valid
+    str("weddingTimeline", marr.timeline);
+    if (typeof marr.polygamyStance === "string") update.polygamyAcceptance = marr.polygamyStance === "open";
+    num("numberOfChildren", fam.numberOfChildren);
+
+    // Education / work (display)
+    str("educationLevel", edu.educationLevel);
+    str("occupation", edu.occupation);
+    str("employmentStatus", edu.employmentStatus);
+    str("incomeLevel", edu.incomeRange);
+
+    // Appearance (display)
+    num("height", app.heightCm);
+    num("weight", app.weightKg);
+    str("bodyType", app.bodyType);
+
+    // Lifestyle (display)
+    str("smokeStatus", life.smoking);
+    str("livingSituation", life.livingSituation);
+
+    // Personality
+    str("aboutYourself", per.idealDay);
+    arr("languagesSpoken", per.languagesSpoken);
+    arr("interestsEntertainments", per.hobbies);
+
+    // Oath
+    const oath = (p.privacyTrust || {}).oathAccepted;
+    if (oath === "yes" || oath === true) update.oathChecked = true;
+
+    if (Object.keys(update).length === 0) return;
+    await db.collection("users").doc(userId).set(update, { merge: true });
+  },
+);
