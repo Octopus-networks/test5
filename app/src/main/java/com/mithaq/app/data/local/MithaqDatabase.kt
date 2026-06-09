@@ -135,6 +135,7 @@ data class CachedUserProfile(
     val profileHeading: String,
     val idealPartner: String,
     val lastSeen: Long,
+    val isIncognito: Boolean,
     val timezone: String
 )
 
@@ -339,7 +340,7 @@ interface ChatDao {
  */
 @Database(
     entities = [CachedUserProfile::class, CachedMessage::class, CachedChatRoom::class],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(MithaqConverters::class)
@@ -487,6 +488,7 @@ fun UserProfile.toCached(): CachedUserProfile = CachedUserProfile(
     profileHeading = profileHeading,
     idealPartner = idealPartner,
     lastSeen = lastSeen,
+    isIncognito = isIncognito,
     timezone = timezone
 )
 
@@ -607,5 +609,6 @@ fun CachedUserProfile.toDomain(): UserProfile = UserProfile(
     profileHeading = profileHeading,
     idealPartner = idealPartner,
     lastSeen = lastSeen,
+    isIncognito = isIncognito,
     timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(country, timezone)
 )

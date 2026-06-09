@@ -249,6 +249,21 @@ class LikesRepository(private val context: Context) {
 
     suspend fun addProfileView(viewerUid: String, viewedUid: String) {
         if (viewerUid == viewedUid) return
+        
+        var isIncognito = false
+        if (isMock) {
+            val mockAuthPrefs = context.getSharedPreferences("mithaq_mock_auth", Context.MODE_PRIVATE)
+            isIncognito = mockAuthPrefs.getBoolean("isIncognito", false)
+        } else {
+            try {
+                val viewerDoc = db.collection("users").document(viewerUid).get().await()
+                isIncognito = viewerDoc.getBoolean("isIncognito") ?: false
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+        if (isIncognito) return
+        
         if (isMock) {
             // Visitors of viewedUid (who viewed viewedUid)
             val viewsStr = prefs.getString("views_$viewedUid", "[]") ?: "[]"

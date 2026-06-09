@@ -269,6 +269,9 @@ class SearchViewModel(
                         val name = doc.getString("name") ?: ""
                         val genderStr = doc.getString("gender") ?: "FEMALE"
                         val gender = if (genderStr.uppercase() == "MALE") Gender.MALE else Gender.FEMALE
+                        val isIncognito = doc.getBoolean("isIncognito") ?: false
+                        if (isIncognito) return@mapNotNull null
+                        
                         val age = doc.getLong("age")?.toInt() ?: 18
                         val city = doc.getString("city") ?: ""
                         val country = doc.getString("country") ?: ""

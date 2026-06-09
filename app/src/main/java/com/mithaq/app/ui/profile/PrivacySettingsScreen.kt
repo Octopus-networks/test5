@@ -62,11 +62,17 @@ fun PrivacySettingsScreen(
     var showLocation by remember(currentUserId) { mutableStateOf(true) }
     var showMaritalStatus by remember(currentUserId) { mutableStateOf(true) }
     var showMarriageTimeline by remember(currentUserId) { mutableStateOf(true) }
+    var isPremium by remember(currentUserId) { mutableStateOf(false) }
+    var isIncognito by remember(currentUserId) { mutableStateOf(false) }
     var loaded by remember(currentUserId) { mutableStateOf(false) }
 
     // Load current privacy prefs from profiles/{uid}.privacy
     LaunchedEffect(currentUserId) {
         try {
+            val userSnap = firestore.collection("users").document(currentUserId).get().await()
+            isPremium = userSnap.getBoolean("isPremium") ?: false
+            isIncognito = userSnap.getBoolean("isIncognito") ?: false
+
             val snap = firestore.collection("profiles").document(currentUserId).get().await()
             @Suppress("UNCHECKED_CAST")
             val privacy = snap.get("privacyTrust") as? Map<String, Any?> ?: emptyMap()
@@ -92,6 +98,11 @@ fun PrivacySettingsScreen(
             firestore.collection("profiles")
                 .document(currentUserId)
                 .set(mapOf("privacyTrust" to privacy), SetOptions.merge())
+                .await()
+            
+            firestore.collection("users")
+                .document(currentUserId)
+                .update("isIncognito", isIncognito)
                 .await()
         } catch (_: Exception) {
             Toast.makeText(
@@ -162,6 +173,15 @@ fun PrivacySettingsScreen(
                     enabled = loaded,
                     onCheckedChange = { showMarriageTimeline = it; scope.launch { persist() } }
                 )
+                if (isPremium) {
+                    HorizontalDivider()
+                    PrivacyToggleRow(
+                        label = if (isArabic) "وضع التخفي (لمشتركي بريميوم)" else "Incognito Mode (Premium)",
+                        checked = isIncognito,
+                        enabled = loaded,
+                        onCheckedChange = { isIncognito = it; scope.launch { persist() } }
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
