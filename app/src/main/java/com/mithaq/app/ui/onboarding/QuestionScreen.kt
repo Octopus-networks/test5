@@ -47,7 +47,6 @@ fun QuestionScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val step = state.currentStep
-    var showExitConfirm by remember { mutableStateOf(false) }
 
     if (state.isComplete) {
         LaunchedEffect(state.answeredQuestions, state.profileCompletionPercent) {
@@ -61,8 +60,6 @@ fun QuestionScreen(
         if (state.isLoading) return
         if (state.canGoBack) {
             viewModel.goBack()
-        } else {
-            showExitConfirm = true
         }
     }
 
@@ -70,26 +67,6 @@ fun QuestionScreen(
         handleBack()
     }
 
-    if (showExitConfirm) {
-        AlertDialog(
-            onDismissRequest = { showExitConfirm = false },
-            title = { Text(stringResource(id = if (isArabic) R.string.onboarding_leave_title_ar else R.string.onboarding_leave_title)) },
-            text = { Text(stringResource(id = if (isArabic) R.string.onboarding_leave_message_ar else R.string.onboarding_leave_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showExitConfirm = false
-                    onExitRequested()
-                }) {
-                    Text(stringResource(id = if (isArabic) R.string.onboarding_leave_ar else R.string.onboarding_leave))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showExitConfirm = false }) {
-                    Text(stringResource(id = if (isArabic) R.string.onboarding_stay_ar else R.string.onboarding_stay))
-                }
-            }
-        )
-    }
 
     if (step == null) {
         Text(stringResource(id = if (isArabic) R.string.onboarding_no_questions_ar else R.string.onboarding_no_questions))
@@ -98,7 +75,7 @@ fun QuestionScreen(
 
     val answer = state.answers[step.id]
     val canContinue = step.isOptional || answerHasValue(step, answer)
-    val showSkip = step.isOptional && !step.isBreak && step.type != QuestionType.Summary
+    val showSkip = false
 
     MithaqQuestionScaffold(
         progress = state.progress,

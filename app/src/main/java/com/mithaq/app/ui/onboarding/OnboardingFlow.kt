@@ -231,7 +231,7 @@ object MithaqOnboardingFlow {
             OnboardingStorageGroup.FAMILY, "hasChildren", OnboardingPrivacy.PUBLIC_CONTROLLED,
             options = listOf(optYes, optNo)),
         q("number_of_children", secMarriage, QuestionType.NumberInput, R.string.onb_num_children_t, R.string.onb_num_children_t_ar,
-            OnboardingStorageGroup.FAMILY, "numberOfChildren", OnboardingPrivacy.PRIVATE, optional = true,
+            OnboardingStorageGroup.FAMILY, "numberOfChildren", OnboardingPrivacy.PRIVATE,
             helperEn = R.string.onb_num_children_h, helperAr = R.string.onb_num_children_h_ar),
         q("wants_children", secMarriage, QuestionType.SingleChoice, R.string.onb_wants_children_t, R.string.onb_wants_children_t_ar,
             OnboardingStorageGroup.FAMILY, "wantsChildren", OnboardingPrivacy.PUBLIC_CONTROLLED, match = true,
@@ -270,7 +270,7 @@ object MithaqOnboardingFlow {
                 opt("flexible", R.string.onb_household_flexible, R.string.onb_household_flexible_ar)
             )),
         q("mahr_shabka", secMarriage, QuestionType.TextInput, R.string.onb_mahr_t, R.string.onb_mahr_t_ar,
-            OnboardingStorageGroup.MARRIAGE_INTENT, "mahrExpectations", OnboardingPrivacy.PRIVATE, optional = true,
+            OnboardingStorageGroup.MARRIAGE_INTENT, "mahrExpectations", OnboardingPrivacy.PRIVATE,
             helperEn = R.string.onb_mahr_h, helperAr = R.string.onb_mahr_h_ar),
 
         // ════════════════ 4. Education / Work / Appearance ════════════════
@@ -285,7 +285,7 @@ object MithaqOnboardingFlow {
                 opt("phd", R.string.onb_education_phd, R.string.onb_education_phd_ar)
             )),
         q("study_field", secEducation, QuestionType.TextInput, R.string.onb_study_field_t, R.string.onb_study_field_t_ar,
-            OnboardingStorageGroup.EDUCATION_WORK, "studyField", OnboardingPrivacy.PUBLIC_CONTROLLED, optional = true),
+            OnboardingStorageGroup.EDUCATION_WORK, "studyField", OnboardingPrivacy.PUBLIC_CONTROLLED),
         q("occupation", secEducation, QuestionType.TextInput, R.string.onb_occupation_t, R.string.onb_occupation_t_ar,
             OnboardingStorageGroup.EDUCATION_WORK, "occupation", OnboardingPrivacy.PUBLIC_CONTROLLED, mirror = true,
             rules = listOf(OnboardingValidationRule.Required, OnboardingValidationRule.MinLength(2))),
@@ -299,7 +299,7 @@ object MithaqOnboardingFlow {
                 opt("not_working", R.string.onb_employment_not, R.string.onb_employment_not_ar)
             )),
         q("income_range", secEducation, QuestionType.SingleChoice, R.string.onb_income_t, R.string.onb_income_t_ar,
-            OnboardingStorageGroup.EDUCATION_WORK, "incomeRange", OnboardingPrivacy.PRIVATE, optional = true,
+            OnboardingStorageGroup.EDUCATION_WORK, "incomeRange", OnboardingPrivacy.PRIVATE,
             helperEn = R.string.onb_income_h, helperAr = R.string.onb_income_h_ar,
             options = listOf(
                 opt("low", R.string.onb_income_low, R.string.onb_income_low_ar),
@@ -312,10 +312,10 @@ object MithaqOnboardingFlow {
             helperEn = R.string.onb_height_h, helperAr = R.string.onb_height_h_ar,
             rules = listOf(OnboardingValidationRule.Required, OnboardingValidationRule.NumberRange(120, 220))),
         q("weight", secEducation, QuestionType.NumberInput, R.string.onb_weight_t, R.string.onb_weight_t_ar,
-            OnboardingStorageGroup.APPEARANCE, "weightKg", OnboardingPrivacy.PRIVATE, optional = true,
+            OnboardingStorageGroup.APPEARANCE, "weightKg", OnboardingPrivacy.PRIVATE,
             helperEn = R.string.onb_weight_h, helperAr = R.string.onb_weight_h_ar),
         q("body_type", secEducation, QuestionType.SingleChoice, R.string.onb_body_t, R.string.onb_body_t_ar,
-            OnboardingStorageGroup.APPEARANCE, "bodyType", OnboardingPrivacy.PUBLIC_CONTROLLED, optional = true,
+            OnboardingStorageGroup.APPEARANCE, "bodyType", OnboardingPrivacy.PUBLIC_CONTROLLED,
             options = listOf(
                 opt("slim", R.string.onb_body_slim, R.string.onb_body_slim_ar),
                 opt("athletic", R.string.onb_body_athletic, R.string.onb_body_athletic_ar),
@@ -341,7 +341,7 @@ object MithaqOnboardingFlow {
         // ════════════════ 5. Personality & Lifestyle ════════════════
         brk("brk_personality", secPersonality, R.string.onb_brk_personality_t, R.string.onb_brk_personality_t_ar, R.string.onb_brk_personality_s, R.string.onb_brk_personality_s_ar),
         q("ideal_day", secPersonality, QuestionType.LongTextInput, R.string.onb_ideal_day_t, R.string.onb_ideal_day_t_ar,
-            OnboardingStorageGroup.PERSONALITY, "idealDay", OnboardingPrivacy.PUBLIC_CONTROLLED, optional = true,
+            OnboardingStorageGroup.PERSONALITY, "idealDay", OnboardingPrivacy.PUBLIC_CONTROLLED,
             helperEn = R.string.onb_ideal_day_h, helperAr = R.string.onb_ideal_day_h_ar),
         q("preferred_activity", secPersonality, QuestionType.SingleChoice, R.string.onb_activity_t, R.string.onb_activity_t_ar,
             OnboardingStorageGroup.PERSONALITY, "preferredActivity", OnboardingPrivacy.PUBLIC_CONTROLLED,
@@ -397,7 +397,7 @@ object MithaqOnboardingFlow {
                 opt("flexible", R.string.onb_partner_age_flexible, R.string.onb_partner_age_flexible_ar)
             )),
         q("partner_location", secPartner, QuestionType.TextInput, R.string.onb_partner_location_t, R.string.onb_partner_location_t_ar,
-            OnboardingStorageGroup.PARTNER_PREFERENCES, "partnerLocation", OnboardingPrivacy.MATCH_ONLY, optional = true, match = true,
+            OnboardingStorageGroup.PARTNER_PREFERENCES, "partnerLocation", OnboardingPrivacy.MATCH_ONLY, match = true,
             helperEn = R.string.onb_partner_location_h, helperAr = R.string.onb_partner_location_h_ar),
         q("partner_qualities", secPartner, QuestionType.MultiChoice, R.string.onb_partner_qualities_t, R.string.onb_partner_qualities_t_ar,
             OnboardingStorageGroup.PARTNER_PREFERENCES, "partnerQualities", OnboardingPrivacy.MATCH_ONLY, match = true,

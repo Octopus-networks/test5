@@ -84,7 +84,7 @@ import com.mithaq.app.ui.admin.AdminModerationScreen
 import com.mithaq.app.ui.limit.PremiumStoreScreen
 import com.mithaq.app.ui.match.QuestionnaireScreen
 import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
-import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
+
 import com.mithaq.app.ui.onboarding.OnboardingViewModel
 import com.mithaq.app.ui.onboarding.QuestionScreen
 import com.mithaq.app.ui.onboarding.components.MithaqIllustrationHeader
@@ -1093,7 +1093,7 @@ fun MithaqAppNavigation(
                 userId = currentUserId,
                 isArabic = isArabic,
                 onExitRequested = {
-                    currentScreen = Routes.Home
+                    // Exit is no longer permitted before completion
                 },
                 onComplete = { answeredQuestions, profileCompletionPercent ->
                     onboardingAnsweredCount = answeredQuestions
@@ -1231,25 +1231,6 @@ fun MithaqAppNavigation(
                         onLanguageChange = onLanguageChange
                     )
                 } else {
-                    val shouldShowWizard = currentUserProfile != null &&
-                            (currentUserProfile!!.questionnaireAnswers.isEmpty() || currentUserProfile!!.verificationStatus == "NONE") &&
-                            !hasDismissedOnboarding
-
-                    if (shouldShowWizard) {
-                        // TODO: Old onboarding will be replaced after the new question engine is fully tested.
-                        OnboardingWizardScreen(
-                            authViewModel = authViewModel,
-                            guardianViewModel = guardianViewModel,
-                            isArabic = isArabic,
-                            onComplete = {
-                                authViewModel.fetchCurrentUserProfile(currentUserId)
-                                hasDismissedOnboarding = true
-                            },
-                            onSkip = {
-                                hasDismissedOnboarding = true
-                            }
-                        )
-                    } else {
                     MithaqMainExperience(
                         currentUserId = currentUserId,
                         isArabic = isArabic,
@@ -1270,7 +1251,6 @@ fun MithaqAppNavigation(
                 }
             }
         }
-    }
         "match_detail" -> {
             val partner = selectedMatchProfile
             if (partner != null) {

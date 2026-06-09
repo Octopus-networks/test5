@@ -69,7 +69,6 @@ import com.mithaq.app.ui.admin.AdminConsoleScreen
 import com.mithaq.app.ui.limit.PremiumStoreScreen
 import com.mithaq.app.ui.match.QuestionnaireScreen
 import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
-import com.mithaq.app.ui.onboarding.OnboardingWizardScreen
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
 import com.mithaq.app.ui.chat.ChatMessage
