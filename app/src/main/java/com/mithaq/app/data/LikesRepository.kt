@@ -135,6 +135,39 @@ class LikesRepository(private val context: Context) {
         }
     }
 
+    /**
+     * Removes a like (un-like). Deletes the fromUid -> toUid like document; the inverse like, if any,
+     * is left untouched. Mirrors [addLike]. Firestore rules allow the owner to delete their own like.
+     */
+    suspend fun removeLike(fromUid: String, toUid: String): Boolean {
+        if (isMock) {
+            removeFromMockArray("likes_$fromUid", toUid)
+            removeFromMockArray("who_liked_me_$toUid", fromUid)
+            // Undo any mutual flag locally so the UI no longer treats them as matched.
+            removeFromMockArray("mutuals_$fromUid", toUid)
+            removeFromMockArray("mutuals_$toUid", fromUid)
+            return true
+        } else {
+            return try {
+                db.collection("likes").document("${fromUid}_${toUid}").delete().await()
+                true
+            } catch (e: Exception) {
+                FirebaseCrashlytics.getInstance().recordException(e)
+                false
+            }
+        }
+    }
+
+    private fun removeFromMockArray(key: String, value: String) {
+        val source = JSONArray(prefs.getString(key, "[]") ?: "[]")
+        val result = JSONArray()
+        for (i in 0 until source.length()) {
+            val item = source.getString(i)
+            if (item != value) result.put(item)
+        }
+        prefs.edit().putString(key, result.toString()).apply()
+    }
+
     suspend fun getLikesList(userUid: String): List<String> {
         if (isMock) {
             val likesStr = prefs.getString("likes_$userUid", "[]") ?: "[]"
