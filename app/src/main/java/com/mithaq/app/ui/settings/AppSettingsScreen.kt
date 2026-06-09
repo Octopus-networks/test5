@@ -624,8 +624,15 @@ fun AdhanSettingsSectionFixed(
                 onClick = {
                     isSaving = true
                     coroutineScope.launch {
-                        if (isEnabled && !AdhanScheduler.canScheduleExactAlarms(context)) {
-                            requestExactAlarmPermission(context)
+                        val success = AdhanScheduler.enableAndScheduleAdhan(
+                            context = context,
+                            currentUser = currentUser,
+                            authViewModel = authViewModel,
+                            isEnabled = isEnabled,
+                            calcMethod = calcMethod,
+                            soundPattern = soundPattern
+                        )
+                        if (!success && isEnabled && !AdhanScheduler.canScheduleExactAlarms(context)) {
                             isSaving = false
                             android.widget.Toast.makeText(
                                 context,
@@ -633,35 +640,6 @@ fun AdhanSettingsSectionFixed(
                                 android.widget.Toast.LENGTH_LONG
                             ).show()
                             return@launch
-                        }
-
-                        val coordinates = if (isEnabled) {
-                            resolveAdhanCoordinates(context, currentUser)
-                        } else {
-                            null
-                        }
-                        val updatedProfile = currentUser.copy(
-                            isAdhanEnabled = isEnabled,
-                            adhanLocationLat = coordinates?.lat ?: currentUser.adhanLocationLat,
-                            adhanLocationLng = coordinates?.lng ?: currentUser.adhanLocationLng,
-                            adhanCalculationMethod = calcMethod,
-                            adhanSoundPattern = soundPattern
-                        )
-                        authViewModel.updatePrayerStats(updatedProfile)
-                        val scheduleSucceeded = if (isEnabled && coordinates != null) {
-                            AdhanScheduler.scheduleNextAdhan(
-                                context = context,
-                                lat = coordinates.lat,
-                                lng = coordinates.lng,
-                                calculationMethod = calcMethod,
-                                soundPattern = soundPattern
-                            )
-                        } else {
-                            AdhanScheduler.cancelAdhan(context)
-                            true
-                        }
-                        if (!scheduleSucceeded) {
-                            requestExactAlarmPermission(context)
                         }
                         isSaving = false
                         android.widget.Toast.makeText(
@@ -684,54 +662,3 @@ fun AdhanSettingsSectionFixed(
     }
 }
 
-private data class AdhanCoordinates(
-    val lat: Double,
-    val lng: Double
-)
-
-private suspend fun resolveAdhanCoordinates(context: Context, currentUser: UserProfile): AdhanCoordinates {
-    if (hasLocationPermission(context)) {
-        val locationClient = LocationServices.getFusedLocationProviderClient(context)
-        val freshLocation = runCatching {
-            val tokenSource = CancellationTokenSource()
-            locationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, tokenSource.token).await()
-        }.getOrNull()
-        if (freshLocation != null && (freshLocation.latitude != 0.0 || freshLocation.longitude != 0.0)) {
-            return AdhanCoordinates(freshLocation.latitude, freshLocation.longitude)
-        }
-
-        val location = runCatching {
-            locationClient.lastLocation.await()
-        }.getOrNull()
-        if (location != null && (location.latitude != 0.0 || location.longitude != 0.0)) {
-            return AdhanCoordinates(location.latitude, location.longitude)
-        }
-    }
-
-    if (currentUser.adhanLocationLat != 0.0 || currentUser.adhanLocationLng != 0.0) {
-        return AdhanCoordinates(currentUser.adhanLocationLat, currentUser.adhanLocationLng)
-    }
-
-    val countryCoordinates = PrayerManager.getCoordinatesForCountry(currentUser.country)
-    return AdhanCoordinates(countryCoordinates.latitude, countryCoordinates.longitude)
-}
-
-private fun hasLocationPermission(context: Context): Boolean {
-    return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-}
-
-private fun requestExactAlarmPermission(context: Context) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-
-    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-    if (alarmManager.canScheduleExactAlarms()) return
-
-    runCatching {
-        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-            data = Uri.parse("package:${context.packageName}")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(intent)
-    }
-}
