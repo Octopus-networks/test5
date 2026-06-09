@@ -121,7 +121,8 @@ class AuthViewModel(
                                 questionnaireAnswers = mapOf(
                                     "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt4", "q5" to "opt1",
                                     "q6" to "opt1", "q7" to "opt2", "q8" to "opt1", "q9" to "opt2", "q10" to "opt1"
-                                )
+                                ),
+                                isIncognito = false
                             ).toCached(),
                             UserProfile(
                                 uid = "mock_user_3",
@@ -153,7 +154,8 @@ class AuthViewModel(
                                 questionnaireAnswers = mapOf(
                                     "q1" to "opt1", "q2" to "opt1", "q3" to "opt2", "q4" to "opt1", "q5" to "opt2",
                                     "q6" to "opt2", "q7" to "opt1", "q8" to "opt2", "q9" to "opt1", "q10" to "opt2"
-                                )
+                                ),
+                                isIncognito = false
                             ).toCached(),
                             UserProfile(
                                 uid = "mock_user_4",
@@ -182,7 +184,8 @@ class AuthViewModel(
                                 isAdmin = false,
                                 isPremium = false,
                                 subscriptionPlan = "FREE",
-                                questionnaireAnswers = emptyMap()
+                                questionnaireAnswers = emptyMap(),
+                                isIncognito = false
                             ).toCached(),
                             UserProfile(
                                 uid = "mock_wali_001",
@@ -211,7 +214,8 @@ class AuthViewModel(
                                 isAdmin = false,
                                 isPremium = false,
                                 subscriptionPlan = "FREE",
-                                questionnaireAnswers = emptyMap()
+                                questionnaireAnswers = emptyMap(),
+                                isIncognito = false
                             ).toCached(),
                             UserProfile(
                                 uid = "mock_admin_001",
@@ -240,7 +244,8 @@ class AuthViewModel(
                                 isAdmin = true,
                                 isPremium = true,
                                 subscriptionPlan = "GOLD",
-                                questionnaireAnswers = emptyMap()
+                                questionnaireAnswers = emptyMap(),
+                                isIncognito = false
                             ).toCached()
                         )
                         userDao.insertUsers(mockUsers)
@@ -484,6 +489,7 @@ class AuthViewModel(
                             country,
                             doc.getString("timezone")
                         )
+                        val isIncognito = doc.getBoolean("isIncognito") ?: false
                         val currentStreakDays = doc.getLong("currentStreakDays")?.toInt() ?: 0
 
                         UserProfile(
@@ -525,6 +531,7 @@ class AuthViewModel(
                             lastMonthlyResetDate = lastMonthlyResetDate,
                             questionnaireAnswers = questionnaireAnswers,
                             lastSeen = lastSeen,
+                            isIncognito = isIncognito,
                             timezone = timezone,
                             currentStreakDays = currentStreakDays
                         )
@@ -740,7 +747,8 @@ class AuthViewModel(
                         isAdmin = false,
                         isPremium = false,
                         subscriptionPlan = "FREE",
-                        questionnaireAnswers = emptyMap()
+                        questionnaireAnswers = emptyMap(),
+                        isIncognito = false
                     )
                     _currentUserProfile.value = fallback
                     userDao?.insertUser(fallback.toCached())
@@ -777,6 +785,7 @@ class AuthViewModel(
                         putString("fcmToken", cached.fcmToken)
                         putBoolean("isAdmin", cached.isAdmin)
                         putBoolean("isPremium", cached.isPremium)
+                        putBoolean("isIncognito", cached.isIncognito)
                         putString("subscriptionPlan", cached.subscriptionPlan)
                         
                         val qAnswersObj = org.json.JSONObject()

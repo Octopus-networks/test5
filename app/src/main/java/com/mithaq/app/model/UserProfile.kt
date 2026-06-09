@@ -142,6 +142,7 @@ data class UserProfile(
     val profileHeading: String = "",
     val idealPartner: String = "",
     val lastSeen: Long = 0L,
+    val isIncognito: Boolean = false,
     
     // Phase 2: Islamic Identity & Trust
     val seriousnessScore: Int = 0,

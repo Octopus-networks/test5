@@ -1,0 +1,768 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 9,
+    "identityHash": "01bfd6af99558e82f7b9f6dacc68be19",
+    "entities": [
+      {
+        "tableName": "cached_users",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` TEXT NOT NULL, `name` TEXT NOT NULL, `gender` TEXT NOT NULL, `age` INTEGER NOT NULL, `city` TEXT NOT NULL, `country` TEXT NOT NULL, `imageUrl` TEXT NOT NULL, `additionalImages` TEXT NOT NULL, `username` TEXT NOT NULL, `oathChecked` INTEGER NOT NULL, `skinColor` TEXT NOT NULL, `healthStatus` TEXT NOT NULL, `nationality` TEXT NOT NULL, `educationLevel` TEXT NOT NULL, `jobTitle` TEXT NOT NULL, `incomeLevel` TEXT NOT NULL, `fastingHabit` TEXT NOT NULL, `weddingTimeline` TEXT NOT NULL, `wifeWorking` TEXT NOT NULL, `householdExpenses` TEXT NOT NULL, `aymaView` TEXT NOT NULL, `shabkaView` TEXT NOT NULL, `gpsLocationEnabled` INTEGER NOT NULL, `blurPictures` INTEGER NOT NULL, `sect` TEXT NOT NULL, `prayerFrequency` TEXT NOT NULL, `modestyPreference` TEXT NOT NULL, `relocationWillingness` TEXT NOT NULL, `polygamyAcceptance` INTEGER NOT NULL, `guardianName` TEXT, `guardianEmail` TEXT, `guardianStatus` TEXT, `photoAccessApprovedUsers` TEXT NOT NULL, `photoAccessRequests` TEXT NOT NULL, `isWaliAccount` INTEGER NOT NULL, `wardUid` TEXT, `verificationStatus` TEXT NOT NULL, `voiceIntroUrl` TEXT, `fcmToken` TEXT, `isAdmin` INTEGER NOT NULL, `isPremium` INTEGER NOT NULL, `subscriptionPlan` TEXT NOT NULL, `premiumExpiry` INTEGER NOT NULL, `questionnaireAnswers` TEXT NOT NULL, `isAdhanEnabled` INTEGER NOT NULL, `adhanLocationLat` REAL NOT NULL, `adhanLocationLng` REAL NOT NULL, `adhanCalculationMethod` TEXT NOT NULL, `adhanSoundPattern` TEXT NOT NULL, `fajrPrayedToday` INTEGER NOT NULL, `fajrWeeklyCount` INTEGER NOT NULL, `fajrMonthlyCount` INTEGER NOT NULL, `dhuhrPrayedToday` INTEGER NOT NULL, `dhuhrWeeklyCount` INTEGER NOT NULL, `dhuhrMonthlyCount` INTEGER NOT NULL, `asrPrayedToday` INTEGER NOT NULL, `asrWeeklyCount` INTEGER NOT NULL, `asrMonthlyCount` INTEGER NOT NULL, `maghribPrayedToday` INTEGER NOT NULL, `maghribWeeklyCount` INTEGER NOT NULL, `maghribMonthlyCount` INTEGER NOT NULL, `ishaPrayedToday` INTEGER NOT NULL, `ishaWeeklyCount` INTEGER NOT NULL, `ishaMonthlyCount` INTEGER NOT NULL, `lastPrayerDate` INTEGER NOT NULL, `lastWeeklyResetDate` INTEGER NOT NULL, `lastMonthlyResetDate` INTEGER NOT NULL, `profileCreator` TEXT NOT NULL, `regionalCode` TEXT NOT NULL, `height` INTEGER NOT NULL, `weight` INTEGER NOT NULL, `bodyType` TEXT NOT NULL, `hairColor` TEXT NOT NULL, `eyeColor` TEXT NOT NULL, `ethnicity` TEXT NOT NULL, `appearanceRating` TEXT NOT NULL, `maritalStatus` TEXT NOT NULL, `haveChildren` TEXT NOT NULL, `numberOfChildren` INTEGER NOT NULL, `wantMoreChildren` TEXT NOT NULL, `livingSituation` TEXT NOT NULL, `occupation` TEXT NOT NULL, `employmentStatus` TEXT NOT NULL, `annualIncome` TEXT NOT NULL, `drinkStatus` TEXT NOT NULL, `smokeStatus` TEXT NOT NULL, `eatingHabit` TEXT NOT NULL, `relationshipLookingFor` TEXT NOT NULL, `religiousValues` TEXT NOT NULL, `attendReligiousService` TEXT NOT NULL, `readQuran` TEXT NOT NULL, `wearHijab` TEXT NOT NULL, `wearNiqab` TEXT NOT NULL, `convertStatus` TEXT NOT NULL, `familyValue` TEXT NOT NULL, `languagesSpoken` TEXT NOT NULL, `interestsEntertainments` TEXT NOT NULL, `interestsSports` TEXT NOT NULL, `interestsFoods` TEXT NOT NULL, `interestsMusics` TEXT NOT NULL, `aboutYourself` TEXT NOT NULL, `partnerPreferences` TEXT NOT NULL, `profileHeading` TEXT NOT NULL, `idealPartner` TEXT NOT NULL, `lastSeen` INTEGER NOT NULL, `isIncognito` INTEGER NOT NULL, `timezone` TEXT NOT NULL, PRIMARY KEY(`uid`))",
+        "fields": [
+          {
+            "fieldPath": "uid",
+            "columnName": "uid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gender",
+            "columnName": "gender",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "age",
+            "columnName": "age",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "city",
+            "columnName": "city",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "country",
+            "columnName": "country",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imageUrl",
+            "columnName": "imageUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "additionalImages",
+            "columnName": "additionalImages",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "username",
+            "columnName": "username",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "oathChecked",
+            "columnName": "oathChecked",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "skinColor",
+            "columnName": "skinColor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "healthStatus",
+            "columnName": "healthStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nationality",
+            "columnName": "nationality",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "educationLevel",
+            "columnName": "educationLevel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "jobTitle",
+            "columnName": "jobTitle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "incomeLevel",
+            "columnName": "incomeLevel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fastingHabit",
+            "columnName": "fastingHabit",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weddingTimeline",
+            "columnName": "weddingTimeline",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wifeWorking",
+            "columnName": "wifeWorking",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "householdExpenses",
+            "columnName": "householdExpenses",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aymaView",
+            "columnName": "aymaView",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shabkaView",
+            "columnName": "shabkaView",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gpsLocationEnabled",
+            "columnName": "gpsLocationEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "blurPictures",
+            "columnName": "blurPictures",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sect",
+            "columnName": "sect",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prayerFrequency",
+            "columnName": "prayerFrequency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modestyPreference",
+            "columnName": "modestyPreference",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relocationWillingness",
+            "columnName": "relocationWillingness",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "polygamyAcceptance",
+            "columnName": "polygamyAcceptance",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "guardianName",
+            "columnName": "guardianName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "guardianEmail",
+            "columnName": "guardianEmail",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "guardianStatus",
+            "columnName": "guardianStatus",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "photoAccessApprovedUsers",
+            "columnName": "photoAccessApprovedUsers",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "photoAccessRequests",
+            "columnName": "photoAccessRequests",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isWaliAccount",
+            "columnName": "isWaliAccount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wardUid",
+            "columnName": "wardUid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "verificationStatus",
+            "columnName": "verificationStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "voiceIntroUrl",
+            "columnName": "voiceIntroUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fcmToken",
+            "columnName": "fcmToken",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isAdmin",
+            "columnName": "isAdmin",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPremium",
+            "columnName": "isPremium",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subscriptionPlan",
+            "columnName": "subscriptionPlan",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "premiumExpiry",
+            "columnName": "premiumExpiry",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "questionnaireAnswers",
+            "columnName": "questionnaireAnswers",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isAdhanEnabled",
+            "columnName": "isAdhanEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adhanLocationLat",
+            "columnName": "adhanLocationLat",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adhanLocationLng",
+            "columnName": "adhanLocationLng",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adhanCalculationMethod",
+            "columnName": "adhanCalculationMethod",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adhanSoundPattern",
+            "columnName": "adhanSoundPattern",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fajrPrayedToday",
+            "columnName": "fajrPrayedToday",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fajrWeeklyCount",
+            "columnName": "fajrWeeklyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fajrMonthlyCount",
+            "columnName": "fajrMonthlyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dhuhrPrayedToday",
+            "columnName": "dhuhrPrayedToday",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dhuhrWeeklyCount",
+            "columnName": "dhuhrWeeklyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dhuhrMonthlyCount",
+            "columnName": "dhuhrMonthlyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "asrPrayedToday",
+            "columnName": "asrPrayedToday",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "asrWeeklyCount",
+            "columnName": "asrWeeklyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "asrMonthlyCount",
+            "columnName": "asrMonthlyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maghribPrayedToday",
+            "columnName": "maghribPrayedToday",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maghribWeeklyCount",
+            "columnName": "maghribWeeklyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maghribMonthlyCount",
+            "columnName": "maghribMonthlyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ishaPrayedToday",
+            "columnName": "ishaPrayedToday",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ishaWeeklyCount",
+            "columnName": "ishaWeeklyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ishaMonthlyCount",
+            "columnName": "ishaMonthlyCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastPrayerDate",
+            "columnName": "lastPrayerDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastWeeklyResetDate",
+            "columnName": "lastWeeklyResetDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastMonthlyResetDate",
+            "columnName": "lastMonthlyResetDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "profileCreator",
+            "columnName": "profileCreator",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "regionalCode",
+            "columnName": "regionalCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "height",
+            "columnName": "height",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weight",
+            "columnName": "weight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyType",
+            "columnName": "bodyType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hairColor",
+            "columnName": "hairColor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eyeColor",
+            "columnName": "eyeColor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ethnicity",
+            "columnName": "ethnicity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appearanceRating",
+            "columnName": "appearanceRating",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maritalStatus",
+            "columnName": "maritalStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "haveChildren",
+            "columnName": "haveChildren",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "numberOfChildren",
+            "columnName": "numberOfChildren",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wantMoreChildren",
+            "columnName": "wantMoreChildren",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "livingSituation",
+            "columnName": "livingSituation",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "occupation",
+            "columnName": "occupation",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "employmentStatus",
+            "columnName": "employmentStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "annualIncome",
+            "columnName": "annualIncome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "drinkStatus",
+            "columnName": "drinkStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "smokeStatus",
+            "columnName": "smokeStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eatingHabit",
+            "columnName": "eatingHabit",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relationshipLookingFor",
+            "columnName": "relationshipLookingFor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "religiousValues",
+            "columnName": "religiousValues",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attendReligiousService",
+            "columnName": "attendReligiousService",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "readQuran",
+            "columnName": "readQuran",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wearHijab",
+            "columnName": "wearHijab",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wearNiqab",
+            "columnName": "wearNiqab",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "convertStatus",
+            "columnName": "convertStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "familyValue",
+            "columnName": "familyValue",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "languagesSpoken",
+            "columnName": "languagesSpoken",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "interestsEntertainments",
+            "columnName": "interestsEntertainments",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "interestsSports",
+            "columnName": "interestsSports",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "interestsFoods",
+            "columnName": "interestsFoods",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "interestsMusics",
+            "columnName": "interestsMusics",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aboutYourself",
+            "columnName": "aboutYourself",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "partnerPreferences",
+            "columnName": "partnerPreferences",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "profileHeading",
+            "columnName": "profileHeading",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idealPartner",
+            "columnName": "idealPartner",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSeen",
+            "columnName": "lastSeen",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isIncognito",
+            "columnName": "isIncognito",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timezone",
+            "columnName": "timezone",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uid"
+          ]
+        }
+      },
+      {
+        "tableName": "cached_messages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`roomId` TEXT NOT NULL, `senderId` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `translatedContent` TEXT, PRIMARY KEY(`roomId`, `senderId`, `timestamp`))",
+        "fields": [
+          {
+            "fieldPath": "roomId",
+            "columnName": "roomId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "senderId",
+            "columnName": "senderId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "translatedContent",
+            "columnName": "translatedContent",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "roomId",
+            "senderId",
+            "timestamp"
+          ]
+        }
+      },
+      {
+        "tableName": "cached_chat_rooms",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`roomId` TEXT NOT NULL, `memberIds` TEXT NOT NULL, `isChaperoned` INTEGER NOT NULL, `waliEmail` TEXT, `lastMessage` TEXT, `lastMessageTimestamp` INTEGER NOT NULL, `dailyPrayers` TEXT NOT NULL, `prayerStreaks` TEXT NOT NULL, `goldRewardUnlocked` INTEGER NOT NULL, PRIMARY KEY(`roomId`))",
+        "fields": [
+          {
+            "fieldPath": "roomId",
+            "columnName": "roomId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "memberIds",
+            "columnName": "memberIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isChaperoned",
+            "columnName": "isChaperoned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "waliEmail",
+            "columnName": "waliEmail",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastMessage",
+            "columnName": "lastMessage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastMessageTimestamp",
+            "columnName": "lastMessageTimestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dailyPrayers",
+            "columnName": "dailyPrayers",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prayerStreaks",
+            "columnName": "prayerStreaks",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goldRewardUnlocked",
+            "columnName": "goldRewardUnlocked",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "roomId"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '01bfd6af99558e82f7b9f6dacc68be19')"
+    ]
+  }
+}
