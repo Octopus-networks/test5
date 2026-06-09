@@ -961,7 +961,7 @@ fun SearchTabContent(
                                             onLikeToggle = {
                                                 coroutineScope.launch {
                                                     val liked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
-                                                    if (!liked) {
+                                                    if (liked) { likesRepository.removeLike(currentUser.uid, profile.uid); isLiked = false } else {
                                                         val isMutual = likesRepository.addLike(currentUser.uid, profile.uid)
                                                         isLiked = true
                                                         if (isMutual) {
@@ -1222,7 +1222,7 @@ fun SearchTabContent(
                                                             onClick = {
                                                                 coroutineScope.launch {
                                                                     val liked = likesRepository.getLikesList(currentUser.uid).contains(profile.uid)
-                                                                    if (!liked) {
+                                                                    if (liked) { likesRepository.removeLike(currentUser.uid, profile.uid); isLiked = false } else {
                                                                         val isMutual = likesRepository.addLike(currentUser.uid, profile.uid)
                                                                         isLiked = true
                                                                         if (isMutual) {

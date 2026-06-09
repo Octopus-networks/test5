@@ -933,20 +933,30 @@ fun MatchDetailScreen(
                 IconButton(
                     onClick = {
                         coroutineScope.launch {
-                            val isMutual = likesRepository.addLike(currentUser.uid, partner.uid)
-                            isLiked = true
-                            if (isMutual) {
+                            if (isLiked) {
+                                likesRepository.removeLike(currentUser.uid, partner.uid)
+                                isLiked = false
                                 android.widget.Toast.makeText(
                                     context,
-                                    if (isArabic) "لقد تم التطابق! ابدأ المحادثة الآن." else "Mutual Match! Chat unlocked.",
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
-                            } else {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    if (isArabic) "تم إرسال الإعجاب!" else "Like sent!",
+                                    if (isArabic) "تم إلغاء الإعجاب" else "Like removed",
                                     android.widget.Toast.LENGTH_SHORT
                                 ).show()
+                            } else {
+                                val isMutual = likesRepository.addLike(currentUser.uid, partner.uid)
+                                isLiked = true
+                                if (isMutual) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        if (isArabic) "لقد تم التطابق! ابدأ المحادثة الآن." else "Mutual Match! Chat unlocked.",
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        if (isArabic) "تم إرسال الإعجاب!" else "Like sent!",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
                         }
                     }
