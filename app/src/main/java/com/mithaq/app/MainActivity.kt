@@ -761,6 +761,32 @@ fun MithaqAppNavigation(
     deepLinkNonce: Int = 0
 ) {
     var currentScreen by remember { mutableStateOf(Routes.Splash) }
+    // ── Sequential back navigation ────────────────────────────────────────────
+    // currentScreen is assigned from ~70 call sites, so visit history is recorded
+    // by OBSERVING changes instead of rewriting every site. The system back button
+    // then walks this history one screen at a time; the exit dialog appears only on
+    // the root screens. Arriving at a root clears history (back from home = exit,
+    // never deeper), and splash/auth surfaces are never recorded as "previous".
+    val screenBackStack = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    var suppressNextHistoryPush by remember { mutableStateOf(false) }
+    var lastScreenForHistory by remember { mutableStateOf(currentScreen) }
+    val navRootScreens = remember { setOf(Routes.Home, Routes.Login, Routes.Entry, Routes.Splash) }
+    LaunchedEffect(currentScreen) {
+        val previous = lastScreenForHistory
+        lastScreenForHistory = currentScreen
+        if (currentScreen == previous) return@LaunchedEffect
+        if (suppressNextHistoryPush) {
+            suppressNextHistoryPush = false
+            return@LaunchedEffect
+        }
+        if (currentScreen in navRootScreens) {
+            screenBackStack.clear()
+        } else if (previous !in setOf(Routes.Splash, Routes.Login, Routes.Entry) &&
+            screenBackStack.lastOrNull() != previous
+        ) {
+            screenBackStack.add(previous)
+        }
+    }
     var currentUserId by remember { mutableStateOf("") }
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
@@ -791,6 +817,15 @@ fun MithaqAppNavigation(
 
     androidx.activity.compose.BackHandler(enabled = currentScreen == Routes.Home || currentScreen == Routes.Login || currentScreen == Routes.Entry) {
         showExitDialog = true
+    }
+
+    // One global handler replaces the old per-screen "back = home" handlers: back now
+    // walks the recorded visit history one screen at a time, landing on Home when the
+    // history runs out (screens with their own deeper BackHandler, e.g. the profile
+    // hub's sub-pages or onboarding, still take priority while they are enabled).
+    androidx.activity.compose.BackHandler(enabled = currentScreen !in navRootScreens) {
+        suppressNextHistoryPush = true
+        currentScreen = screenBackStack.removeLastOrNull() ?: Routes.Home
     }
 
     var selectedMatchProfile by remember { mutableStateOf<UserProfile?>(null) }
@@ -1358,7 +1393,6 @@ fun MithaqAppNavigation(
                 val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
                 val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
                 val matchDetailViewModel = remember { com.mithaq.app.ui.match.MatchDetailViewModel() }
-                androidx.activity.compose.BackHandler { currentScreen = "home" }
                 com.mithaq.app.ui.match.MatchDetailScreen(
                     partner = partner,
                     currentUser = profile,
@@ -1382,7 +1416,6 @@ fun MithaqAppNavigation(
         }
         "admin" -> {
             if (currentUserProfile?.isAdmin == true) {
-                androidx.activity.compose.BackHandler { currentScreen = "home" }
                 AdminConsoleScreen(
                     authViewModel = authViewModel,
                     isArabic = isArabic,
@@ -1396,7 +1429,6 @@ fun MithaqAppNavigation(
             // Admin-only moderation surface. The screen itself renders a safe "Not authorized"
             // state and loads no admin data unless the caller is an admin (gate in the ViewModel +
             // Firestore rules), so accidental access never exposes moderation data.
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             AdminModerationScreen(
                 currentUserId = currentUserId,
                 isAdmin = currentUserProfile?.isAdmin == true,
@@ -1405,7 +1437,6 @@ fun MithaqAppNavigation(
             )
         }
         "premium_store", "premium_store_platinum" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             if (BetaFeatureGates.PREMIUM_BILLING) {
                 PremiumStoreScreen(
                     viewModel = authViewModel,
@@ -1425,7 +1456,6 @@ fun MithaqAppNavigation(
             }
         }
         "questionnaire" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             QuestionnaireScreen(
                 currentAnswers = currentUserProfile?.questionnaireAnswers ?: emptyMap(),
                 isArabic = isArabic,
@@ -1437,7 +1467,6 @@ fun MithaqAppNavigation(
             )
         }
         "profile_settings" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             ProfileSettingsScreen(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
@@ -1454,7 +1483,6 @@ fun MithaqAppNavigation(
         "stats" -> {
             val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
             val likesRepository = remember { com.mithaq.app.data.LikesRepository(context) }
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             MyStatsScreen(
                 currentUser = profile,
                 likesRepository = likesRepository,
@@ -1466,7 +1494,6 @@ fun MithaqAppNavigation(
             )
         }
         "ai_matchmaker" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             if (BetaFeatureGates.GEMINI_AI) {
                 val profile = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User")
                 AiMatchmakerScreen(
@@ -1491,7 +1518,6 @@ fun MithaqAppNavigation(
             }
         }
         "privacy_settings" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             PrivacySettingsScreen(
                 currentUserId = currentUserId,
                 isArabic = isArabic,
@@ -1499,7 +1525,6 @@ fun MithaqAppNavigation(
             )
         }
         "guardian" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             GuardianScreen(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 viewModel = guardianViewModel,
@@ -1509,7 +1534,6 @@ fun MithaqAppNavigation(
             )
         }
         "photo_privacy" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             PhotoPrivacyScreen(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 isArabic = isArabic,
@@ -1518,7 +1542,6 @@ fun MithaqAppNavigation(
             )
         }
         "prayer_settings" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             PrayerSettingsScreen(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 authViewModel = authViewModel,
@@ -1527,7 +1550,6 @@ fun MithaqAppNavigation(
             )
         }
         "app_settings" -> {
-            androidx.activity.compose.BackHandler { currentScreen = "home" }
             AppSettingsScreen(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 authViewModel = authViewModel,
