@@ -151,6 +151,18 @@ class PhotoAccessManager(
             }
         }
         return try {
+            // Storage grants photo downloads from photoRequests/{viewer}_{owner}.status ==
+            // "approved", so deleting that document is what actually cuts off access.
+            // Legacy grants may have no request document; a failed delete must still be
+            // visible because the array removal below only changes UI state.
+            try {
+                firestore.collection("photoRequests")
+                    .document("${approvedUserId}_${currentUserId}")
+                    .delete()
+                    .await()
+            } catch (e: Exception) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+            }
             firestore.collection("users")
                 .document(currentUserId)
                 .update("photoAccessApprovedUsers", FieldValue.arrayRemove(approvedUserId))

@@ -73,8 +73,15 @@ service firebase.storage {
     // Phase 11: secure user photos. Owner writes their own; reads are limited to the
     // owner, an admin, or a viewer holding an approved photo request for this owner.
     // Private photo bytes are never public and never served via a stored URL.
+    // A photo the owner set to "hidden" must not be downloadable even by viewers who
+    // hold an approved photo request. Metadata doc id is the object name minus ".jpg".
+    function photoNotHidden(userId, photoId) {
+      return firestore.get(/databases/(default)/documents/userPhotos/$(userId)/photos/$(photoId.split('\\.')[0])).data.visibility != 'hidden';
+    }
+
     match /user_photos/{userId}/{photoId} {
-      allow read: if isOwner(userId) || isAdmin() || approvedPhotoRequest(userId);
+      allow read: if isOwner(userId) || isAdmin() ||
+        (approvedPhotoRequest(userId) && photoNotHidden(userId, photoId));
       allow create, update: if isOwner(userId) &&
         request.resource.size < 5 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*');
