@@ -124,6 +124,30 @@ object AdhanScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val preReminderMin = prefs.getString("adhan_pre_reminder_min", "0")?.toIntOrNull() ?: 0
+        if (preReminderMin > 0) {
+            val preIntent = Intent(context, AdhanReceiver::class.java).apply {
+                action = AdhanReceiver.ACTION_PRE_ADHAN_ALARM
+                putExtra("PRAYER_NAME", nextPrayer.name)
+                putExtra("MINUTES", preReminderMin)
+            }
+            val prePendingIntent = PendingIntent.getBroadcast(
+                context,
+                ALARM_REQUEST_CODE + 1000,
+                preIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val preTime = nextPrayerTime.time - (preReminderMin * 60_000L)
+            if (preTime > System.currentTimeMillis()) {
+                val preAlarmInfo = AlarmManager.AlarmClockInfo(preTime, showPendingIntent)
+                try {
+                    alarmManager.setAlarmClock(preAlarmInfo, prePendingIntent)
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "Exact alarm permission missing for pre-reminder", e)
+                }
+            }
+        }
+
         return try {
             val alarmClockInfo = AlarmManager.AlarmClockInfo(
                 nextPrayerTime.time,
@@ -153,6 +177,18 @@ object AdhanScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         alarmManager.cancel(pendingIntent)
+        
+        val preIntent = Intent(context, AdhanReceiver::class.java).apply {
+            action = AdhanReceiver.ACTION_PRE_ADHAN_ALARM
+        }
+        val prePendingIntent = PendingIntent.getBroadcast(
+            context,
+            ALARM_REQUEST_CODE + 1000,
+            preIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(prePendingIntent)
+        
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putBoolean("isAdhanEnabled", false)

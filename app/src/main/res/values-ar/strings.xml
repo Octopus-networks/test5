@@ -233,17 +233,14 @@
     <string name="discover_location_note_ar">فلتر القرب سيستخدم المدينة أو GPS لاحقًا دون عرض مسافة دقيقة الآن.</string>
     <string name="discover_load_error_title_ar">تعذر تحميل الملفات العامة</string>
     <string name="discover_load_error_message_ar">تحقق من الاتصال وحاول مرة أخرى.</string>
-    <string name="discover_no_profiles_title_ar">لا توجد ملفات عامة بعد</string>
-    <string name="discover_no_profiles_message_ar">ستظهر هنا الملفات المكتملة التي اختارت الظهور في البحث.</string>
-    <string name="discover_no_filter_results_title_ar">لا توجد نتائج لهذا الفلتر</string>
-    <string name="discover_no_filter_results_message_ar">جرب فلترًا آخر أو عد إلى المقترحات.</string>
-    <string name="discover_requesting_ar">جاري الطلب</string>
-    <string name="discover_sent_ar">تم الإرسال</string>
-    <string name="discover_accepted_ar">تم القبول</string>
-    <string name="discover_interest_declined_ar">تم رفض الاهتمام</string>
-    <string name="discover_photo_requested_ar">تم طلب الصورة</string>
-    <string name="discover_photo_approved_ar">تمت الموافقة على رؤية الصورة</string>
-    <string name="discover_photo_declined_ar">تم رفض طلب الصورة</string>
+
+    <string name="notif_adhan_title">Time for %s prayer</string>
+    <string name="notif_adhan_title_ar">حان وقت صلاة %s</string>
+    <string name="notif_adhan_body">Allahu Akbar, it is now time for prayer.</string>
+    <string name="notif_adhan_body_ar">الله أكبر، حان الآن موعد الصلاة.</string>
+    <string name="notif_pre_adhan_title">%1$s prayer in %2$d minutes</string>
+    <string name="notif_pre_adhan_title_ar">باقي %2$d دقائق على صلاة %1$s</string>
+
     <string name="discover_matched_only_ar">للمتوافقين فقط</string>
     <string name="discover_photos_private_ar">الصور خاصة</string>
     <string name="discover_interest_first_ar">الاهتمام أولًا</string>
