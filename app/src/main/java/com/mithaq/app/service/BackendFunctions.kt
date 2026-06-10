@@ -36,14 +36,17 @@ object BackendFunctions {
     }
 
     /**
-     * Records a new chat initiation against the caller's server-side daily limit. Throws a
+     * Asks the server to create the chat request to [toUserId]. The callable checks the
+     * caller's daily limit and creates the chatRequests document in one transaction
+     * (Firestore rules deny client creates). Throws a
      * [com.google.firebase.functions.FirebaseFunctionsException] with code RESOURCE_EXHAUSTED
-     * when a free user is over the daily cap; premium users are unlimited.
+     * when a free user is over the daily cap (premium users are unlimited) and
+     * FAILED_PRECONDITION when there is no accepted interest between the two members.
      */
-    suspend fun recordChatInitiation() {
+    suspend fun recordChatInitiation(toUserId: String) {
         functions
             .getHttpsCallable("recordChatInitiation")
-            .call()
+            .call(mapOf("toUserId" to toUserId))
             .await()
     }
 }

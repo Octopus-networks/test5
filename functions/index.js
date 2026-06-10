@@ -130,39 +130,95 @@ exports.setUserPremium = onCall(secureCallable, async (request) => {
   return { ok: true };
 });
 
-// Server-authoritative free-tier daily chat-initiation limit. The caller invokes this
-// before starting a new chat; premium users are unlimited, free users get FREE_DAILY_CHAT_LIMIT
-// per UTC day. The counter lives at users/{uid}/chatLimits/{yyyy-mm-dd} and is writable only by
-// the Admin SDK (Firestore rules deny client writes), so the count cannot be forged.
+// Accepted interest is the prerequisite for a chat request, in either direction.
+async function acceptedInterestRequestIdBetween(uidA, uidB) {
+  const sentId = `${uidA}_${uidB}`;
+  const sent = await db.collection("interestRequests").doc(sentId).get();
+  if (sent.exists && sent.get("status") === "accepted") {
+    return sentId;
+  }
+  const receivedId = `${uidB}_${uidA}`;
+  const received = await db.collection("interestRequests").doc(receivedId).get();
+  if (received.exists && received.get("status") === "accepted") {
+    return receivedId;
+  }
+  return null;
+}
+
+// Server-authoritative free-tier daily chat-initiation limit. This callable both checks
+// the quota AND creates the chatRequests document in one transaction - Firestore rules
+// deny client creates, so the cap cannot be bypassed by writing chatRequests directly,
+// and a failed create can no longer consume an attempt. Premium users are unlimited;
+// free users get FREE_DAILY_CHAT_LIMIT per UTC day (counter at
+// users/{uid}/chatLimits/{yyyy-mm-dd}, Admin-SDK-only so it cannot be forged).
 const FREE_DAILY_CHAT_LIMIT = 3;
 exports.recordChatInitiation = onCall(secureCallable, async (request) => {
   const uid = requireAuth(request);
+  const toUserId = requireString(request.data || {}, "toUserId");
+  if (toUserId === uid) {
+    throw new HttpsError("invalid-argument", "Cannot request a chat with yourself.");
+  }
   const userSnap = await getUser(uid);
-  if (userSnap.get("isPremium") === true) {
-    return { allowed: true, remaining: -1, isPremium: true };
+  const isPremium = userSnap.get("isPremium") === true;
+
+  const relatedInterestRequestId = await acceptedInterestRequestIdBetween(uid, toUserId);
+  if (!relatedInterestRequestId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Accepted interest is required before requesting a chat.",
+    );
   }
 
   // UTC day key so the cap cannot be gamed by changing the device clock/timezone.
   const dateKey = new Date().toISOString().slice(0, 10);
   const limitRef = db.collection("users").doc(uid).collection("chatLimits").doc(dateKey);
+  const requestRef = db.collection("chatRequests").doc(`${uid}_${toUserId}`);
 
-  const remaining = await db.runTransaction(async (tx) => {
-    const snap = await tx.get(limitRef);
-    const current = Number(snap.get("count")) || 0;
-    if (current >= FREE_DAILY_CHAT_LIMIT) {
-      throw new HttpsError(
-        "resource-exhausted",
-        "Daily chat limit reached. Upgrade to Premium for unlimited chats.",
-      );
+  const outcome = await db.runTransaction(async (tx) => {
+    const existing = await tx.get(requestRef);
+    if (existing.exists && existing.get("status") === "pending") {
+      // Re-sending a pending request must not burn quota.
+      return { alreadyPending: true, remaining: -1 };
     }
-    tx.set(limitRef, {
-      count: current + 1,
+
+    let remaining = -1;
+    if (!isPremium) {
+      const snap = await tx.get(limitRef);
+      const current = Number(snap.get("count")) || 0;
+      if (current >= FREE_DAILY_CHAT_LIMIT) {
+        throw new HttpsError(
+          "resource-exhausted",
+          "Daily chat limit reached. Upgrade to Premium for unlimited chats.",
+        );
+      }
+      tx.set(limitRef, {
+        count: current + 1,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      remaining = FREE_DAILY_CHAT_LIMIT - (current + 1);
+    }
+
+    tx.set(requestRef, {
+      requestId: requestRef.id,
+      fromUserId: uid,
+      toUserId,
+      status: "pending",
+      relatedInterestRequestId,
+      requiresGuardianApproval: false,
+      guardianApprovalStatus: "not_required",
+      createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-    return FREE_DAILY_CHAT_LIMIT - (current + 1);
+    return { alreadyPending: false, remaining };
   });
 
-  return { allowed: true, remaining, isPremium: false };
+  return {
+    allowed: true,
+    requestId: requestRef.id,
+    alreadyPending: outcome.alreadyPending,
+    remaining: outcome.remaining,
+    isPremium,
+  };
 });
 
 exports.setUserRole = onCall(secureCallable, async (request) => {
