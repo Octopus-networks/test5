@@ -225,12 +225,8 @@ fun GridMatchCard(
                     )
                     if (isCompatible) {
                         if (profile.verificationStatus == "VERIFIED") {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Verified",
-                                tint = Color(0xFF4CAF50),
-                                modifier = Modifier.size(12.dp)
-                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            com.mithaq.app.ui.components.VerifiedBadge()
                         }
                         val isOnline = (System.currentTimeMillis() - profile.lastSeen) < 300000
                         val isActiveRecently = (System.currentTimeMillis() - profile.lastSeen) < 86400000
@@ -1324,15 +1320,6 @@ fun FavoritesTabContent(
 fun VerificationBadge(status: String?, modifier: Modifier = Modifier) {
     if (status == "VERIFIED") {
         Spacer(modifier = Modifier.width(4.dp))
-        Icon(
-            imageVector = Icons.Default.Done,
-            contentDescription = "Verified Profile",
-            tint = Color.White,
-            modifier = modifier
-                .size(16.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF2196F3))
-                .padding(2.dp)
-        )
+        com.mithaq.app.ui.components.VerifiedBadge(modifier = modifier)
     }
 }
