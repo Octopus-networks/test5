@@ -16,9 +16,19 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    // Phase 12 follow-up: moderation states now have teeth. userModeration/{uid} is
+    // admin-only; a suspended/banned member loses every interactive write gated by
+    // isVerifiedEmailUser. (The enforceModerationStatus function also disables their
+    // Auth account; this rule covers the window until their token expires.)
+    function notSuspendedOrBanned() {
+      return !exists(/databases/$(database)/documents/userModeration/$(request.auth.uid)) ||
+        !(get(/databases/$(database)/documents/userModeration/$(request.auth.uid)).data.status in ["suspended", "banned"]);
+    }
+
     function isVerifiedEmailUser() {
       return isAuthenticated() &&
-        request.auth.token.email_verified == true;
+        request.auth.token.email_verified == true &&
+        notSuspendedOrBanned();
     }
 
     function changedOnly(fields) {

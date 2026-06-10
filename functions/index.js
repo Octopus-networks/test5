@@ -881,3 +881,30 @@ exports.mirrorProfileToUser = onDocumentWritten(
     await db.collection("users").doc(userId).set(update, { merge: true });
   },
 );
+
+// Admin moderation gets teeth: suspending or banning a member disables their Firebase
+// Auth account (no new sign-ins) and revokes their refresh tokens (existing sessions
+// die at the next ID-token refresh, <= 1 hour). Firestore rules deny their interactive
+// writes in the meantime (notSuspendedOrBanned). Setting the status back to
+// active/warned re-enables the account.
+exports.enforceModerationStatus = onDocumentWritten(
+  { document: "userModeration/{userId}", region },
+  async (event) => {
+    const userId = event.params.userId;
+    const after = event.data && event.data.after;
+    const status = after && after.exists ? String(after.get("status") || "active") : "active";
+    const shouldDisable = status === "suspended" || status === "banned";
+    try {
+      await getAuth().updateUser(userId, { disabled: shouldDisable });
+      if (shouldDisable) {
+        await getAuth().revokeRefreshTokens(userId);
+      }
+    } catch (error) {
+      // Moderation records can outlive the Auth account (e.g. after deletion).
+      if (error.code === "auth/user-not-found") {
+        return;
+      }
+      throw error;
+    }
+  },
+);
