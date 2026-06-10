@@ -203,7 +203,7 @@ fun ChatTabContent(
                             roomsList.add(ChatRoom(roomId, memberIds, isChaperoned, waliEmail, lastMessage, lastMessageTimestamp))
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                     }
                 }
                 
@@ -1037,7 +1037,7 @@ fun ChatTabContent(
                                         val service = com.mithaq.app.service.GeminiService(com.mithaq.app.Config.GEMINI_API_KEY)
                                         icebreakers = service.suggestOpeningMessages(currentUser, targetUser)
                                     } catch(e: Exception) {
-                                        e.printStackTrace()
+                                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                                     } finally {
                                         loadingIcebreakers = false
                                     }

@@ -137,7 +137,7 @@ class ChaperonedChatViewModel(
                         list.add(ChatMessage(senderId, content, timestamp, translatedContent))
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
             if (list.isEmpty()) {
@@ -269,7 +269,7 @@ class ChaperonedChatViewModel(
                             }
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                     }
                 }
                 if (_chatRoom.value == null) {
@@ -535,7 +535,7 @@ class ChaperonedChatViewModel(
                     array.put(obj)
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             }
         }
         
@@ -572,7 +572,7 @@ class ChaperonedChatViewModel(
             array.put(notifObj)
             queuePrefs.edit().putString("queue_$recipientId", array.toString()).apply()
         } catch (e: Exception) {
-            e.printStackTrace()
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 }

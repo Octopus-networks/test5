@@ -485,7 +485,7 @@ fun AdhanSettingsSectionFixed(
             mediaPlayer = MediaPlayer.create(context, defaultSoundUri)
             mediaPlayer?.start()
         } catch (e: Exception) {
-            e.printStackTrace()
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
         }
     }
 

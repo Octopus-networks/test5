@@ -243,7 +243,7 @@ fun WaliDashboardScreen(
                         )
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
 
@@ -269,7 +269,7 @@ fun WaliDashboardScreen(
                             roomsList.add(ChatRoom(roomId, memberIds, isChaperoned, waliEmail, lastMessage, lastMessageTimestamp))
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                     }
                 }
 

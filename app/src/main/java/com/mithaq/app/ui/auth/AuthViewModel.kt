@@ -252,7 +252,7 @@ class AuthViewModel(
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             }
         }
     }
@@ -413,7 +413,7 @@ class AuthViewModel(
                         _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = status)
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }
@@ -541,7 +541,7 @@ class AuthViewModel(
                 }
                 profiles.forEach { userDao?.insertUser(it.toCached()) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             }
         }
     }
@@ -590,7 +590,7 @@ class AuthViewModel(
                     )
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             }
         }
     }
@@ -623,7 +623,7 @@ class AuthViewModel(
                     _currentUserProfile.value = _currentUserProfile.value?.copy(isWaliAccount = isWali, isAdmin = isAdmin)
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             }
         }
     }
@@ -633,7 +633,7 @@ class AuthViewModel(
             try {
                 userDao?.deleteUser(targetUid)
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             }
             val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
                 auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
@@ -644,7 +644,7 @@ class AuthViewModel(
                 try {
                     BackendFunctions.deleteUserProfile(targetUid)
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }
@@ -1123,7 +1123,7 @@ class AuthViewModel(
                                 }
                             }
                         } catch (e: Exception) {
-                            e.printStackTrace()
+                            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                         }
                     }
 
@@ -1587,7 +1587,7 @@ class AuthViewModel(
             }
             android.net.Uri.fromFile(localFile).toString()
         } catch (e: Exception) {
-            e.printStackTrace()
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             ""
         }
     }
@@ -1628,7 +1628,7 @@ class AuthViewModel(
             }
             android.net.Uri.fromFile(localFile).toString()
         } catch (e: Exception) {
-            e.printStackTrace()
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             ""
         }
     }
@@ -1891,7 +1891,7 @@ class AuthViewModel(
                     BackendFunctions.setVerificationStatus(userId, "VERIFIED")
                     _currentUserProfile.value = _currentUserProfile.value?.copy(verificationStatus = "VERIFIED")
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }
@@ -1939,7 +1939,7 @@ class AuthViewModel(
                     firestore.collection("users").document(current.uid)
                         .update("aboutYourself", aboutYourself, "idealPartner", idealPartner).await()
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }
@@ -1966,7 +1966,7 @@ class AuthViewModel(
                     firestore.collection("users").document(current.uid)
                         .update("name", name).await()
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }
@@ -1993,7 +1993,7 @@ class AuthViewModel(
                     firestore.collection("users").document(current.uid)
                         .update("gender", gender.name).await()
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }
@@ -2064,7 +2064,7 @@ class AuthViewModel(
                 }
                 onResult(true, null)
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 onResult(false, e.localizedMessage ?: "Failed to save profile.")
             }
         }
@@ -2091,7 +2091,7 @@ class AuthViewModel(
                     firestore.collection("users").document(current.uid)
                         .update("additionalImages", images).await()
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }
@@ -2112,7 +2112,7 @@ class AuthViewModel(
                     try {
                         firestore.collection("users").document(uid).delete().await()
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                     }
                 }
                 // 2. Delete from local database (Room)
@@ -2127,7 +2127,7 @@ class AuthViewModel(
                 try {
                     user.delete().await()
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
 
@@ -2158,7 +2158,7 @@ class AuthViewModel(
                 try {
                     firestore.collection("users").document(current.uid).update("lastSeen", now).await()
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }
@@ -2217,7 +2217,7 @@ class AuthViewModel(
 
                 onResult(true, null)
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 onResult(false, e.localizedMessage ?: "Failed to update GPS location.")
             }
         }
@@ -2335,7 +2335,7 @@ class AuthViewModel(
                         _currentUserProfile.value = currentProfile.copy(fcmToken = token)
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }

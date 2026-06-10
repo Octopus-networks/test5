@@ -847,7 +847,7 @@ fun MithaqAppNavigation(
                         }
                         context.startActivity(intent)
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                     }
                 }) {
                     Text(if (isArabic) "فتح الإعدادات" else "Open Settings")
@@ -1069,7 +1069,7 @@ fun MithaqAppNavigation(
                             }
                         }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
                 // Wait until this effect is cancelled (user logs out or uid changes) then clean up
                 try {
