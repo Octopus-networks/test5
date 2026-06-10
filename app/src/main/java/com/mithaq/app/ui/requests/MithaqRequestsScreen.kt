@@ -44,6 +44,7 @@ import com.mithaq.app.domain.model.InterestRequest
 import com.mithaq.app.domain.model.PhotoRequest
 import com.mithaq.app.domain.model.PublicProfile
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Color
 import com.mithaq.app.ui.components.MithaqEmptyState
 import com.mithaq.app.ui.components.MithaqStateIllustration
@@ -69,8 +70,7 @@ fun MithaqRequestsScreen(
     val tabs = listOf(
         localizedString(isArabic, R.string.requests_tab_interest, R.string.requests_tab_interest_ar),
         localizedString(isArabic, R.string.requests_tab_photo, R.string.requests_tab_photo_ar),
-        localizedString(isArabic, R.string.requests_tab_chat, R.string.requests_tab_chat_ar),
-        localizedString(isArabic, R.string.requests_tab_guardian, R.string.requests_tab_guardian_ar)
+        localizedString(isArabic, R.string.requests_tab_chat, R.string.requests_tab_chat_ar)
     )
     var selectedTab by remember(currentUserId) { mutableIntStateOf(0) }
     val interestState by interestRequestViewModel.state.collectAsState()
@@ -132,7 +132,8 @@ fun MithaqRequestsScreen(
                 },
                 onCancel = { requestId ->
                     interestRequestViewModel.cancelInterest(currentUserId, requestId)
-                }
+                },
+                onDismissError = { interestRequestViewModel.clearMessages() }
             )
             1 -> PhotoRequestsTab(
                 currentUserId = currentUserId,
@@ -144,7 +145,8 @@ fun MithaqRequestsScreen(
                 },
                 onCancel = { requestId ->
                     photoRequestViewModel.cancelPhotoRequest(currentUserId, requestId)
-                }
+                },
+                onDismissError = { photoRequestViewModel.clearMessages() }
             )
             2 -> ChatRequestsTab(
                 currentUserId = currentUserId,
@@ -156,14 +158,10 @@ fun MithaqRequestsScreen(
                 },
                 onCancel = { requestId ->
                     chatRequestViewModel.cancelChatRequest(currentUserId, requestId)
-                }
+                },
+                onDismissError = { chatRequestViewModel.clearMessages() }
             )
-            else -> MithaqEmptyState(
-                title = localizedString(isArabic, R.string.requests_empty_title, R.string.requests_empty_title_ar),
-                message = localizedString(isArabic, R.string.requests_empty_message, R.string.requests_empty_message_ar),
-                icon = Icons.Filled.Favorite,
-                modifier = Modifier.padding(horizontal = 18.dp)
-            )
+            else -> {}
         }
     }
 }
@@ -175,7 +173,8 @@ private fun InterestRequestsTab(
     state: InterestRequestUiState,
     onRetry: () -> Unit,
     onRespond: (String, Boolean) -> Unit,
-    onCancel: (String) -> Unit
+    onCancel: (String) -> Unit,
+    onDismissError: () -> Unit
 ) {
     when {
         state.isLoadingRequests -> {
@@ -185,10 +184,15 @@ private fun InterestRequestsTab(
                 }
             }
         }
-        state.errorMessage != null -> {
+        (state.errorMessageRes != null || state.errorMessage != null) && state.sentRequests.isEmpty() && state.receivedPendingRequests.isEmpty() && state.receivedHistoryRequests.isEmpty() -> {
+            val errorText = if (state.errorMessageRes != null) {
+                localizedString(isArabic, state.errorMessageRes, state.errorMessageResAr ?: state.errorMessageRes)
+            } else {
+                state.errorMessage ?: ""
+            }
             MithaqEmptyState(
                 title = localizedString(isArabic, R.string.requests_interest_load_error, R.string.requests_interest_load_error_ar),
-                message = state.errorMessage,
+                message = errorText,
                 icon = Icons.Filled.Refresh,
                 actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry,
@@ -200,12 +204,32 @@ private fun InterestRequestsTab(
                 modifier = Modifier.padding(horizontal = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                state.message?.let { message ->
+                state.messageRes?.let { msgRes ->
+                    val msgResAr = state.messageResAr ?: msgRes
                     Text(
-                        text = message,
+                        text = localizedString(isArabic, msgRes, msgResAr),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodyMedium
                     )
+                }
+
+                if (state.errorMessageRes != null || state.errorMessage != null) {
+                    val errorText = if (state.errorMessageRes != null) {
+                        localizedString(isArabic, state.errorMessageRes, state.errorMessageResAr ?: state.errorMessageRes)
+                    } else {
+                        state.errorMessage ?: ""
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).clickable { onDismissError() },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Text(
+                            text = errorText,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
                 }
 
                 InterestSectionTitle(localizedString(isArabic, R.string.requests_received_pending, R.string.requests_received_pending_ar))
@@ -278,7 +302,8 @@ private fun PhotoRequestsTab(
     state: PhotoRequestUiState,
     onRetry: () -> Unit,
     onRespond: (String, Boolean) -> Unit,
-    onCancel: (String) -> Unit
+    onCancel: (String) -> Unit,
+    onDismissError: () -> Unit
 ) {
     when {
         state.isLoadingRequests -> {
@@ -288,10 +313,15 @@ private fun PhotoRequestsTab(
                 }
             }
         }
-        state.errorMessage != null -> {
+        (state.errorMessageRes != null || state.errorMessage != null) && state.sentRequests.isEmpty() && state.receivedPendingRequests.isEmpty() && state.receivedHistoryRequests.isEmpty() -> {
+            val errorText = if (state.errorMessageRes != null) {
+                localizedString(isArabic, state.errorMessageRes, state.errorMessageResAr ?: state.errorMessageRes)
+            } else {
+                state.errorMessage ?: ""
+            }
             MithaqEmptyState(
                 title = localizedString(isArabic, R.string.requests_photo_load_error, R.string.requests_photo_load_error_ar),
-                message = state.errorMessage,
+                message = errorText,
                 icon = Icons.Filled.Refresh,
                 actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry,
@@ -303,12 +333,32 @@ private fun PhotoRequestsTab(
                 modifier = Modifier.padding(horizontal = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                state.message?.let { message ->
+                state.messageRes?.let { msgRes ->
+                    val msgResAr = state.messageResAr ?: msgRes
                     Text(
-                        text = message,
+                        text = localizedString(isArabic, msgRes, msgResAr),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodyMedium
                     )
+                }
+
+                if (state.errorMessageRes != null || state.errorMessage != null) {
+                    val errorText = if (state.errorMessageRes != null) {
+                        localizedString(isArabic, state.errorMessageRes, state.errorMessageResAr ?: state.errorMessageRes)
+                    } else {
+                        state.errorMessage ?: ""
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).clickable { onDismissError() },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Text(
+                            text = errorText,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
                 }
 
                 InterestSectionTitle(localizedString(isArabic, R.string.requests_photo_received_pending, R.string.requests_photo_received_pending_ar))
@@ -381,7 +431,8 @@ private fun ChatRequestsTab(
     state: ChatRequestUiState,
     onRetry: () -> Unit,
     onRespond: (String, Boolean) -> Unit,
-    onCancel: (String) -> Unit
+    onCancel: (String) -> Unit,
+    onDismissError: () -> Unit
 ) {
     when {
         state.isLoadingRequests -> {
@@ -391,10 +442,15 @@ private fun ChatRequestsTab(
                 }
             }
         }
-        state.errorMessage != null -> {
+        (state.errorMessageRes != null || state.errorMessage != null) && state.sentRequests.isEmpty() && state.receivedPendingRequests.isEmpty() && state.receivedHistoryRequests.isEmpty() -> {
+            val errorText = if (state.errorMessageRes != null) {
+                localizedString(isArabic, state.errorMessageRes, state.errorMessageResAr ?: state.errorMessageRes)
+            } else {
+                state.errorMessage ?: ""
+            }
             MithaqEmptyState(
                 title = localizedString(isArabic, R.string.requests_chat_load_error, R.string.requests_chat_load_error_ar),
-                message = state.errorMessage,
+                message = errorText,
                 icon = Icons.Filled.Refresh,
                 actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry,
@@ -406,12 +462,32 @@ private fun ChatRequestsTab(
                 modifier = Modifier.padding(horizontal = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                state.message?.let { message ->
+                state.messageRes?.let { msgRes ->
+                    val msgResAr = state.messageResAr ?: msgRes
                     Text(
-                        text = message,
+                        text = localizedString(isArabic, msgRes, msgResAr),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodyMedium
                     )
+                }
+
+                if (state.errorMessageRes != null || state.errorMessage != null) {
+                    val errorText = if (state.errorMessageRes != null) {
+                        localizedString(isArabic, state.errorMessageRes, state.errorMessageResAr ?: state.errorMessageRes)
+                    } else {
+                        state.errorMessage ?: ""
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).clickable { onDismissError() },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Text(
+                            text = errorText,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
                 }
 
                 InterestSectionTitle(localizedString(isArabic, R.string.requests_chat_received_pending, R.string.requests_chat_received_pending_ar))

@@ -59,6 +59,7 @@ class InterestRequestRepository(
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("interestRequests")
             .whereEqualTo("fromUserId", userId)
+            .limit(100)
             .get()
             .await()
             .documents
@@ -70,6 +71,7 @@ class InterestRequestRepository(
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("interestRequests")
             .whereEqualTo("toUserId", userId)
+            .limit(100)
             .get()
             .await()
             .documents

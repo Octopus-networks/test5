@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 data class PhotoRequestUiState(
     val isLoadingRequests: Boolean = false,
@@ -22,7 +25,10 @@ data class PhotoRequestUiState(
     val receivedPendingRequests: List<PhotoRequest> = emptyList(),
     val receivedHistoryRequests: List<PhotoRequest> = emptyList(),
     val publicProfilesByUserId: Map<String, PublicProfile> = emptyMap(),
-    val message: String? = null,
+    val messageRes: Int? = null,
+    val messageResAr: Int? = null,
+    val errorMessageRes: Int? = null,
+    val errorMessageResAr: Int? = null,
     val errorMessage: String? = null
 )
 
@@ -35,7 +41,7 @@ class PhotoRequestViewModel(
 
     fun loadForUser(userId: String) {
         if (userId.isBlank()) return
-        _state.value = _state.value.copy(isLoadingRequests = true, errorMessage = null)
+        _state.value = _state.value.copy(isLoadingRequests = true, errorMessage = null, errorMessageRes = null, errorMessageResAr = null)
         viewModelScope.launch {
             try {
                 val sent = repository.getSentPhotoRequests(userId)
@@ -43,9 +49,15 @@ class PhotoRequestViewModel(
                 val profileIds = (sent.map { it.toUserId } + received.map { it.fromUserId })
                     .filter { it.isNotBlank() }
                     .distinct()
-                val profiles = profileIds.mapNotNull { id ->
-                    publicProfileRepository.getPublicProfile(id)?.let { id to it }
-                }.toMap()
+                val profiles = coroutineScope {
+                    profileIds.map { id ->
+                        async {
+                            try {
+                                publicProfileRepository.getPublicProfile(id)?.let { id to it }
+                            } catch (e: Exception) { null }
+                        }
+                    }.awaitAll().filterNotNull().toMap()
+                }
                 _state.value = _state.value.copy(
                     isLoadingRequests = false,
                     sentStatusByUserId = sent.associate { it.toUserId to it.status },
@@ -67,7 +79,10 @@ class PhotoRequestViewModel(
         if (fromUserId.isBlank() || toUserId.isBlank() || toUserId in _state.value.requestingToUserIds) return
         _state.value = _state.value.copy(
             requestingToUserIds = _state.value.requestingToUserIds + toUserId,
-            message = null,
+            messageRes = null,
+            messageResAr = null,
+            errorMessageRes = null,
+            errorMessageResAr = null,
             errorMessage = null
         )
         viewModelScope.launch {
@@ -76,7 +91,10 @@ class PhotoRequestViewModel(
                     _state.value = _state.value.copy(
                         requestingToUserIds = _state.value.requestingToUserIds - toUserId,
                         sentStatusByUserId = _state.value.sentStatusByUserId + (toUserId to "pending"),
-                        message = "Photo request sent.",
+                        messageRes = com.mithaq.app.R.string.msg_photo_sent,
+                        messageResAr = com.mithaq.app.R.string.msg_photo_sent_ar,
+                        errorMessageRes = null,
+                        errorMessageResAr = null,
                         errorMessage = null
                     )
                     loadForUser(fromUserId)
@@ -85,7 +103,10 @@ class PhotoRequestViewModel(
                     _state.value = _state.value.copy(
                         requestingToUserIds = _state.value.requestingToUserIds - toUserId,
                         sentStatusByUserId = _state.value.sentStatusByUserId + (toUserId to "pending"),
-                        message = "Photo request is already pending.",
+                        messageRes = com.mithaq.app.R.string.msg_photo_pending,
+                        messageResAr = com.mithaq.app.R.string.msg_photo_pending_ar,
+                        errorMessageRes = null,
+                        errorMessageResAr = null,
                         errorMessage = null
                     )
                 }
@@ -103,7 +124,10 @@ class PhotoRequestViewModel(
         if (requestId.isBlank() || requestId in _state.value.cancellingRequestIds) return
         _state.value = _state.value.copy(
             cancellingRequestIds = _state.value.cancellingRequestIds + requestId,
-            message = null,
+            messageRes = null,
+            messageResAr = null,
+            errorMessageRes = null,
+            errorMessageResAr = null,
             errorMessage = null
         )
         viewModelScope.launch {
@@ -111,7 +135,10 @@ class PhotoRequestViewModel(
                 is PhotoRequestResult.Success -> {
                     _state.value = _state.value.copy(
                         cancellingRequestIds = _state.value.cancellingRequestIds - requestId,
-                        message = "Photo request cancelled.",
+                        messageRes = com.mithaq.app.R.string.msg_photo_cancelled,
+                        messageResAr = com.mithaq.app.R.string.msg_photo_cancelled_ar,
+                        errorMessageRes = null,
+                        errorMessageResAr = null,
                         errorMessage = null
                     )
                     loadForUser(currentUserId)
@@ -131,7 +158,10 @@ class PhotoRequestViewModel(
         if (requestId.isBlank() || requestId in _state.value.respondingRequestIds) return
         _state.value = _state.value.copy(
             respondingRequestIds = _state.value.respondingRequestIds + requestId,
-            message = null,
+            messageRes = null,
+            messageResAr = null,
+            errorMessageRes = null,
+            errorMessageResAr = null,
             errorMessage = null
         )
         viewModelScope.launch {
@@ -139,7 +169,10 @@ class PhotoRequestViewModel(
                 is PhotoRequestResult.Success -> {
                     _state.value = _state.value.copy(
                         respondingRequestIds = _state.value.respondingRequestIds - requestId,
-                        message = if (approved) "Photo access approved." else "Photo request declined.",
+                        messageRes = if (approved) com.mithaq.app.R.string.msg_photo_approved else com.mithaq.app.R.string.msg_photo_declined,
+                        messageResAr = if (approved) com.mithaq.app.R.string.msg_photo_approved_ar else com.mithaq.app.R.string.msg_photo_declined_ar,
+                        errorMessageRes = null,
+                        errorMessageResAr = null,
                         errorMessage = null
                     )
                     loadForUser(currentUserId)
@@ -153,5 +186,9 @@ class PhotoRequestViewModel(
                 }
             }
         }
+    }
+
+    fun clearMessages() {
+        _state.value = _state.value.copy(messageRes = null, messageResAr = null, errorMessageRes = null, errorMessageResAr = null, errorMessage = null)
     }
 }

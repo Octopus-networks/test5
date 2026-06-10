@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 data class InterestRequestUiState(
     val isLoadingRequests: Boolean = false,
@@ -24,7 +27,10 @@ data class InterestRequestUiState(
     val receivedPendingRequests: List<InterestRequest> = emptyList(),
     val receivedHistoryRequests: List<InterestRequest> = emptyList(),
     val publicProfilesByUserId: Map<String, PublicProfile> = emptyMap(),
-    val message: String? = null,
+    val messageRes: Int? = null,
+    val messageResAr: Int? = null,
+    val errorMessageRes: Int? = null,
+    val errorMessageResAr: Int? = null,
     val errorMessage: String? = null
 )
 
@@ -37,7 +43,7 @@ class InterestRequestViewModel(
 
     fun loadForUser(userId: String) {
         if (userId.isBlank()) return
-        _state.value = _state.value.copy(isLoadingRequests = true, errorMessage = null)
+        _state.value = _state.value.copy(isLoadingRequests = true, errorMessage = null, errorMessageRes = null, errorMessageResAr = null)
         viewModelScope.launch {
             try {
                 val sent = repository.getSentInterestRequests(userId)
@@ -47,13 +53,15 @@ class InterestRequestViewModel(
                 val profileIds = (sent.map { it.toUserId } + received.map { it.fromUserId })
                     .filter { it.isNotBlank() }
                     .distinct()
-                val summaries = profileIds
-                    .mapNotNull { request ->
-                        publicProfileRepository.getPublicProfile(request)?.let { profile ->
-                            request to profile
+                val summaries = coroutineScope {
+                    profileIds.map { id ->
+                        async {
+                            try {
+                                publicProfileRepository.getPublicProfile(id)?.let { id to it }
+                            } catch (e: Exception) { null }
                         }
-                    }
-                    .toMap()
+                    }.awaitAll().filterNotNull().toMap()
+                }
                 _state.value = _state.value.copy(
                     isLoadingRequests = false,
                     sentPendingToUserIds = sent
@@ -83,7 +91,10 @@ class InterestRequestViewModel(
         if (fromUserId.isBlank() || toUserId.isBlank() || toUserId in _state.value.sendingToUserIds) return
         _state.value = _state.value.copy(
             sendingToUserIds = _state.value.sendingToUserIds + toUserId,
-            message = null,
+            messageRes = null,
+            messageResAr = null,
+            errorMessageRes = null,
+            errorMessageResAr = null,
             errorMessage = null
         )
         viewModelScope.launch {
@@ -93,7 +104,10 @@ class InterestRequestViewModel(
                         sendingToUserIds = _state.value.sendingToUserIds - toUserId,
                         sentPendingToUserIds = _state.value.sentPendingToUserIds + toUserId,
                         sentStatusByUserId = _state.value.sentStatusByUserId + (toUserId to "pending"),
-                        message = "Interest request sent.",
+                        messageRes = com.mithaq.app.R.string.msg_interest_sent,
+                        messageResAr = com.mithaq.app.R.string.msg_interest_sent_ar,
+                        errorMessageRes = null,
+                        errorMessageResAr = null,
                         errorMessage = null
                     )
                     loadForUser(fromUserId)
@@ -103,7 +117,10 @@ class InterestRequestViewModel(
                         sendingToUserIds = _state.value.sendingToUserIds - toUserId,
                         sentPendingToUserIds = _state.value.sentPendingToUserIds + toUserId,
                         sentStatusByUserId = _state.value.sentStatusByUserId + (toUserId to "pending"),
-                        message = "Interest request is already pending.",
+                        messageRes = com.mithaq.app.R.string.msg_interest_pending,
+                        messageResAr = com.mithaq.app.R.string.msg_interest_pending_ar,
+                        errorMessageRes = null,
+                        errorMessageResAr = null,
                         errorMessage = null
                     )
                 }
@@ -121,7 +138,10 @@ class InterestRequestViewModel(
         if (requestId.isBlank() || requestId in _state.value.respondingRequestIds) return
         _state.value = _state.value.copy(
             respondingRequestIds = _state.value.respondingRequestIds + requestId,
-            message = null,
+            messageRes = null,
+            messageResAr = null,
+            errorMessageRes = null,
+            errorMessageResAr = null,
             errorMessage = null
         )
         viewModelScope.launch {
@@ -129,7 +149,10 @@ class InterestRequestViewModel(
                 is InterestRequestResult.Success -> {
                     _state.value = _state.value.copy(
                         respondingRequestIds = _state.value.respondingRequestIds - requestId,
-                        message = if (accepted) "Interest accepted." else "Interest declined.",
+                        messageRes = if (accepted) com.mithaq.app.R.string.msg_interest_accepted else com.mithaq.app.R.string.msg_interest_declined,
+                        messageResAr = if (accepted) com.mithaq.app.R.string.msg_interest_accepted_ar else com.mithaq.app.R.string.msg_interest_declined_ar,
+                        errorMessageRes = null,
+                        errorMessageResAr = null,
                         errorMessage = null
                     )
                     loadForUser(currentUserId)
@@ -149,7 +172,10 @@ class InterestRequestViewModel(
         if (requestId.isBlank() || requestId in _state.value.cancellingRequestIds) return
         _state.value = _state.value.copy(
             cancellingRequestIds = _state.value.cancellingRequestIds + requestId,
-            message = null,
+            messageRes = null,
+            messageResAr = null,
+            errorMessageRes = null,
+            errorMessageResAr = null,
             errorMessage = null
         )
         viewModelScope.launch {
@@ -157,7 +183,10 @@ class InterestRequestViewModel(
                 is InterestRequestResult.Success -> {
                     _state.value = _state.value.copy(
                         cancellingRequestIds = _state.value.cancellingRequestIds - requestId,
-                        message = "Interest request cancelled.",
+                        messageRes = com.mithaq.app.R.string.msg_interest_cancelled,
+                        messageResAr = com.mithaq.app.R.string.msg_interest_cancelled_ar,
+                        errorMessageRes = null,
+                        errorMessageResAr = null,
                         errorMessage = null
                     )
                     loadForUser(currentUserId)
@@ -174,6 +203,6 @@ class InterestRequestViewModel(
     }
 
     fun clearMessages() {
-        _state.value = _state.value.copy(message = null, errorMessage = null)
+        _state.value = _state.value.copy(messageRes = null, messageResAr = null, errorMessageRes = null, errorMessageResAr = null, errorMessage = null)
     }
 }

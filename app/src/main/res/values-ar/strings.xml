@@ -710,4 +710,46 @@
     <string name="onb_oath_not_yet">ليس بعد</string>
     <string name="onb_summary_t">ملفك جاهز</string>
     <string name="onb_summary_s">راجع إجاباتك ثم تابع. يمكنك تعديل أي شيء لاحقًا من ملفك.</string>
+
+    <!-- VM Messages -->
+    <string name="msg_err_load_chat">Could not load chat requests.</string>
+    <string name="msg_err_load_chat_ar">تعذر تحميل طلبات المحادثة.</string>
+    <string name="msg_chat_sent">Chat request sent.</string>
+    <string name="msg_chat_sent_ar">تم إرسال طلب المحادثة.</string>
+    <string name="msg_chat_pending">Chat request is already pending.</string>
+    <string name="msg_chat_pending_ar">طلب المحادثة معلق بالفعل.</string>
+    <string name="msg_chat_limit">You\'ve reached today\'s free chat limit (3). Upgrade to Premium for unlimited chats.</string>
+    <string name="msg_chat_limit_ar">لقد وصلت للحد اليومي المجاني للمحادثات (3). قم بالترقية للوصول غير المحدود.</string>
+    <string name="msg_chat_cancelled">Chat request cancelled.</string>
+    <string name="msg_chat_cancelled_ar">تم إلغاء طلب المحادثة.</string>
+    <string name="msg_chat_approved">Chat request approved.</string>
+    <string name="msg_chat_approved_ar">تمت الموافقة على طلب المحادثة.</string>
+    <string name="msg_chat_declined">Chat request declined.</string>
+    <string name="msg_chat_declined_ar">تم رفض طلب المحادثة.</string>
+
+    <string name="msg_err_load_interest">Could not load requests.</string>
+    <string name="msg_err_load_interest_ar">تعذر تحميل الطلبات.</string>
+    <string name="msg_interest_sent">Interest request sent.</string>
+    <string name="msg_interest_sent_ar">تم إرسال طلب الاهتمام.</string>
+    <string name="msg_interest_pending">Interest request is already pending.</string>
+    <string name="msg_interest_pending_ar">طلب الاهتمام معلق بالفعل.</string>
+    <string name="msg_interest_accepted">Interest accepted.</string>
+    <string name="msg_interest_accepted_ar">تم قبول الاهتمام.</string>
+    <string name="msg_interest_declined">Interest declined.</string>
+    <string name="msg_interest_declined_ar">تم رفض الاهتمام.</string>
+    <string name="msg_interest_cancelled">Interest request cancelled.</string>
+    <string name="msg_interest_cancelled_ar">تم إلغاء طلب الاهتمام.</string>
+
+    <string name="msg_err_load_photo">Could not load photo requests.</string>
+    <string name="msg_err_load_photo_ar">تعذر تحميل طلبات الصور.</string>
+    <string name="msg_photo_sent">Photo request sent.</string>
+    <string name="msg_photo_sent_ar">تم إرسال طلب الصورة.</string>
+    <string name="msg_photo_pending">Photo request is already pending.</string>
+    <string name="msg_photo_pending_ar">طلب الصورة معلق بالفعل.</string>
+    <string name="msg_photo_cancelled">Photo request cancelled.</string>
+    <string name="msg_photo_cancelled_ar">تم إلغاء طلب الصورة.</string>
+    <string name="msg_photo_approved">Photo access approved.</string>
+    <string name="msg_photo_approved_ar">تمت الموافقة على الوصول للصورة.</string>
+    <string name="msg_photo_declined">Photo request declined.</string>
+    <string name="msg_photo_declined_ar">تم رفض طلب الصورة.</string>
 </resources>
