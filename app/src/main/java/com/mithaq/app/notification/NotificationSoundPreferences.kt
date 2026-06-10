@@ -24,6 +24,12 @@ import com.mithaq.app.R
  */
 enum class NotificationSound(val key: String, val rawResId: Int?) {
     DEFAULT("default", null),
+    // Premium synthesized tones (harmonic, natural decay) — listed first.
+    MARIMBA("marimba", R.raw.notif_marimba),
+    CRYSTAL("crystal", R.raw.notif_crystal),
+    AURORA("aurora", R.raw.notif_aurora),
+    PEBBLE("pebble", R.raw.notif_pebble),
+    // Legacy basic tones.
     CHIME("chime", R.raw.notif_chime),
     DING("ding", R.raw.notif_ding),
     SOFT("soft", R.raw.notif_soft),
