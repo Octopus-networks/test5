@@ -118,6 +118,11 @@ fun GridMatchCard(
             }
         }
     ) {
+        com.mithaq.app.ui.components.PremiumHighlight(
+            profile = profile,
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(8.dp)
+        ) {
         Box(modifier = Modifier.fillMaxSize()) {
             UserProfileImage(
                 imageUrl = if (isCompatible) profile.imageUrl else "",
@@ -285,6 +290,7 @@ fun GridMatchCard(
                 }
             }
         }
+        }
     }
 }
 
@@ -451,7 +457,7 @@ fun rememberUserProfileResolver(
                             )
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                     }
                 }
             }
@@ -488,7 +494,7 @@ fun LikesTabContent(
                 myLikesIds = likesRepository.getLikesList(currentUser.uid)
                 mutualIds = likesRepository.getMutualMatches(currentUser.uid)
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             } finally {
                 isLoading = false
             }
@@ -705,6 +711,11 @@ fun LikesTabContent(
                                 }
                             }
                         ) {
+                            com.mithaq.app.ui.components.PremiumHighlight(
+                                profile = partner,
+                                modifier = Modifier.fillMaxSize(),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
                             Row(
                                 modifier = Modifier
                                     .padding(16.dp)
@@ -846,6 +857,7 @@ fun LikesTabContent(
                                     )
                                 }
                             }
+                            }
                         }
                     }
                 }
@@ -878,7 +890,7 @@ fun ViewsTabContent(
                 visitorIds = likesRepository.getProfileVisitors(currentUser.uid)
                 viewedByMeIds = likesRepository.getProfilesIViewed(currentUser.uid)
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             } finally {
                 isLoading = false
             }
@@ -979,6 +991,11 @@ fun ViewsTabContent(
                                 }
                             }
                         ) {
+                            com.mithaq.app.ui.components.PremiumHighlight(
+                                profile = partner,
+                                modifier = Modifier.fillMaxSize(),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
                             Row(
                                 modifier = Modifier
                                     .padding(16.dp)
@@ -1057,6 +1074,7 @@ fun ViewsTabContent(
                                 )
                             }
                         }
+                        }
                     }
                 }
             }
@@ -1091,7 +1109,7 @@ fun FavoritesTabContent(
                 myFavoritesIds = likesRepository.getFavorites(currentUser.uid)
                 mutualFavoritesIds = likesRepository.getMutualFavorites(currentUser.uid)
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             } finally {
                 isLoading = false
             }
@@ -1196,6 +1214,11 @@ fun FavoritesTabContent(
                                 }
                             }
                         ) {
+                            com.mithaq.app.ui.components.PremiumHighlight(
+                                profile = partner,
+                                modifier = Modifier.fillMaxSize(),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
                             Row(
                                 modifier = Modifier
                                     .padding(16.dp)
@@ -1307,6 +1330,7 @@ fun FavoritesTabContent(
                                         modifier = if (!isCompatible) Modifier.alpha(0.5f) else Modifier
                                     )
                                 }
+                            }
                             }
                         }
                     }

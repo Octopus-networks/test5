@@ -537,6 +537,11 @@ fun SearchTabContent(
                         shape = RoundedCornerShape(24.dp),
                         onClick = { onSelectMatch(topMatch) }
                     ) {
+                        com.mithaq.app.ui.components.PremiumHighlight(
+                            profile = topMatch,
+                            modifier = Modifier.fillMaxSize(),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
                         Row(
                             modifier = Modifier
                                 .padding(20.dp)
@@ -628,6 +633,7 @@ fun SearchTabContent(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
+                        }
                         }
                     }
                 }
@@ -1023,6 +1029,11 @@ fun SearchTabContent(
                                         }
                                     }
                                 ) {
+                                    com.mithaq.app.ui.components.PremiumHighlight(
+                                        profile = profile,
+                                        modifier = Modifier.fillMaxSize(),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         UserProfileImage(
                                             imageUrl = if (isCompatible) profile.imageUrl else "",
@@ -1256,6 +1267,7 @@ fun SearchTabContent(
                                                 }
                                             }
                                         }
+                                    }
                                     }
                                 }
                             }
