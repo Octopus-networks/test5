@@ -122,6 +122,26 @@ fun MithaqDiscoverScreen(
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
     val chatState by chatRequestViewModel.state.collectAsState()
+    var detailProfile by remember { mutableStateOf<PublicProfile?>(null) }
+
+    if (detailProfile != null) {
+        val viewerCountry: String = state.currentUserCountry ?: ""
+        PublicProfileDetailScreen(
+            profile = detailProfile!!,
+            isArabic = isArabic,
+            currentUserId = currentUserId,
+            viewerCountry = viewerCountry,
+            interestState = interestState,
+            photoState = photoState,
+            chatState = chatState,
+            onSendInterest = { toUserId: String -> interestRequestViewModel.sendInterest(currentUserId, toUserId) },
+            onCancelInterest = { toUserId: String -> interestRequestViewModel.cancelInterest(currentUserId, "${currentUserId}_$toUserId") },
+            onRequestPhoto = { toUserId: String -> photoRequestViewModel.requestPhoto(currentUserId, toUserId) },
+            onRequestChat = { toUserId: String -> chatRequestViewModel.requestChat(currentUserId, toUserId) },
+            onBack = { detailProfile = null }
+        )
+        return
+    }
 
     Column(
         modifier = modifier
@@ -186,6 +206,7 @@ fun MithaqDiscoverScreen(
                 chatRequestViewModel.requestChat(currentUserId, toUserId)
             },
             onOpenChat = { onOpenMessages() },
+            onOpenDetail = { profile -> detailProfile = profile },
             onRetry = viewModel::loadProfiles
         )
     }
@@ -306,6 +327,7 @@ private fun DiscoverProfileContent(
     onRequestPhoto: (String) -> Unit,
     onRequestChat: (String) -> Unit,
     onOpenChat: (String) -> Unit = {},
+    onOpenDetail: (PublicProfile) -> Unit = {},
     onRetry: () -> Unit
 ) {
     when {
@@ -355,6 +377,7 @@ private fun DiscoverProfileContent(
                     onRequestPhoto = onRequestPhoto,
                     onRequestChat = onRequestChat,
                     onOpenChat = onOpenChat,
+                    onOpenDetail = { onOpenDetail(profile) },
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
@@ -379,7 +402,8 @@ fun MithaqPublicProfileCard(
     onCancelInterest: (String) -> Unit = {},
     onRequestPhoto: (String) -> Unit = {},
     onRequestChat: (String) -> Unit = {},
-    onOpenChat: (String) -> Unit = {}
+    onOpenChat: (String) -> Unit = {},
+    onOpenDetail: () -> Unit = {}
 ) {
     Card(
         modifier = modifier
@@ -392,7 +416,8 @@ fun MithaqPublicProfileCard(
                 shape = RoundedCornerShape(24.dp)
             ),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        onClick = onOpenDetail
     ) {
         Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
             // Phase 11: show the real photo only when this viewer holds an approved photo
@@ -771,9 +796,10 @@ fun MithaqPublicProfileCard(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun PhotoPrivacyPlaceholder(
+fun PhotoPrivacyPlaceholder(
     mode: String,
-    isArabic: Boolean
+    isArabic: Boolean,
+    modifier: Modifier = Modifier
 ) {
     val normalizedMode = mode.ifBlank { "blurred_by_default" }
     val caption = when (normalizedMode) {
@@ -796,7 +822,7 @@ private fun PhotoPrivacyPlaceholder(
     )
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .aspectRatio(0.85f)
             .clip(RoundedCornerShape(24.dp))
@@ -862,7 +888,7 @@ private fun PhotoPrivacyPlaceholder(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun ProfileSignalChip(
+fun ProfileSignalChip(
     label: String,
     icon: ImageVector,
     chipContainerColor: Color = SurfaceVariantDark,
@@ -907,14 +933,14 @@ fun PublicProfileFilter.label(isArabic: Boolean): String {
 }
 
 @Composable
-private fun PublicProfile.displayTitle(isArabic: Boolean): String {
+fun PublicProfile.displayTitle(isArabic: Boolean): String {
     val name = displayName.ifBlank { localizedString(isArabic, R.string.discover_member_fallback, R.string.discover_member_fallback_ar) }
     val ageLabel = age?.toString()
     return if (ageLabel == null) name else "$name, $ageLabel"
 }
 
 @Composable
-private fun PublicProfile.locationLabel(isArabic: Boolean): String {
+fun PublicProfile.locationLabel(isArabic: Boolean): String {
     val parts = listOf(city, country).map { it.trim() }.filter { it.isNotBlank() }
     return parts.joinToString(", ").ifBlank {
         localizedString(isArabic, R.string.discover_location_not_shared, R.string.discover_location_not_shared_ar)

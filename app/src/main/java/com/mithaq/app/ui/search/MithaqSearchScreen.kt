@@ -43,6 +43,7 @@ import com.mithaq.app.domain.model.PublicProfile
 import com.mithaq.app.ui.home.DiscoverUiState
 import com.mithaq.app.ui.home.DiscoverViewModel
 import com.mithaq.app.ui.home.MithaqPublicProfileCard
+import com.mithaq.app.ui.home.PublicProfileDetailScreen
 import com.mithaq.app.ui.home.PublicProfileFilterRow
 import com.mithaq.app.ui.requests.ChatRequestUiState
 import com.mithaq.app.ui.requests.ChatRequestViewModel
@@ -70,6 +71,27 @@ fun MithaqSearchScreen(
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
     val chatState by chatRequestViewModel.state.collectAsState()
+    var detailProfile by remember { mutableStateOf<PublicProfile?>(null) }
+
+    if (detailProfile != null) {
+        val viewerCountry = state.currentUserCountry ?: ""
+        PublicProfileDetailScreen(
+            profile = detailProfile!!,
+            isArabic = isArabic,
+            currentUserId = currentUserId,
+            viewerCountry = viewerCountry,
+            interestState = interestState,
+            photoState = photoState,
+            chatState = chatState,
+            onSendInterest = { toUserId: String -> interestRequestViewModel.sendInterest(currentUserId, toUserId) },
+            onCancelInterest = { toUserId: String -> interestRequestViewModel.cancelInterest(currentUserId, "${currentUserId}_$toUserId") },
+            onRequestPhoto = { toUserId: String -> photoRequestViewModel.requestPhoto(currentUserId, toUserId) },
+            onRequestChat = { toUserId: String -> chatRequestViewModel.requestChat(currentUserId, toUserId) },
+            onBack = { detailProfile = null }
+        )
+        return
+    }
+
     // The whole point of a Search tab: free-text matching on top of the chip filters.
     var searchQuery by remember { mutableStateOf("") }
 
@@ -155,6 +177,7 @@ fun MithaqSearchScreen(
                 chatRequestViewModel.requestChat(currentUserId, toUserId)
             },
             onOpenChat = { onOpenMessages() },
+            onOpenDetail = { profile -> detailProfile = profile },
             onRetry = viewModel::loadProfiles
         )
     }
@@ -174,6 +197,7 @@ private fun SearchResultsContent(
     onRequestPhoto: (String) -> Unit,
     onRequestChat: (String) -> Unit,
     onOpenChat: (String) -> Unit = {},
+    onOpenDetail: (PublicProfile) -> Unit = {},
     onRetry: () -> Unit
 ) {
     when {
@@ -222,6 +246,7 @@ private fun SearchResultsContent(
                     onRequestPhoto = onRequestPhoto,
                     onRequestChat = onRequestChat,
                     onOpenChat = onOpenChat,
+                    onOpenDetail = { onOpenDetail(profile) },
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }

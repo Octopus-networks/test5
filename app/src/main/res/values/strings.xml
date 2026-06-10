@@ -458,6 +458,22 @@
     <string name="photo_visibility_hidden_ar">خاصة</string>
     <string name="photo_visibility_public">Public</string>
     <string name="photo_visibility_public_ar">عامة</string>
+    <string name="profile_detail_their_time">Their local time</string>
+    <string name="profile_detail_their_time_ar">التوقيت المحلي لديه</string>
+    <string name="profile_detail_same_country">Same country as you</string>
+    <string name="profile_detail_same_country_ar">نفس بلدك</string>
+    <string name="profile_detail_label_marital_status">Marital Status</string>
+    <string name="profile_detail_label_marital_status_ar">الحالة الاجتماعية</string>
+    <string name="profile_detail_label_marriage_timeline">Marriage Timeline</string>
+    <string name="profile_detail_label_marriage_timeline_ar">خطة الزواج</string>
+    <string name="profile_detail_label_account_type">Account Type</string>
+    <string name="profile_detail_label_account_type_ar">نوع الحساب</string>
+    <string name="profile_detail_label_member_since">Member Since</string>
+    <string name="profile_detail_label_member_since_ar">عضو منذ</string>
+    <string name="profile_detail_label_completion">Profile Completion</string>
+    <string name="profile_detail_label_completion_ar">اكتمال الملف</string>
+    <string name="profile_detail_label_guardian">Guardian</string>
+    <string name="profile_detail_label_guardian_ar">ولي الأمر</string>
 
     <!-- ============================================================ -->
     <!-- Phase 11.12A — Structured onboarding (EN base + _ar siblings) -->
