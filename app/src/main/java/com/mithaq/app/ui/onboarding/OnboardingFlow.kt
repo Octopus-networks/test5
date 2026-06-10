@@ -101,7 +101,32 @@ object MithaqOnboardingFlow {
         storageGroup = OnboardingStorageGroup.NONE
     )
 
-    fun steps(): List<OnboardingStep> = listOf(
+    private fun getFallbackContext(): android.content.Context? {
+        return try {
+            com.google.firebase.FirebaseApp.getInstance().applicationContext
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun steps(context: android.content.Context? = getFallbackContext()): List<OnboardingStep> {
+        val staticSteps = buildStaticSteps()
+        if (context != null) {
+            try {
+                val inputStream = context.assets.open("onboarding/onboarding_steps.json")
+                val jsonString = inputStream.bufferedReader().use { it.readText() }
+                val loader = OnboardingConfigLoader(context)
+                val dynamicSteps = loader.loadStepsFromJson(jsonString)
+                val restSteps = staticSteps.filter { it.section.id != "identity_location" }
+                return dynamicSteps + restSteps
+            } catch (e: Exception) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+            }
+        }
+        return staticSteps
+    }
+
+    private fun buildStaticSteps(): List<OnboardingStep> = listOf(
         // ════════════════ 1. Identity & Location ════════════════
         brk("brk_identity", secIdentity, R.string.onb_brk_identity_t, R.string.onb_brk_identity_t_ar, R.string.onb_brk_identity_s, R.string.onb_brk_identity_s_ar),
         q("account_type", secIdentity, QuestionType.SingleChoice, R.string.onb_account_type_t, R.string.onb_account_type_t_ar,

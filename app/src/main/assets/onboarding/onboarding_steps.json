@@ -1,0 +1,175 @@
+[
+  {
+    "id": "brk_identity",
+    "sectionId": "identity_location",
+    "type": "SectionBreak",
+    "titleRes": "onb_brk_identity_t",
+    "helperRes": "onb_brk_identity_s",
+    "optional": true,
+    "privacy": "PUBLIC_SAFE",
+    "storageGroup": "NONE"
+  },
+  {
+    "id": "account_type",
+    "sectionId": "identity_location",
+    "type": "SingleChoice",
+    "titleRes": "onb_account_type_t",
+    "storageGroup": "BASIC_INFO",
+    "fieldKey": "accountType",
+    "privacy": "PUBLIC_SAFE",
+    "mirror": true,
+    "options": [
+      {"id": "male", "labelRes": "onb_account_type_male"},
+      {"id": "female", "labelRes": "onb_account_type_female"},
+      {"id": "guardian", "labelRes": "onb_account_type_guardian"}
+    ]
+  },
+  {
+    "id": "first_name",
+    "sectionId": "identity_location",
+    "type": "TextInput",
+    "titleRes": "onb_first_name_t",
+    "helperRes": "onb_first_name_h",
+    "storageGroup": "BASIC_INFO",
+    "fieldKey": "firstName",
+    "privacy": "PRIVATE",
+    "validation": [
+      {"rule": "Required"},
+      {"rule": "MinLength", "value": 2},
+      {"rule": "MaxLength", "value": 40}
+    ]
+  },
+  {
+    "id": "display_name",
+    "sectionId": "identity_location",
+    "type": "TextInput",
+    "titleRes": "onb_display_name_t",
+    "helperRes": "onb_display_name_h",
+    "storageGroup": "BASIC_INFO",
+    "fieldKey": "displayName",
+    "privacy": "PUBLIC_SAFE",
+    "mirror": true,
+    "validation": [
+      {"rule": "Required"},
+      {"rule": "MinLength", "value": 2},
+      {"rule": "MaxLength", "value": 30}
+    ]
+  },
+  {
+    "id": "gender",
+    "sectionId": "identity_location",
+    "type": "SingleChoice",
+    "titleRes": "onb_gender_t",
+    "storageGroup": "BASIC_INFO",
+    "fieldKey": "gender",
+    "privacy": "PUBLIC_SAFE",
+    "mirror": true,
+    "match": true,
+    "options": [
+      {"id": "male", "labelRes": "onb_gender_male"},
+      {"id": "female", "labelRes": "onb_gender_female"}
+    ]
+  },
+  {
+    "id": "age",
+    "sectionId": "identity_location",
+    "type": "NumberInput",
+    "titleRes": "onb_age_t",
+    "helperRes": "onb_age_h",
+    "storageGroup": "BASIC_INFO",
+    "fieldKey": "age",
+    "privacy": "PUBLIC_CONTROLLED",
+    "mirror": true,
+    "match": true,
+    "validation": [
+      {"rule": "Required"},
+      {"rule": "NumberRange", "min": 18, "max": 77}
+    ]
+  },
+  {
+    "id": "nationality",
+    "sectionId": "identity_location",
+    "type": "SearchableList",
+    "titleRes": "onb_nationality_t",
+    "storageGroup": "BASIC_INFO",
+    "fieldKey": "nationality",
+    "privacy": "PUBLIC_SAFE",
+    "mirror": true,
+    "options": [
+      {"id": "egypt", "labelRes": "onb_country_egypt"},
+      {"id": "saudi_arabia", "labelRes": "onb_country_saudi"},
+      {"id": "uae", "labelRes": "onb_country_uae"},
+      {"id": "kuwait", "labelRes": "onb_country_kuwait"},
+      {"id": "qatar", "labelRes": "onb_country_qatar"},
+      {"id": "bahrain", "labelRes": "onb_country_bahrain"},
+      {"id": "oman", "labelRes": "onb_country_oman"},
+      {"id": "jordan", "labelRes": "onb_country_jordan"},
+      {"id": "morocco", "labelRes": "onb_country_morocco"},
+      {"id": "algeria", "labelRes": "onb_country_algeria"},
+      {"id": "tunisia", "labelRes": "onb_country_tunisia"},
+      {"id": "turkey", "labelRes": "onb_country_turkey"},
+      {"id": "uk", "labelRes": "onb_country_uk"},
+      {"id": "usa", "labelRes": "onb_country_usa"},
+      {"id": "canada", "labelRes": "onb_country_canada"},
+      {"id": "other", "labelRes": "onb_country_other"}
+    ]
+  },
+  {
+    "id": "country",
+    "sectionId": "identity_location",
+    "type": "SearchableList",
+    "titleRes": "onb_country_t",
+    "storageGroup": "LOCATION",
+    "fieldKey": "country",
+    "privacy": "PUBLIC_SAFE",
+    "mirror": true,
+    "match": true,
+    "options": [
+      {"id": "egypt", "labelRes": "onb_country_egypt"},
+      {"id": "saudi_arabia", "labelRes": "onb_country_saudi"},
+      {"id": "uae", "labelRes": "onb_country_uae"},
+      {"id": "kuwait", "labelRes": "onb_country_kuwait"},
+      {"id": "qatar", "labelRes": "onb_country_qatar"},
+      {"id": "bahrain", "labelRes": "onb_country_bahrain"},
+      {"id": "oman", "labelRes": "onb_country_oman"},
+      {"id": "jordan", "labelRes": "onb_country_jordan"},
+      {"id": "morocco", "labelRes": "onb_country_morocco"},
+      {"id": "algeria", "labelRes": "onb_country_algeria"},
+      {"id": "tunisia", "labelRes": "onb_country_tunisia"},
+      {"id": "turkey", "labelRes": "onb_country_turkey"},
+      {"id": "uk", "labelRes": "onb_country_uk"},
+      {"id": "usa", "labelRes": "onb_country_usa"},
+      {"id": "canada", "labelRes": "onb_country_canada"},
+      {"id": "other", "labelRes": "onb_country_other"}
+    ]
+  },
+  {
+    "id": "city",
+    "sectionId": "identity_location",
+    "type": "TextInput",
+    "titleRes": "onb_city_t",
+    "storageGroup": "LOCATION",
+    "fieldKey": "city",
+    "privacy": "PUBLIC_SAFE",
+    "mirror": true,
+    "validation": [
+      {"rule": "Required"},
+      {"rule": "MinLength", "value": 2}
+    ]
+  },
+  {
+    "id": "willing_to_relocate",
+    "sectionId": "identity_location",
+    "type": "SingleChoice",
+    "titleRes": "onb_relocate_t",
+    "storageGroup": "LOCATION",
+    "fieldKey": "willingToRelocate",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {"id": "yes", "labelRes": "onb_yes"},
+      {"id": "no", "labelRes": "onb_no"},
+      {"id": "maybe", "labelRes": "onb_maybe"}
+    ]
+  }
+]
