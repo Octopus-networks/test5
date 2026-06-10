@@ -159,8 +159,6 @@ class PublicProfileRepository(
             else -> DiscoveryDirection.Unknown
         }
     }
-
-    }
 }
 
 fun List<PublicProfile>.premiumWeightedInterleave(): List<PublicProfile> {
