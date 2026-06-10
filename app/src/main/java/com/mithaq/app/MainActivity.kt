@@ -155,7 +155,13 @@ class MainActivity : FragmentActivity() {
             val biometricManager = remember { BiometricAuthManager(this) }
 
             LaunchedEffect(Unit) {
-                if (biometricManager.isBiometricAvailable()) {
+                // App Lock is opt-in per account (Security settings). Only prompt when the
+                // signed-in user enabled it; a device merely supporting biometrics is not consent.
+                val signedInUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                val appLockEnabled = signedInUid != null &&
+                    getSharedPreferences("mithaq_security_prefs", MODE_PRIVATE)
+                        .getBoolean("app_lock_enabled_$signedInUid", false)
+                if (appLockEnabled && biometricManager.isBiometricAvailable()) {
                     biometricManager.showBiometricPrompt(
                         activity = this@MainActivity,
                         title = if (isArabic) "المصادقة البيومترية" else "Biometric Authentication",
