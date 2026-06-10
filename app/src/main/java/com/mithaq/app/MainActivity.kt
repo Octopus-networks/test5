@@ -1301,6 +1301,7 @@ fun MithaqAppNavigation(
                     onOpenAdminModeration = { currentScreen = "admin_moderation" },
                     onOpenAppSettings = { currentScreen = "app_settings" },
                     onOpenProfileSettings = { currentScreen = "profile_settings" },
+                    onOpenPrayerHub = { currentScreen = "prayer_hub" },
                     onOpenPrayerSettings = { currentScreen = "prayer_settings" },
                     onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
                     onOpenPrivacy = { currentScreen = "privacy_settings" },
@@ -1378,6 +1379,7 @@ fun MithaqAppNavigation(
                         onOpenAdminModeration = { currentScreen = "admin_moderation" },
                         onOpenAppSettings = { currentScreen = "app_settings" },
                         onOpenProfileSettings = { currentScreen = "profile_settings" },
+                        onOpenPrayerHub = { currentScreen = "prayer_hub" },
                         onOpenPrayerSettings = { currentScreen = "prayer_settings" },
                         onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
                         onOpenPrivacy = { currentScreen = "privacy_settings" },
@@ -1470,6 +1472,17 @@ fun MithaqAppNavigation(
                 onBack = { currentScreen = "home" }
             )
         }
+        "prayer_hub" -> {
+            com.mithaq.app.ui.prayer.PrayerHubScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                isArabic = isArabic,
+                onOpenPrayerSettings = {
+                    currentScreen = "prayer_settings"
+                },
+                onOpenQibla = { /* Stage 2 stub */ },
+                onBack = { currentScreen = "profile_hub" }
+            )
+        }
         "profile_settings" -> {
             ProfileSettingsScreen(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
@@ -1550,7 +1563,7 @@ fun MithaqAppNavigation(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 authViewModel = authViewModel,
                 isArabic = isArabic,
-                onBack = { currentScreen = "home" }
+                onBack = { currentScreen = "prayer_hub" }
             )
         }
         "app_settings" -> {

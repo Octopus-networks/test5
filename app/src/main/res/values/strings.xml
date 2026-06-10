@@ -1028,4 +1028,24 @@
     <string name="msg_photo_declined_ar">تم رفض طلب الصورة.</string>
     <string name="msg_err_load_profiles">Could not load public profiles right now.</string>
     <string name="msg_err_load_profiles_ar">تعذر تحميل الملفات الشخصية العامة في الوقت الحالي.</string>
+    <!-- Prayer Hub -->
+    <string name="prayer_hub_title">Prayer Hub</string>
+    <string name="prayer_hub_title_ar">مركز الصلاة</string>
+    <string name="prayer_hub_qibla">Qibla</string>
+    <string name="prayer_hub_qibla_ar">القبلة</string>
+    <string name="prayer_hub_settings">Adhan Settings</string>
+    <string name="prayer_hub_settings_ar">إعدادات الأذان</string>
+    <string name="prayer_hub_next_prayer">Next Prayer</string>
+    <string name="prayer_hub_next_prayer_ar">الصلاة القادمة</string>
+    <string name="prayer_hub_empty_state_title">Coordinates Required</string>
+    <string name="prayer_hub_empty_state_title_ar">الإحداثيات مطلوبة</string>
+    <string name="prayer_hub_empty_state_message">We need your location or country coordinates to calculate accurate prayer times.</string>
+    <string name="prayer_hub_empty_state_message_ar">نحتاج إلى موقعك أو إحداثيات بلدك لحساب أوقات الصلاة بدقة.</string>
+    <string name="prayer_hub_setup_btn">Setup Prayer Times</string>
+    <string name="prayer_hub_setup_btn_ar">إعداد أوقات الصلاة</string>
+    <string name="prayer_hub_sunrise">Sunrise</string>
+    <string name="prayer_hub_sunrise_ar">الشروق</string>
+    <string name="prayer_hub_prayed">Prayed</string>
+    <string name="prayer_hub_prayed_ar">صليت</string>
+
 </resources>

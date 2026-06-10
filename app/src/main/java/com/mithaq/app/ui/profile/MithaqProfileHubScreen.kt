@@ -81,6 +81,7 @@ fun MithaqProfileHubScreen(
     onOpenAdminModeration: () -> Unit = {},
     onOpenAppSettings: () -> Unit = {},
     onOpenProfileSettings: () -> Unit = {},
+    onOpenPrayerHub: () -> Unit = {},
     onOpenPrayerSettings: () -> Unit = {},
     onOpenPhotoPrivacy: () -> Unit = {},
     onOpenPrivacy: () -> Unit = {},
@@ -211,12 +212,12 @@ fun MithaqProfileHubScreen(
                     showComingSoon = false,
                     onClick = onOpenPhotoPrivacy
                 )
-                // Phase 1: Prayer settings open the dedicated Adhan/prayer screen.
+                // Phase 1: Prayer hub opens the dedicated prayer companion.
                 R.string.profile_hub_prayer_title -> ProfileHubRow(
                     item = item,
                     isArabic = isArabic,
                     showComingSoon = false,
-                    onClick = onOpenPrayerSettings
+                    onClick = onOpenPrayerHub
                 )
                 // Phase 0 wiring: Language opens the existing App Settings screen.
                 R.string.profile_hub_language_title -> ProfileHubRow(

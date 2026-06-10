@@ -64,6 +64,7 @@ fun MithaqMainExperience(
     onOpenAdminModeration: () -> Unit = {},
     onOpenAppSettings: () -> Unit = {},
     onOpenProfileSettings: () -> Unit = {},
+    onOpenPrayerHub: () -> Unit = {},
     onOpenPrayerSettings: () -> Unit = {},
     onOpenPhotoPrivacy: () -> Unit = {},
     onOpenPrivacy: () -> Unit = {},
@@ -128,6 +129,7 @@ fun MithaqMainExperience(
                 photoRequestViewModel = photoRequestViewModel,
                 chatRequestViewModel = chatRequestViewModel,
                 onOpenMessages = { selectedTab = MithaqMainTab.Messages },
+                onOpenPrayerHub = onOpenPrayerHub,
                 modifier = screenModifier
             )
             MithaqMainTab.Search -> MithaqSearchScreen(
@@ -159,6 +161,7 @@ fun MithaqMainExperience(
                 onOpenAdminModeration = onOpenAdminModeration,
                 onOpenAppSettings = onOpenAppSettings,
                 onOpenProfileSettings = onOpenProfileSettings,
+                onOpenPrayerHub = onOpenPrayerHub,
                 onOpenPrayerSettings = onOpenPrayerSettings,
                 onOpenPhotoPrivacy = onOpenPhotoPrivacy,
                 onOpenPrivacy = onOpenPrivacy,
