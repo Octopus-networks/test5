@@ -161,6 +161,13 @@ exports.recordChatInitiation = onCall(secureCallable, async (request) => {
   const userSnap = await getUser(uid);
   const isPremium = userSnap.get("isPremium") === true;
 
+  // A block in either direction stops chat requests too. These docs are written by
+  // this callable (Admin SDK), so the rules-side noBlockBetween never sees them —
+  // the gate has to live here. isBlockedBetween is best-effort fail-open.
+  if (await isBlockedBetween(uid, toUserId)) {
+    throw new HttpsError("permission-denied", "You cannot send requests to this member.");
+  }
+
   const relatedInterestRequestId = await acceptedInterestRequestIdBetween(uid, toUserId);
   if (!relatedInterestRequestId) {
     throw new HttpsError(
