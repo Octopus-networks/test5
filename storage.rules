@@ -97,8 +97,18 @@ service firebase.storage {
         return isAuthenticated() &&
           request.auth.uid in firestore.get(/databases/(default)/documents/chats/$(chatId)).data.participantIds;
       }
+      // Mirrors the Firestore message-create rule: a block in either direction between
+      // the chat's two participants also stops new attachment uploads.
+      function chatParticipants() {
+        return firestore.get(/databases/(default)/documents/chats/$(chatId)).data.participantIds;
+      }
+      function noBlockBetweenParticipants() {
+        return !firestore.exists(/databases/(default)/documents/blocks/$(chatParticipants()[0] + '_' + chatParticipants()[1])) &&
+          !firestore.exists(/databases/(default)/documents/blocks/$(chatParticipants()[1] + '_' + chatParticipants()[0]));
+      }
       allow read: if isChatMember() || isAdmin();
       allow create: if isChatMember() &&
+        noBlockBetweenParticipants() &&
         request.resource.size < 10 * 1024 * 1024 &&
         (
           request.resource.contentType.matches('image/.*') ||

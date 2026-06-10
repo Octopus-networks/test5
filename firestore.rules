@@ -162,6 +162,13 @@ service cloud.firestore {
         );
     }
 
+    // A block in either direction kills chat activity between two members. Doc ids are
+    // deterministic ({blocker}_{blocked}), so two exists() calls cover both directions.
+    function noBlockBetween(uidA, uidB) {
+      return !exists(/databases/$(database)/documents/blocks/$(uidA + "_" + uidB)) &&
+        !exists(/databases/$(database)/documents/blocks/$(uidB + "_" + uidA));
+    }
+
     function hasAcceptedInterest(uidA, uidB) {
       return exists(/databases/$(database)/documents/interestRequests/$(uidA + "_" + uidB)) &&
         get(/databases/$(database)/documents/interestRequests/$(uidA + "_" + uidB)).data.status == "accepted" ||
@@ -477,6 +484,10 @@ service cloud.firestore {
         request.resource.data.participantIds[1] is string &&
         request.resource.data.participantIds[0] != request.resource.data.participantIds[1] &&
         request.auth.uid in request.resource.data.participantIds &&
+        noBlockBetween(
+          request.resource.data.participantIds[0],
+          request.resource.data.participantIds[1]
+        ) &&
         request.resource.data.status == "active" &&
         request.resource.data.guardianApprovalStatus == "not_required" &&
         approvedChatRequestFor(
@@ -508,6 +519,7 @@ service cloud.firestore {
         allow read: if isChatParticipant(chatId) || isAdmin();
         allow create: if isChatParticipant(chatId) &&
           chatData(chatId).status == "active" &&
+          noBlockBetween(chatData(chatId).participantIds[0], chatData(chatId).participantIds[1]) &&
           request.resource.data.messageId == messageId &&
           request.resource.data.chatId == chatId &&
           request.resource.data.senderId == request.auth.uid &&
