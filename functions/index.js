@@ -2,11 +2,17 @@
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
-const admin = require("firebase-admin");
+// firebase-admin v14 dropped the legacy namespaced API (admin.firestore() etc.);
+// only the modular entry points exist now.
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
+const { getMessaging } = require("firebase-admin/messaging");
+const { getStorage } = require("firebase-admin/storage");
 
-admin.initializeApp();
+initializeApp();
 
-const db = admin.firestore();
+const db = getFirestore();
 const region = "us-central1";
 const secureCallable = {
   region,
@@ -80,7 +86,7 @@ function auditPayload(request, action, targetUid, extra = {}) {
     targetUid,
     actorUid: request.auth.uid,
     actorEmail: request.auth.token.email || null,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
     ...extra,
   };
 }
@@ -151,7 +157,7 @@ exports.recordChatInitiation = onCall(secureCallable, async (request) => {
     }
     tx.set(limitRef, {
       count: current + 1,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     return FREE_DAILY_CHAT_LIMIT - (current + 1);
   });
@@ -176,14 +182,42 @@ exports.setUserRole = onCall(secureCallable, async (request) => {
   return { ok: true };
 });
 
-exports.deleteUserProfile = onCall(secureCallable, async (request) => {
+// Heavy accounts (many photos/subcollections) can exceed the default 60s budget.
+exports.deleteUserProfile = onCall({ ...secureCallable, timeoutSeconds: 300 }, async (request) => {
   await requireAdmin(request);
   const targetUid = requireString(request.data, "targetUid");
   if (targetUid === request.auth.uid) {
     throw new HttpsError("failed-precondition", "Admins cannot delete their own account here.");
   }
 
-  await db.collection("users").doc(targetUid).delete();
+  // Auth first: kills sign-in immediately so the client cannot recreate data while
+  // the cleanup below runs. A missing Auth user (already deleted) is fine.
+  try {
+    await getAuth().deleteUser(targetUid);
+  } catch (error) {
+    if (error.code !== "auth/user-not-found") {
+      throw error;
+    }
+  }
+
+  // Identity documents, including subcollections (users/{uid}/chatLimits,
+  // userPhotos/{uid}/photos). Deleting users/{uid} also triggers the public-profile
+  // mirror, which is idempotent with the direct publicProfiles delete below.
+  await db.recursiveDelete(db.collection("users").doc(targetUid));
+  await db.recursiveDelete(db.collection("profiles").doc(targetUid));
+  await db.recursiveDelete(db.collection("userPhotos").doc(targetUid));
+  await db.collection("publicProfiles").doc(targetUid).delete();
+
+  // Stored media: private photos, legacy profile images ({uid}.jpg and
+  // {uid}_additional_N.jpg share the uid prefix), voice intro, verification evidence.
+  const bucket = getStorage().bucket();
+  await Promise.all([
+    bucket.deleteFiles({ prefix: `user_photos/${targetUid}/` }),
+    bucket.deleteFiles({ prefix: `profiles/${targetUid}` }),
+    bucket.deleteFiles({ prefix: `voices/${targetUid}` }),
+    bucket.deleteFiles({ prefix: `verification/${targetUid}/` }),
+  ]);
+
   await db.collection("adminAuditLogs").add(auditPayload(request, "deleteUserProfile", targetUid));
   return { ok: true };
 });
@@ -264,7 +298,7 @@ async function sendPushToRecipient(recipientUid, { title, body, data }) {
     return { successCount: 0, failureCount: 0, attempted: 0 };
   }
 
-  const response = await admin.messaging().sendEachForMulticast({
+  const response = await getMessaging().sendEachForMulticast({
     tokens: targets.map((target) => target.token),
     notification: { title, body },
     data: sanitizeData(data),
@@ -293,7 +327,7 @@ async function sendPushToRecipient(recipientUid, { title, body, data }) {
     } else if (target.legacy) {
       cleanups.push(
         db.collection("users").doc(recipientUid)
-          .update({ fcmToken: admin.firestore.FieldValue.delete() })
+          .update({ fcmToken: FieldValue.delete() })
           .catch(() => {})
       );
     }
@@ -373,7 +407,7 @@ async function createNotification({ senderUid = null, recipientUid, title, body,
     body,
     type,
     status: "PENDING",
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    timestamp: FieldValue.serverTimestamp(),
   });
 
   try {
@@ -394,7 +428,7 @@ async function createNotification({ senderUid = null, recipientUid, title, body,
     if (result.successCount > 0) {
       await notificationRef.update({
         status: "PUSH_SENT",
-        pushedAt: admin.firestore.FieldValue.serverTimestamp(),
+        pushedAt: FieldValue.serverTimestamp(),
       });
     }
   } catch (error) {
@@ -671,8 +705,8 @@ function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
     photoPrivacyMode: "blurred_by_default",
     profileCompletionPercent:
       typeof profile.profileCompletionPercent === "number" ? profile.profileCompletionPercent : 0,
-    lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    lastActiveAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   };
 }
 
@@ -690,7 +724,7 @@ async function syncPublicProfile(userId) {
 
   let isEmailVerified = false;
   try {
-    const userRecord = await admin.auth().getUser(userId);
+    const userRecord = await getAuth().getUser(userId);
     isEmailVerified = !!userRecord.emailVerified;
   } catch (error) {
     isEmailVerified = false;
