@@ -49,6 +49,9 @@ class PublicProfileRepository(
             .documents
             .map { it.toPublicProfile() }
             .filter { it.userId.isNotBlank() && it.userId != currentUserId }
+            // Client-side (not whereEqualTo) so docs the mirror hasn't rebuilt yet —
+            // which lack the field entirely — stay visible instead of vanishing.
+            .filter { !it.isIncognito }
             .filter { it.isEligibleFor(currentDirection) }
             .sortedWith(
                 compareByDescending<PublicProfile> { it.lastActiveAt }
@@ -83,6 +86,7 @@ class PublicProfileRepository(
             hasGuardian = getBoolean("hasGuardian") == true,
             isEmailVerified = getBoolean("isEmailVerified") == true,
             isIdentityVerified = getBoolean("isIdentityVerified") == true,
+            isIncognito = getBoolean("isIncognito") == true,
             photoPrivacyMode = getString("photoPrivacyMode") ?: "blurred_by_default",
             profileCompletionPercent = getLong("profileCompletionPercent")?.toInt() ?: 0,
             lastActiveAt = getTimestamp("lastActiveAt")?.toDate(),

@@ -665,6 +665,9 @@ function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
     hasGuardian: guardianStatus == "VERIFIED",
     isEmailVerified: !!isEmailVerified,
     isIdentityVerified: verificationStatus == "VERIFIED",
+    // Incognito members must not appear in public discovery. The flag lives on the
+    // server-owned users/{uid} doc; mirroring it here lets Discover filter honestly.
+    isIncognito: userMeta.isIncognito == true,
     photoPrivacyMode: "blurred_by_default",
     profileCompletionPercent:
       typeof profile.profileCompletionPercent === "number" ? profile.profileCompletionPercent : 0,
