@@ -2,6 +2,7 @@ package com.mithaq.app.ui.home
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
@@ -116,7 +118,8 @@ fun MithaqDiscoverScreen(
     interestRequestViewModel: InterestRequestViewModel,
     photoRequestViewModel: PhotoRequestViewModel,
     chatRequestViewModel: ChatRequestViewModel,
-    onOpenMessages: () -> Unit = {}
+    onOpenMessages: () -> Unit = {},
+    onOpenPrayerHub: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val interestState by interestRequestViewModel.state.collectAsState()
@@ -162,6 +165,46 @@ fun MithaqDiscoverScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondaryDark
         )
+        
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val prefs = context.getSharedPreferences("mithaq_prefs", android.content.Context.MODE_PRIVATE)
+        val nextAdhanAt = prefs.getLong("nextAdhanAt", 0L)
+        if (nextAdhanAt > 0L) {
+            val prayerNameStr = prefs.getString("nextAdhanPrayer", "") ?: ""
+            val nextTime = java.util.Date(nextAdhanAt)
+            val timeStr = java.text.SimpleDateFormat("hh:mm a", if (isArabic) java.util.Locale("ar") else java.util.Locale.getDefault()).format(nextTime)
+            val prayerLabel = when (prayerNameStr) {
+                "FAJR" -> if (isArabic) "الفجر" else "Fajr"
+                "SUNRISE" -> if (isArabic) "الشروق" else "Sunrise"
+                "DHUHR" -> if (isArabic) "الظهر" else "Dhuhr"
+                "ASR" -> if (isArabic) "العصر" else "Asr"
+                "MAGHRIB" -> if (isArabic) "المغرب" else "Maghrib"
+                "ISHA" -> if (isArabic) "العشاء" else "Isha"
+                else -> ""
+            }
+            if (prayerLabel.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                androidx.compose.material3.Surface(
+                    color = AccentGold.copy(alpha = 0.1f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    modifier = Modifier.clickable { onOpenPrayerHub() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Default.Notifications, contentDescription = null, tint = AccentGold, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isArabic) "الصلاة القادمة: $prayerLabel $timeStr" else "Next: $prayerLabel $timeStr",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = AccentGold
+                        )
+                    }
+                }
+            }
+        }
+        
         Spacer(modifier = Modifier.height(18.dp))
         PublicProfileFilterRow(
             isArabic = isArabic,
