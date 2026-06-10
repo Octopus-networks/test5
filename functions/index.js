@@ -5,7 +5,7 @@ const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/
 // firebase-admin v14 dropped the legacy namespaced API (admin.firestore() etc.);
 // only the modular entry points exist now.
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { getAuth } = require("firebase-admin/auth");
 const { getMessaging } = require("firebase-admin/messaging");
 const { getStorage } = require("firebase-admin/storage");
@@ -719,7 +719,7 @@ function humanizeLabel(value) {
     .join(" ");
 }
 
-function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
+function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}, authCreatedAtMs = null) {
   const basicInfo = profile.basicInfo || {};
   const location = profile.location || {};
   const personalStatus = profile.personalStatus || {};
@@ -772,7 +772,14 @@ function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
     photoPrivacyMode: "blurred_by_default",
     profileCompletionPercent:
       typeof profile.profileCompletionPercent === "number" ? profile.profileCompletionPercent : 0,
-    lastActiveAt: FieldValue.serverTimestamp(),
+    // Real presence: users/{uid}.lastSeen (millis, written on every app open by
+    // SessionMaintenanceRepository). The old serverTimestamp() meant "last mirror
+    // rebuild", which made the Recently Active filter show recently-EDITED profiles.
+    lastActiveAt: Number.isFinite(Number(userMeta.lastSeen)) && Number(userMeta.lastSeen) > 0
+      ? Timestamp.fromMillis(Number(userMeta.lastSeen))
+      : FieldValue.serverTimestamp(),
+    // Real join date (Auth creationTime) for the New Members filter.
+    memberSince: authCreatedAtMs ? Timestamp.fromMillis(authCreatedAtMs) : null,
     updatedAt: FieldValue.serverTimestamp(),
   };
 }
@@ -790,9 +797,14 @@ async function syncPublicProfile(userId) {
   const profile = profileSnap.data() || {};
 
   let isEmailVerified = false;
+  let authCreatedAtMs = null;
   try {
     const userRecord = await getAuth().getUser(userId);
     isEmailVerified = !!userRecord.emailVerified;
+    // Real join date for the "New members" discovery filter (Auth is the only
+    // honest source; profile timestamps move on every edit).
+    const createdAt = Date.parse(userRecord.metadata.creationTime || "");
+    authCreatedAtMs = Number.isFinite(createdAt) ? createdAt : null;
   } catch (error) {
     isEmailVerified = false;
   }
@@ -807,7 +819,7 @@ async function syncPublicProfile(userId) {
     userMeta = {};
   }
 
-  const publicData = buildPublicProfile(userId, profile, isEmailVerified, userMeta);
+  const publicData = buildPublicProfile(userId, profile, isEmailVerified, userMeta, authCreatedAtMs);
   await db.collection("publicProfiles").doc(userId).set(publicData, { merge: true });
 }
 

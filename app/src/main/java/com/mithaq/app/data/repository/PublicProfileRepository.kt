@@ -92,6 +92,7 @@ class PublicProfileRepository(
             photoPrivacyMode = getString("photoPrivacyMode") ?: "blurred_by_default",
             profileCompletionPercent = getLong("profileCompletionPercent")?.toInt() ?: 0,
             lastActiveAt = getTimestamp("lastActiveAt")?.toDate(),
+            memberSince = getTimestamp("memberSince")?.toDate(),
             updatedAt = getTimestamp("updatedAt")?.toDate()
         )
     }
@@ -115,27 +116,16 @@ class PublicProfileRepository(
         }
     }
 
-    private fun List<PublicProfile>.premiumWeightedInterleave(): List<PublicProfile> {
-        val premiumProfiles = filter { it.isPremium }
-        val freeProfiles = filterNot { it.isPremium }
-        if (premiumProfiles.isEmpty() || freeProfiles.isEmpty()) return this
-
-        val result = ArrayList<PublicProfile>(size)
-        var premiumIndex = 0
-        var freeIndex = 0
-
-        while (premiumIndex < premiumProfiles.size || freeIndex < freeProfiles.size) {
-            repeat(PREMIUM_WEIGHT) {
-                if (premiumIndex < premiumProfiles.size) {
-                    result += premiumProfiles[premiumIndex++]
-                }
-            }
-            if (freeIndex < freeProfiles.size) {
-                result += freeProfiles[freeIndex++]
-            }
+    suspend fun getCurrentUserCountry(userId: String?): String? {
+        if (userId.isNullOrBlank()) return null
+        getPublicProfile(userId)?.country?.takeIf { it.isNotBlank() }?.let { return it }
+        return try {
+            val snapshot = firestore.collection("profiles").document(userId).get().await()
+            val basicInfo = snapshot.get("basicInfo") as? Map<*, *> ?: emptyMap<Any, Any>()
+            basicInfo["country"] as? String
+        } catch (e: Exception) {
+            null
         }
-
-        return result
     }
 
     private fun PublicProfile.isEligibleFor(currentDirection: DiscoveryDirection): Boolean {
@@ -170,9 +160,30 @@ class PublicProfileRepository(
         }
     }
 
-    private companion object {
-        const val PREMIUM_WEIGHT = 2
     }
+}
+
+fun List<PublicProfile>.premiumWeightedInterleave(): List<PublicProfile> {
+    val premiumProfiles = filter { it.isPremium }
+    val freeProfiles = filterNot { it.isPremium }
+    if (premiumProfiles.isEmpty() || freeProfiles.isEmpty()) return this
+
+    val result = ArrayList<PublicProfile>(size)
+    var premiumIndex = 0
+    var freeIndex = 0
+
+    while (premiumIndex < premiumProfiles.size || freeIndex < freeProfiles.size) {
+        repeat(2) { // PREMIUM_WEIGHT = 2
+            if (premiumIndex < premiumProfiles.size) {
+                result += premiumProfiles[premiumIndex++]
+            }
+        }
+        if (freeIndex < freeProfiles.size) {
+            result += freeProfiles[freeIndex++]
+        }
+    }
+
+    return result
 }
 
 sealed interface PublicProfileWriteResult {
