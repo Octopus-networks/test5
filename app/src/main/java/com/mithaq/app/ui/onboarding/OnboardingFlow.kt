@@ -117,13 +117,49 @@ object MithaqOnboardingFlow {
                 val jsonString = inputStream.bufferedReader().use { it.readText() }
                 val loader = OnboardingConfigLoader(context)
                 val dynamicSteps = loader.loadStepsFromJson(jsonString)
-                val restSteps = staticSteps.filter { it.section.id != "identity_location" }
-                return dynamicSteps + restSteps
+                
+                checkConsistency(dynamicSteps, staticSteps)
+                
+                return dynamicSteps
             } catch (e: Exception) {
                 com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                if (com.mithaq.app.BuildConfig.DEBUG && e is IllegalStateException) {
+                    throw e
+                }
             }
         }
         return staticSteps
+    }
+
+    private fun checkConsistency(dynamic: List<OnboardingStep>, static: List<OnboardingStep>) {
+        if (dynamic.size != static.size) {
+            throw IllegalStateException("Size mismatch: dynamic=${dynamic.size}, static=${static.size}")
+        }
+        for (i in dynamic.indices) {
+            val d = dynamic[i]
+            val s = static[i]
+            if (d.id != s.id) throw IllegalStateException("ID mismatch at $i: ${d.id} vs ${s.id}")
+            if (d.type != s.type) throw IllegalStateException("Type mismatch at $i (${d.id}): ${d.type} vs ${s.type}")
+            if (d.storageGroup != s.storageGroup) throw IllegalStateException("StorageGroup mismatch at $i (${d.id}): ${d.storageGroup} vs ${s.storageGroup}")
+            if (d.fieldKey != s.fieldKey) throw IllegalStateException("FieldKey mismatch at $i (${d.id}): ${d.fieldKey} vs ${s.fieldKey}")
+            if (d.privacy != s.privacy) throw IllegalStateException("Privacy mismatch at $i (${d.id}): ${d.privacy} vs ${s.privacy}")
+            if (d.isOptional != s.isOptional) throw IllegalStateException("Optional mismatch at $i (${d.id}): ${d.isOptional} vs ${s.isOptional}")
+            
+            if (d.options.size != s.options.size) throw IllegalStateException("Options size mismatch at $i (${d.id})")
+            for (j in d.options.indices) {
+                if (d.options[j].id != s.options[j].id) {
+                    throw IllegalStateException("Option ID mismatch at $i (${d.id}), option $j: ${d.options[j].id} vs ${s.options[j].id}")
+                }
+            }
+            
+            if (d.validationRules.size != s.validationRules.size) throw IllegalStateException("Rules size mismatch at $i (${d.id})")
+            for (j in d.validationRules.indices) {
+                val dr = d.validationRules[j]
+                val sr = s.validationRules[j]
+                if (dr::class != sr::class) throw IllegalStateException("Rule class mismatch at $i (${d.id}): ${dr::class} vs ${sr::class}")
+                if (dr != sr) throw IllegalStateException("Rule mismatch at $i (${d.id}): $dr vs $sr")
+            }
+        }
     }
 
     private fun buildStaticSteps(): List<OnboardingStep> = listOf(
