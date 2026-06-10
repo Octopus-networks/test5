@@ -550,6 +550,14 @@ service cloud.firestore {
           changedOnly(["status", "updatedAt"]) &&
           request.resource.data.status == "sent"
         ) || (
+          // Recipient may mark incoming message as read.
+          isChatParticipant(chatId) &&
+          resource.data.senderId != request.auth.uid &&
+          request.resource.data.senderId == resource.data.senderId &&
+          request.resource.data.chatId == resource.data.chatId &&
+          changedOnly(["status", "readAt", "updatedAt"]) &&
+          request.resource.data.status == "read"
+        ) || (
           // Any chat participant may set or clear ONLY their own emoji reaction.
           // The message text, sender, status, and other users' reactions are untouchable.
           isChatParticipant(chatId) &&

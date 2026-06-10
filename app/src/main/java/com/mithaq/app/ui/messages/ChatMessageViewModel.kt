@@ -21,7 +21,8 @@ data class ChatMessageUiState(
     val isLoadingOlder: Boolean = false,
     val hasMoreOlder: Boolean = true,
     val messages: List<ChatMessage> = emptyList(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isPremiumUser: Boolean = false
 )
 
 class ChatMessageViewModel(
@@ -193,5 +194,18 @@ class ChatMessageViewModel(
     override fun onCleared() {
         stopListening()
         super.onCleared()
+    }
+
+    fun loadPremiumStatus(userId: String) {
+        viewModelScope.launch {
+            val isPremium = repository.isUserPremium(userId)
+            _state.value = _state.value.copy(isPremiumUser = isPremium)
+        }
+    }
+
+    fun markIncomingMessagesRead(chatId: String, currentUserId: String) {
+        viewModelScope.launch {
+            repository.markIncomingMessagesRead(chatId, currentUserId)
+        }
     }
 }

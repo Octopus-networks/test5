@@ -387,6 +387,43 @@ class ChatMessageRepository(
         }
     }
 
+    suspend fun markIncomingMessagesRead(chatId: String, currentUserId: String) {
+        if (chatId.isBlank() || currentUserId.isBlank()) return
+        try {
+            val messagesRef = firestore.collection("chats")
+                .document(chatId)
+                .collection("messages")
+            val snapshot = messagesRef
+                .whereEqualTo("status", "sent")
+                .get()
+                .await()
+            
+            val toUpdate = snapshot.documents.filter { it.getString("senderId") != currentUserId }
+            if (toUpdate.isEmpty()) return
+            
+            firestore.runBatch { batch ->
+                for (doc in toUpdate) {
+                    batch.update(doc.reference, mapOf(
+                        "status" to "read",
+                        "readAt" to FieldValue.serverTimestamp(),
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    ))
+                }
+            }.await()
+        } catch (e: Exception) {
+            // Ignore
+        }
+    }
+
+    suspend fun isUserPremium(userId: String): Boolean {
+        return try {
+            val doc = firestore.collection("users").document(userId).get().await()
+            doc.getBoolean("isPremium") ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private fun DocumentSnapshot.toChatMessage(parentChatId: String): ChatMessage {
         return ChatMessage(
             messageId = getString("messageId") ?: id,
@@ -403,7 +440,8 @@ class ChatMessageRepository(
             createdAt = getTimestamp("createdAt")?.toDate(),
             updatedAt = getTimestamp("updatedAt")?.toDate(),
             editedAt = getTimestamp("editedAt")?.toDate(),
-            deletedAt = getTimestamp("deletedAt")?.toDate()
+            deletedAt = getTimestamp("deletedAt")?.toDate(),
+            readAt = getTimestamp("readAt")?.toDate()
         )
     }
 
