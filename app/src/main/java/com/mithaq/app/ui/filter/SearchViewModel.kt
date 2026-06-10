@@ -523,7 +523,24 @@ class SearchViewModel(
     }
 
     private fun applyLocalFilters() {
-        _searchResults.value = allUsersCache.filter { isCompatible(it) }
+        val filtered = allUsersCache.filter { isCompatible(it) }
+
+        // Profile Boost: apply a bounded re-rank so premium members float up
+        // while preserving the original relevance/ordering.
+        _searchResults.value = filtered.mapIndexed { index, user ->
+            val boost = if (user.isPremium) {
+                when (user.subscriptionPlan.uppercase()) {
+                    "PLATINUM" -> 15
+                    "GOLD" -> 8
+                    else -> 5
+                }
+            } else 0
+            
+            // Lower score ranks higher. We subtract the boost from their original index.
+            Triple(user, index - boost, index)
+        }.sortedWith(
+            compareBy<Triple<UserProfile, Int, Int>> { it.second }.thenBy { it.third }
+        ).map { it.first }
     }
 
     fun resetFilters() {
