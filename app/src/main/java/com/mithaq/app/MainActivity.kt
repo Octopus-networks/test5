@@ -873,6 +873,16 @@ fun MithaqAppNavigation(
             }
         }
     )
+    val identityVerificationViewModel: com.mithaq.app.ui.verification.IdentityVerificationViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return com.mithaq.app.ui.verification.IdentityVerificationViewModel(
+                    context = context,
+                    _currentUserProfile = authViewModel._currentUserProfile
+                ) as T
+            }
+        }
+    )
     val searchViewModel = remember { SearchViewModel(context = context) }
     val guardianViewModel = remember { GuardianViewModel() }
     val profileSettingsViewModel = remember { ProfileSettingsViewModel() }
@@ -1434,6 +1444,7 @@ fun MithaqAppNavigation(
                 isArabic = isArabic,
                 authViewModel = authViewModel,
                 profileEditViewModel = profileEditViewModel,
+                identityVerificationViewModel = identityVerificationViewModel,
                 guardianViewModel = guardianViewModel,
                 profileSettingsViewModel = profileSettingsViewModel,
                 onNavigateToScreen = { target -> currentScreen = target },

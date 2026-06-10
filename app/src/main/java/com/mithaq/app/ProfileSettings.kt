@@ -178,8 +178,8 @@ fun ModestyTabContent(
     targetUser: UserProfile?,
     onRefreshProfile: () -> Unit,
     isArabic: Boolean,
-    authViewModel: AuthViewModel,
     profileEditViewModel: com.mithaq.app.ui.profile.ProfileEditViewModel,
+    identityVerificationViewModel: com.mithaq.app.ui.verification.IdentityVerificationViewModel,
     profileSettingsViewModel: ProfileSettingsViewModel,
     onNavigateToScreen: (String) -> Unit
 ) {
@@ -1093,7 +1093,7 @@ fun ModestyTabContent(
                                 }
                                 isSubmitting = true
                                 statusMsg = if (isArabic) "جاري معالجة التحقق وإثبات الحيوية (Liveness)..." else "Processing verification & live face verification..."
-                                authViewModel.submitVerification(idCardUri!!, selfieUri!!, context) { success, message ->
+                                identityVerificationViewModel.submitVerification(idCardUri!!, selfieUri!!, context) { success, message ->
                                     isSubmitting = false
                                     statusMsg = message
                                     if (success) {
@@ -1348,7 +1348,7 @@ fun ModestyTabContent(
                         FilterChip(
                             selected = !currentUser.isWaliAccount && !currentUser.isAdmin,
                             onClick = {
-                                authViewModel.updateMockRole(isWali = false, isAdmin = false, context = context)
+                                identityVerificationViewModel.updateMockRole(isWali = false, isAdmin = false, context = context)
                             },
                             label = { Text(if (isArabic) "يوزر عادي (عضو)" else "Regular Member") }
                         )
@@ -1356,7 +1356,7 @@ fun ModestyTabContent(
                         FilterChip(
                             selected = currentUser.isWaliAccount,
                             onClick = {
-                                authViewModel.updateMockRole(isWali = true, isAdmin = false, context = context)
+                                identityVerificationViewModel.updateMockRole(isWali = true, isAdmin = false, context = context)
                             },
                             label = { Text(if (isArabic) "مشرف (ولي أمر)" else "Wali / Guardian") }
                         )
@@ -1364,7 +1364,7 @@ fun ModestyTabContent(
                         FilterChip(
                             selected = currentUser.isAdmin,
                             onClick = {
-                                authViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
+                                identityVerificationViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
                             },
                             label = { Text(if (isArabic) "إدمن (مسؤول)" else "Admin") }
                         )
@@ -1438,7 +1438,7 @@ fun ModestyTabContent(
                         devTapCount++
                         if (devTapCount >= 5) {
                             isDevMenuVisible = true
-                            authViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
+                            identityVerificationViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
                             android.widget.Toast.makeText(
                                 context,
                                 if (isArabic) "وضع المطور نشط الآن! وتمت ترقيتك إلى مسؤول (Admin)." else "Developer mode activated! You have been promoted to Admin.",
@@ -1460,6 +1460,7 @@ fun ProfileSettingsScreen(
     isArabic: Boolean,
     authViewModel: AuthViewModel,
     profileEditViewModel: com.mithaq.app.ui.profile.ProfileEditViewModel,
+    identityVerificationViewModel: com.mithaq.app.ui.verification.IdentityVerificationViewModel,
     guardianViewModel: GuardianViewModel,
     profileSettingsViewModel: ProfileSettingsViewModel,
     onNavigateToScreen: (String) -> Unit,
@@ -1494,8 +1495,8 @@ fun ProfileSettingsScreen(
                 targetUser = null,
                 onRefreshProfile = onRefreshProfile,
                 isArabic = isArabic,
-                authViewModel = authViewModel,
                 profileEditViewModel = profileEditViewModel,
+                identityVerificationViewModel = identityVerificationViewModel,
                 profileSettingsViewModel = profileSettingsViewModel,
                 onNavigateToScreen = onNavigateToScreen
             )
