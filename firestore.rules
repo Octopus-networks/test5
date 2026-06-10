@@ -434,26 +434,10 @@ service cloud.firestore {
         isRequestParticipant(resource.data) ||
         isAdmin();
       allow list: if isRequestParticipant(resource.data) || isAdmin();
-      allow create: if isVerifiedEmailUser() &&
-        request.resource.data.fromUserId == request.auth.uid &&
-        request.resource.data.toUserId is string &&
-        request.resource.data.toUserId != request.auth.uid &&
-        requestId == request.auth.uid + "_" + request.resource.data.toUserId &&
-        request.resource.data.status == "pending" &&
-        hasAcceptedInterest(request.auth.uid, request.resource.data.toUserId) &&
-        request.resource.data.requiresGuardianApproval == false &&
-        request.resource.data.guardianApprovalStatus == "not_required" &&
-        request.resource.data.keys().hasOnly([
-          "requestId",
-          "fromUserId",
-          "toUserId",
-          "status",
-          "relatedInterestRequestId",
-          "requiresGuardianApproval",
-          "guardianApprovalStatus",
-          "createdAt",
-          "updatedAt"
-        ]);
+      // Chat requests are created ONLY by the recordChatInitiation callable, which
+      // checks the free-tier daily quota and creates the document in one transaction.
+      // A direct client create would bypass the cap, so it is denied outright.
+      allow create: if false;
       allow update: if isVerifiedEmailUser() && (
         (
           resource.data.fromUserId == request.auth.uid &&

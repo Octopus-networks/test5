@@ -4,7 +4,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import com.google.firebase.functions.FirebaseFunctionsException
 import com.mithaq.app.domain.model.ChatRequest
 import com.mithaq.app.service.BackendFunctions
@@ -28,7 +27,8 @@ class ChatRequestRepository(
         }
 
         return try {
-            val acceptedInterestId = acceptedInterestRequestId(fromUserId, toUserId)
+            // Early, friendlier check; the callable revalidates this authoritatively.
+            acceptedInterestRequestId(fromUserId, toUserId)
                 ?: return ChatRequestResult.Error("Please send or receive accepted interest before requesting chat.")
 
             val requestId = requestId(fromUserId, toUserId)
@@ -38,31 +38,21 @@ class ChatRequestRepository(
                 return ChatRequestResult.AlreadyPending
             }
 
-            // Enforce the free-tier daily chat-initiation limit on the server (premium = unlimited).
-            // Fail OPEN on any non-limit backend error (e.g. function offline) so the request flow
-            // stays available — the cap is a soft monetization limit, not a safety boundary.
+            // The recordChatInitiation callable checks the free-tier daily quota and CREATES
+            // the chatRequests document in one transaction. Firestore rules deny client
+            // creates, so the cap cannot be bypassed by writing directly, and a failed
+            // create no longer consumes an attempt. No fail-open: if the backend is
+            // unreachable the request fails visibly instead of silently skipping the cap.
             try {
-                BackendFunctions.recordChatInitiation()
+                BackendFunctions.recordChatInitiation(toUserId)
             } catch (e: FirebaseFunctionsException) {
-                if (e.code == FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED) {
-                    return ChatRequestResult.LimitReached
+                return when (e.code) {
+                    FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED -> ChatRequestResult.LimitReached
+                    FirebaseFunctionsException.Code.FAILED_PRECONDITION ->
+                        ChatRequestResult.Error("Please send or receive accepted interest before requesting chat.")
+                    else -> ChatRequestResult.Error(e.localizedMessage ?: "Could not send chat request.")
                 }
-            } catch (_: Exception) {
-                // fail open
             }
-
-            val requestData = mapOf(
-                "requestId" to requestId,
-                "fromUserId" to fromUserId,
-                "toUserId" to toUserId,
-                "status" to "pending",
-                "relatedInterestRequestId" to acceptedInterestId,
-                "requiresGuardianApproval" to false,
-                "guardianApprovalStatus" to "not_required",
-                "createdAt" to FieldValue.serverTimestamp(),
-                "updatedAt" to FieldValue.serverTimestamp()
-            )
-            requestRef.set(requestData, SetOptions.merge()).await()
             ChatRequestResult.Success(requestId)
         } catch (e: Exception) {
             ChatRequestResult.Error(e.localizedMessage ?: "Could not send chat request.")
