@@ -19,9 +19,18 @@
     "privacy": "PUBLIC_SAFE",
     "mirror": true,
     "options": [
-      {"id": "male", "labelRes": "onb_account_type_male"},
-      {"id": "female", "labelRes": "onb_account_type_female"},
-      {"id": "guardian", "labelRes": "onb_account_type_guardian"}
+      {
+        "id": "male",
+        "labelRes": "onb_account_type_male"
+      },
+      {
+        "id": "female",
+        "labelRes": "onb_account_type_female"
+      },
+      {
+        "id": "guardian",
+        "labelRes": "onb_account_type_guardian"
+      }
     ]
   },
   {
@@ -34,9 +43,17 @@
     "fieldKey": "firstName",
     "privacy": "PRIVATE",
     "validation": [
-      {"rule": "Required"},
-      {"rule": "MinLength", "value": 2},
-      {"rule": "MaxLength", "value": 40}
+      {
+        "rule": "Required"
+      },
+      {
+        "rule": "MinLength",
+        "value": 2
+      },
+      {
+        "rule": "MaxLength",
+        "value": 40
+      }
     ]
   },
   {
@@ -50,9 +67,17 @@
     "privacy": "PUBLIC_SAFE",
     "mirror": true,
     "validation": [
-      {"rule": "Required"},
-      {"rule": "MinLength", "value": 2},
-      {"rule": "MaxLength", "value": 30}
+      {
+        "rule": "Required"
+      },
+      {
+        "rule": "MinLength",
+        "value": 2
+      },
+      {
+        "rule": "MaxLength",
+        "value": 30
+      }
     ]
   },
   {
@@ -66,8 +91,14 @@
     "mirror": true,
     "match": true,
     "options": [
-      {"id": "male", "labelRes": "onb_gender_male"},
-      {"id": "female", "labelRes": "onb_gender_female"}
+      {
+        "id": "male",
+        "labelRes": "onb_gender_male"
+      },
+      {
+        "id": "female",
+        "labelRes": "onb_gender_female"
+      }
     ]
   },
   {
@@ -82,8 +113,14 @@
     "mirror": true,
     "match": true,
     "validation": [
-      {"rule": "Required"},
-      {"rule": "NumberRange", "min": 18, "max": 77}
+      {
+        "rule": "Required"
+      },
+      {
+        "rule": "NumberRange",
+        "min": 18,
+        "max": 77
+      }
     ]
   },
   {
@@ -96,22 +133,70 @@
     "privacy": "PUBLIC_SAFE",
     "mirror": true,
     "options": [
-      {"id": "egypt", "labelRes": "onb_country_egypt"},
-      {"id": "saudi_arabia", "labelRes": "onb_country_saudi"},
-      {"id": "uae", "labelRes": "onb_country_uae"},
-      {"id": "kuwait", "labelRes": "onb_country_kuwait"},
-      {"id": "qatar", "labelRes": "onb_country_qatar"},
-      {"id": "bahrain", "labelRes": "onb_country_bahrain"},
-      {"id": "oman", "labelRes": "onb_country_oman"},
-      {"id": "jordan", "labelRes": "onb_country_jordan"},
-      {"id": "morocco", "labelRes": "onb_country_morocco"},
-      {"id": "algeria", "labelRes": "onb_country_algeria"},
-      {"id": "tunisia", "labelRes": "onb_country_tunisia"},
-      {"id": "turkey", "labelRes": "onb_country_turkey"},
-      {"id": "uk", "labelRes": "onb_country_uk"},
-      {"id": "usa", "labelRes": "onb_country_usa"},
-      {"id": "canada", "labelRes": "onb_country_canada"},
-      {"id": "other", "labelRes": "onb_country_other"}
+      {
+        "id": "egypt",
+        "labelRes": "onb_country_egypt"
+      },
+      {
+        "id": "saudi_arabia",
+        "labelRes": "onb_country_saudi"
+      },
+      {
+        "id": "uae",
+        "labelRes": "onb_country_uae"
+      },
+      {
+        "id": "kuwait",
+        "labelRes": "onb_country_kuwait"
+      },
+      {
+        "id": "qatar",
+        "labelRes": "onb_country_qatar"
+      },
+      {
+        "id": "bahrain",
+        "labelRes": "onb_country_bahrain"
+      },
+      {
+        "id": "oman",
+        "labelRes": "onb_country_oman"
+      },
+      {
+        "id": "jordan",
+        "labelRes": "onb_country_jordan"
+      },
+      {
+        "id": "morocco",
+        "labelRes": "onb_country_morocco"
+      },
+      {
+        "id": "algeria",
+        "labelRes": "onb_country_algeria"
+      },
+      {
+        "id": "tunisia",
+        "labelRes": "onb_country_tunisia"
+      },
+      {
+        "id": "turkey",
+        "labelRes": "onb_country_turkey"
+      },
+      {
+        "id": "uk",
+        "labelRes": "onb_country_uk"
+      },
+      {
+        "id": "usa",
+        "labelRes": "onb_country_usa"
+      },
+      {
+        "id": "canada",
+        "labelRes": "onb_country_canada"
+      },
+      {
+        "id": "other",
+        "labelRes": "onb_country_other"
+      }
     ]
   },
   {
@@ -125,22 +210,70 @@
     "mirror": true,
     "match": true,
     "options": [
-      {"id": "egypt", "labelRes": "onb_country_egypt"},
-      {"id": "saudi_arabia", "labelRes": "onb_country_saudi"},
-      {"id": "uae", "labelRes": "onb_country_uae"},
-      {"id": "kuwait", "labelRes": "onb_country_kuwait"},
-      {"id": "qatar", "labelRes": "onb_country_qatar"},
-      {"id": "bahrain", "labelRes": "onb_country_bahrain"},
-      {"id": "oman", "labelRes": "onb_country_oman"},
-      {"id": "jordan", "labelRes": "onb_country_jordan"},
-      {"id": "morocco", "labelRes": "onb_country_morocco"},
-      {"id": "algeria", "labelRes": "onb_country_algeria"},
-      {"id": "tunisia", "labelRes": "onb_country_tunisia"},
-      {"id": "turkey", "labelRes": "onb_country_turkey"},
-      {"id": "uk", "labelRes": "onb_country_uk"},
-      {"id": "usa", "labelRes": "onb_country_usa"},
-      {"id": "canada", "labelRes": "onb_country_canada"},
-      {"id": "other", "labelRes": "onb_country_other"}
+      {
+        "id": "egypt",
+        "labelRes": "onb_country_egypt"
+      },
+      {
+        "id": "saudi_arabia",
+        "labelRes": "onb_country_saudi"
+      },
+      {
+        "id": "uae",
+        "labelRes": "onb_country_uae"
+      },
+      {
+        "id": "kuwait",
+        "labelRes": "onb_country_kuwait"
+      },
+      {
+        "id": "qatar",
+        "labelRes": "onb_country_qatar"
+      },
+      {
+        "id": "bahrain",
+        "labelRes": "onb_country_bahrain"
+      },
+      {
+        "id": "oman",
+        "labelRes": "onb_country_oman"
+      },
+      {
+        "id": "jordan",
+        "labelRes": "onb_country_jordan"
+      },
+      {
+        "id": "morocco",
+        "labelRes": "onb_country_morocco"
+      },
+      {
+        "id": "algeria",
+        "labelRes": "onb_country_algeria"
+      },
+      {
+        "id": "tunisia",
+        "labelRes": "onb_country_tunisia"
+      },
+      {
+        "id": "turkey",
+        "labelRes": "onb_country_turkey"
+      },
+      {
+        "id": "uk",
+        "labelRes": "onb_country_uk"
+      },
+      {
+        "id": "usa",
+        "labelRes": "onb_country_usa"
+      },
+      {
+        "id": "canada",
+        "labelRes": "onb_country_canada"
+      },
+      {
+        "id": "other",
+        "labelRes": "onb_country_other"
+      }
     ]
   },
   {
@@ -153,8 +286,13 @@
     "privacy": "PUBLIC_SAFE",
     "mirror": true,
     "validation": [
-      {"rule": "Required"},
-      {"rule": "MinLength", "value": 2}
+      {
+        "rule": "Required"
+      },
+      {
+        "rule": "MinLength",
+        "value": 2
+      }
     ]
   },
   {
@@ -167,9 +305,1128 @@
     "privacy": "PUBLIC_CONTROLLED",
     "match": true,
     "options": [
-      {"id": "yes", "labelRes": "onb_yes"},
-      {"id": "no", "labelRes": "onb_no"},
-      {"id": "maybe", "labelRes": "onb_maybe"}
+      {
+        "id": "yes",
+        "labelRes": "onb_yes"
+      },
+      {
+        "id": "no",
+        "labelRes": "onb_no"
+      },
+      {
+        "id": "maybe",
+        "labelRes": "onb_maybe"
+      }
     ]
+  },
+  {
+    "id": "brk_religion",
+    "sectionId": "religion_values",
+    "type": "SectionBreak",
+    "titleRes": "onb_brk_religion_t",
+    "helperRes": "onb_brk_religion_s",
+    "optional": true,
+    "privacy": "PUBLIC_SAFE",
+    "storageGroup": "NONE"
+  },
+  {
+    "id": "sect",
+    "sectionId": "religion_values",
+    "type": "SingleChoice",
+    "titleRes": "onb_sect_t",
+    "storageGroup": "RELIGIOUS_PRACTICE",
+    "fieldKey": "sect",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {
+        "id": "sunni",
+        "labelRes": "onb_sect_sunni"
+      },
+      {
+        "id": "just_muslim",
+        "labelRes": "onb_sect_just_muslim"
+      },
+      {
+        "id": "other",
+        "labelRes": "onb_sect_other"
+      },
+      {
+        "id": "prefer_not",
+        "labelRes": "onb_pns"
+      }
+    ]
+  },
+  {
+    "id": "religious_commitment",
+    "sectionId": "religion_values",
+    "type": "SingleChoice",
+    "titleRes": "onb_commitment_t",
+    "storageGroup": "RELIGIOUS_PRACTICE",
+    "fieldKey": "commitment",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {
+        "id": "very",
+        "labelRes": "onb_commitment_very"
+      },
+      {
+        "id": "practicing",
+        "labelRes": "onb_commitment_practicing"
+      },
+      {
+        "id": "moderate",
+        "labelRes": "onb_commitment_moderate"
+      },
+      {
+        "id": "learning",
+        "labelRes": "onb_commitment_learning"
+      }
+    ]
+  },
+  {
+    "id": "prayer_habit",
+    "sectionId": "religion_values",
+    "type": "SingleChoice",
+    "titleRes": "onb_prayer_t",
+    "storageGroup": "RELIGIOUS_PRACTICE",
+    "fieldKey": "prayerHabit",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {
+        "id": "five_daily",
+        "labelRes": "onb_prayer_five"
+      },
+      {
+        "id": "most",
+        "labelRes": "onb_prayer_most"
+      },
+      {
+        "id": "sometimes",
+        "labelRes": "onb_prayer_sometimes"
+      },
+      {
+        "id": "working_on",
+        "labelRes": "onb_prayer_working"
+      }
+    ]
+  },
+  {
+    "id": "mosque_jumuah",
+    "sectionId": "religion_values",
+    "type": "SingleChoice",
+    "titleRes": "onb_mosque_t",
+    "storageGroup": "RELIGIOUS_PRACTICE",
+    "fieldKey": "mosqueHabit",
+    "privacy": "PUBLIC_CONTROLLED",
+    "options": [
+      {
+        "id": "always",
+        "labelRes": "onb_mosque_always"
+      },
+      {
+        "id": "usually",
+        "labelRes": "onb_mosque_usually"
+      },
+      {
+        "id": "sometimes",
+        "labelRes": "onb_mosque_sometimes"
+      },
+      {
+        "id": "rarely",
+        "labelRes": "onb_mosque_rarely"
+      }
+    ]
+  },
+  {
+    "id": "quran_reading",
+    "sectionId": "religion_values",
+    "type": "SingleChoice",
+    "titleRes": "onb_quran_t",
+    "storageGroup": "RELIGIOUS_PRACTICE",
+    "fieldKey": "quranReading",
+    "privacy": "PUBLIC_CONTROLLED",
+    "options": [
+      {
+        "id": "daily",
+        "labelRes": "onb_quran_daily"
+      },
+      {
+        "id": "weekly",
+        "labelRes": "onb_quran_weekly"
+      },
+      {
+        "id": "sometimes",
+        "labelRes": "onb_quran_sometimes"
+      },
+      {
+        "id": "learning",
+        "labelRes": "onb_quran_learning"
+      }
+    ]
+  },
+  {
+    "id": "halal_food",
+    "sectionId": "religion_values",
+    "type": "SingleChoice",
+    "titleRes": "onb_halal_t",
+    "storageGroup": "RELIGIOUS_PRACTICE",
+    "fieldKey": "halalCommitment",
+    "privacy": "PUBLIC_CONTROLLED",
+    "options": [
+      {
+        "id": "strict",
+        "labelRes": "onb_halal_strict"
+      },
+      {
+        "id": "mostly",
+        "labelRes": "onb_halal_mostly"
+      },
+      {
+        "id": "flexible",
+        "labelRes": "onb_halal_flexible"
+      }
+    ]
+  },
+  {
+    "id": "family_values",
+    "sectionId": "religion_values",
+    "type": "SingleChoice",
+    "titleRes": "onb_family_values_t",
+    "storageGroup": "RELIGIOUS_PRACTICE",
+    "fieldKey": "familyValues",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {
+        "id": "traditional",
+        "labelRes": "onb_family_values_traditional"
+      },
+      {
+        "id": "balanced",
+        "labelRes": "onb_family_values_balanced"
+      },
+      {
+        "id": "modern",
+        "labelRes": "onb_family_values_modern"
+      }
+    ]
+  },
+  {
+    "id": "modesty",
+    "sectionId": "religion_values",
+    "type": "SingleChoice",
+    "titleRes": "onb_modesty_t",
+    "helperRes": "onb_modesty_h",
+    "storageGroup": "RELIGIOUS_PRACTICE",
+    "fieldKey": "modesty",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {
+        "id": "niqab",
+        "labelRes": "onb_modesty_niqab"
+      },
+      {
+        "id": "hijab",
+        "labelRes": "onb_modesty_hijab"
+      },
+      {
+        "id": "modest_dress",
+        "labelRes": "onb_modesty_modest"
+      },
+      {
+        "id": "beard_sunnah",
+        "labelRes": "onb_modesty_beard"
+      },
+      {
+        "id": "prefer_not",
+        "labelRes": "onb_pns"
+      }
+    ]
+  },
+  {
+    "id": "wali_involvement",
+    "sectionId": "religion_values",
+    "type": "SingleChoice",
+    "titleRes": "onb_wali_t",
+    "helperRes": "onb_wali_h",
+    "storageGroup": "RELIGIOUS_PRACTICE",
+    "fieldKey": "waliInvolvement",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {
+        "id": "essential",
+        "labelRes": "onb_wali_essential"
+      },
+      {
+        "id": "welcome",
+        "labelRes": "onb_wali_welcome"
+      },
+      {
+        "id": "later",
+        "labelRes": "onb_wali_later"
+      }
+    ]
+  },
+  {
+    "id": "brk_marriage",
+    "sectionId": "marriage_family",
+    "type": "SectionBreak",
+    "titleRes": "onb_brk_marriage_t",
+    "helperRes": "onb_brk_marriage_s",
+    "optional": true,
+    "privacy": "PUBLIC_SAFE",
+    "storageGroup": "NONE"
+  },
+  {
+    "id": "marital_status",
+    "sectionId": "marriage_family",
+    "type": "SingleChoice",
+    "titleRes": "onb_marital_t",
+    "storageGroup": "MARRIAGE_INTENT",
+    "fieldKey": "maritalStatus",
+    "privacy": "PUBLIC_SAFE",
+    "mirror": true,
+    "match": true,
+    "options": [
+      {
+        "id": "single",
+        "labelRes": "onb_marital_single"
+      },
+      {
+        "id": "divorced",
+        "labelRes": "onb_marital_divorced"
+      },
+      {
+        "id": "widowed",
+        "labelRes": "onb_marital_widowed"
+      },
+      {
+        "id": "discuss",
+        "labelRes": "onb_discuss"
+      }
+    ]
+  },
+  {
+    "id": "has_children",
+    "sectionId": "marriage_family",
+    "type": "YesNo",
+    "titleRes": "onb_has_children_t",
+    "storageGroup": "FAMILY",
+    "fieldKey": "hasChildren",
+    "privacy": "PUBLIC_CONTROLLED",
+    "options": [
+      {
+        "id": "yes",
+        "labelRes": "onb_yes"
+      },
+      {
+        "id": "no",
+        "labelRes": "onb_no"
+      }
+    ]
+  },
+  {
+    "id": "number_of_children",
+    "sectionId": "marriage_family",
+    "type": "NumberInput",
+    "titleRes": "onb_num_children_t",
+    "helperRes": "onb_num_children_h",
+    "storageGroup": "FAMILY",
+    "fieldKey": "numberOfChildren",
+    "privacy": "PRIVATE"
+  },
+  {
+    "id": "wants_children",
+    "sectionId": "marriage_family",
+    "type": "SingleChoice",
+    "titleRes": "onb_wants_children_t",
+    "storageGroup": "FAMILY",
+    "fieldKey": "wantsChildren",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {
+        "id": "yes",
+        "labelRes": "onb_yes"
+      },
+      {
+        "id": "maybe",
+        "labelRes": "onb_maybe"
+      },
+      {
+        "id": "no",
+        "labelRes": "onb_no"
+      },
+      {
+        "id": "discuss",
+        "labelRes": "onb_discuss"
+      }
+    ]
+  },
+  {
+    "id": "marriage_timeline",
+    "sectionId": "marriage_family",
+    "type": "SingleChoice",
+    "titleRes": "onb_timeline_t",
+    "storageGroup": "MARRIAGE_INTENT",
+    "fieldKey": "timeline",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {
+        "id": "asap",
+        "labelRes": "onb_timeline_asap"
+      },
+      {
+        "id": "one_two",
+        "labelRes": "onb_timeline_one_two"
+      },
+      {
+        "id": "no_rush",
+        "labelRes": "onb_timeline_no_rush"
+      },
+      {
+        "id": "discuss",
+        "labelRes": "onb_discuss"
+      }
+    ]
+  },
+  {
+    "id": "polygamy_stance",
+    "sectionId": "marriage_family",
+    "type": "SingleChoice",
+    "titleRes": "onb_polygamy_t",
+    "storageGroup": "MARRIAGE_INTENT",
+    "fieldKey": "polygamyStance",
+    "privacy": "PRIVATE",
+    "match": true,
+    "options": [
+      {
+        "id": "open",
+        "labelRes": "onb_polygamy_open"
+      },
+      {
+        "id": "not_open",
+        "labelRes": "onb_polygamy_not_open"
+      },
+      {
+        "id": "discuss",
+        "labelRes": "onb_discuss"
+      }
+    ]
+  },
+  {
+    "id": "housing_after_marriage",
+    "sectionId": "marriage_family",
+    "type": "SingleChoice",
+    "titleRes": "onb_housing_t",
+    "storageGroup": "MARRIAGE_INTENT",
+    "fieldKey": "housing",
+    "privacy": "PRIVATE",
+    "options": [
+      {
+        "id": "own_home",
+        "labelRes": "onb_housing_own"
+      },
+      {
+        "id": "family_home",
+        "labelRes": "onb_housing_family"
+      },
+      {
+        "id": "flexible",
+        "labelRes": "onb_housing_flexible"
+      },
+      {
+        "id": "discuss",
+        "labelRes": "onb_discuss"
+      }
+    ]
+  },
+  {
+    "id": "household_responsibility",
+    "sectionId": "marriage_family",
+    "type": "MultiChoice",
+    "titleRes": "onb_household_t",
+    "helperRes": "onb_household_h",
+    "storageGroup": "MARRIAGE_INTENT",
+    "fieldKey": "householdExpectations",
+    "privacy": "PRIVATE",
+    "validation": [
+      {
+        "rule": "SelectionRange",
+        "min": 1,
+        "max": 4
+      }
+    ],
+    "options": [
+      {
+        "id": "provider",
+        "labelRes": "onb_household_provider"
+      },
+      {
+        "id": "homemaker",
+        "labelRes": "onb_household_homemaker"
+      },
+      {
+        "id": "shared",
+        "labelRes": "onb_household_shared"
+      },
+      {
+        "id": "flexible",
+        "labelRes": "onb_household_flexible"
+      }
+    ]
+  },
+  {
+    "id": "mahr_shabka",
+    "sectionId": "marriage_family",
+    "type": "TextInput",
+    "titleRes": "onb_mahr_t",
+    "helperRes": "onb_mahr_h",
+    "storageGroup": "MARRIAGE_INTENT",
+    "fieldKey": "mahrExpectations",
+    "privacy": "PRIVATE"
+  },
+  {
+    "id": "brk_education",
+    "sectionId": "education_work_appearance",
+    "type": "SectionBreak",
+    "titleRes": "onb_brk_edu_t",
+    "helperRes": "onb_brk_edu_s",
+    "optional": true,
+    "privacy": "PUBLIC_SAFE",
+    "storageGroup": "NONE"
+  },
+  {
+    "id": "education_level",
+    "sectionId": "education_work_appearance",
+    "type": "SingleChoice",
+    "titleRes": "onb_education_t",
+    "storageGroup": "EDUCATION_WORK",
+    "fieldKey": "educationLevel",
+    "privacy": "PUBLIC_SAFE",
+    "mirror": true,
+    "match": true,
+    "options": [
+      {
+        "id": "high_school",
+        "labelRes": "onb_education_high"
+      },
+      {
+        "id": "diploma",
+        "labelRes": "onb_education_diploma"
+      },
+      {
+        "id": "bachelor",
+        "labelRes": "onb_education_bachelor"
+      },
+      {
+        "id": "master",
+        "labelRes": "onb_education_master"
+      },
+      {
+        "id": "phd",
+        "labelRes": "onb_education_phd"
+      }
+    ]
+  },
+  {
+    "id": "study_field",
+    "sectionId": "education_work_appearance",
+    "type": "TextInput",
+    "titleRes": "onb_study_field_t",
+    "storageGroup": "EDUCATION_WORK",
+    "fieldKey": "studyField",
+    "privacy": "PUBLIC_CONTROLLED"
+  },
+  {
+    "id": "occupation",
+    "sectionId": "education_work_appearance",
+    "type": "TextInput",
+    "titleRes": "onb_occupation_t",
+    "storageGroup": "EDUCATION_WORK",
+    "fieldKey": "occupation",
+    "privacy": "PUBLIC_CONTROLLED",
+    "mirror": true,
+    "validation": [
+      {
+        "rule": "Required"
+      },
+      {
+        "rule": "MinLength",
+        "value": 2
+      }
+    ]
+  },
+  {
+    "id": "employment_status",
+    "sectionId": "education_work_appearance",
+    "type": "SingleChoice",
+    "titleRes": "onb_employment_t",
+    "storageGroup": "EDUCATION_WORK",
+    "fieldKey": "employmentStatus",
+    "privacy": "PUBLIC_CONTROLLED",
+    "options": [
+      {
+        "id": "employed",
+        "labelRes": "onb_employment_employed"
+      },
+      {
+        "id": "self_employed",
+        "labelRes": "onb_employment_self"
+      },
+      {
+        "id": "student",
+        "labelRes": "onb_employment_student"
+      },
+      {
+        "id": "seeking",
+        "labelRes": "onb_employment_seeking"
+      },
+      {
+        "id": "not_working",
+        "labelRes": "onb_employment_not"
+      }
+    ]
+  },
+  {
+    "id": "income_range",
+    "sectionId": "education_work_appearance",
+    "type": "SingleChoice",
+    "titleRes": "onb_income_t",
+    "helperRes": "onb_income_h",
+    "storageGroup": "EDUCATION_WORK",
+    "fieldKey": "incomeRange",
+    "privacy": "PRIVATE",
+    "options": [
+      {
+        "id": "low",
+        "labelRes": "onb_income_low"
+      },
+      {
+        "id": "medium",
+        "labelRes": "onb_income_medium"
+      },
+      {
+        "id": "high",
+        "labelRes": "onb_income_high"
+      },
+      {
+        "id": "prefer_not",
+        "labelRes": "onb_pns"
+      }
+    ]
+  },
+  {
+    "id": "height",
+    "sectionId": "education_work_appearance",
+    "type": "NumberInput",
+    "titleRes": "onb_height_t",
+    "helperRes": "onb_height_h",
+    "storageGroup": "APPEARANCE",
+    "fieldKey": "heightCm",
+    "privacy": "PUBLIC_CONTROLLED",
+    "validation": [
+      {
+        "rule": "Required"
+      },
+      {
+        "rule": "NumberRange",
+        "min": 120,
+        "max": 220
+      }
+    ]
+  },
+  {
+    "id": "weight",
+    "sectionId": "education_work_appearance",
+    "type": "NumberInput",
+    "titleRes": "onb_weight_t",
+    "helperRes": "onb_weight_h",
+    "storageGroup": "APPEARANCE",
+    "fieldKey": "weightKg",
+    "privacy": "PRIVATE"
+  },
+  {
+    "id": "body_type",
+    "sectionId": "education_work_appearance",
+    "type": "SingleChoice",
+    "titleRes": "onb_body_t",
+    "storageGroup": "APPEARANCE",
+    "fieldKey": "bodyType",
+    "privacy": "PUBLIC_CONTROLLED",
+    "options": [
+      {
+        "id": "slim",
+        "labelRes": "onb_body_slim"
+      },
+      {
+        "id": "athletic",
+        "labelRes": "onb_body_athletic"
+      },
+      {
+        "id": "average",
+        "labelRes": "onb_body_average"
+      },
+      {
+        "id": "curvy",
+        "labelRes": "onb_body_curvy"
+      },
+      {
+        "id": "plus",
+        "labelRes": "onb_body_plus"
+      }
+    ]
+  },
+  {
+    "id": "smoking",
+    "sectionId": "education_work_appearance",
+    "type": "SingleChoice",
+    "titleRes": "onb_smoking_t",
+    "storageGroup": "LIFESTYLE",
+    "fieldKey": "smoking",
+    "privacy": "PUBLIC_CONTROLLED",
+    "match": true,
+    "options": [
+      {
+        "id": "no",
+        "labelRes": "onb_smoking_no"
+      },
+      {
+        "id": "occasionally",
+        "labelRes": "onb_smoking_occ"
+      },
+      {
+        "id": "yes",
+        "labelRes": "onb_smoking_yes"
+      }
+    ]
+  },
+  {
+    "id": "living_situation",
+    "sectionId": "education_work_appearance",
+    "type": "SingleChoice",
+    "titleRes": "onb_living_t",
+    "storageGroup": "LIFESTYLE",
+    "fieldKey": "livingSituation",
+    "privacy": "PRIVATE",
+    "options": [
+      {
+        "id": "with_family",
+        "labelRes": "onb_living_family"
+      },
+      {
+        "id": "alone",
+        "labelRes": "onb_living_alone"
+      },
+      {
+        "id": "shared",
+        "labelRes": "onb_living_shared"
+      }
+    ]
+  },
+  {
+    "id": "brk_personality",
+    "sectionId": "personality_lifestyle",
+    "type": "SectionBreak",
+    "titleRes": "onb_brk_personality_t",
+    "helperRes": "onb_brk_personality_s",
+    "optional": true,
+    "privacy": "PUBLIC_SAFE",
+    "storageGroup": "NONE"
+  },
+  {
+    "id": "ideal_day",
+    "sectionId": "personality_lifestyle",
+    "type": "LongTextInput",
+    "titleRes": "onb_ideal_day_t",
+    "helperRes": "onb_ideal_day_h",
+    "storageGroup": "PERSONALITY",
+    "fieldKey": "idealDay",
+    "privacy": "PUBLIC_CONTROLLED"
+  },
+  {
+    "id": "preferred_activity",
+    "sectionId": "personality_lifestyle",
+    "type": "SingleChoice",
+    "titleRes": "onb_activity_t",
+    "storageGroup": "PERSONALITY",
+    "fieldKey": "preferredActivity",
+    "privacy": "PUBLIC_CONTROLLED",
+    "options": [
+      {
+        "id": "outdoors",
+        "labelRes": "onb_activity_outdoors"
+      },
+      {
+        "id": "home",
+        "labelRes": "onb_activity_home"
+      },
+      {
+        "id": "social",
+        "labelRes": "onb_activity_social"
+      },
+      {
+        "id": "learning",
+        "labelRes": "onb_activity_learning"
+      },
+      {
+        "id": "worship",
+        "labelRes": "onb_activity_worship"
+      }
+    ]
+  },
+  {
+    "id": "hobbies",
+    "sectionId": "personality_lifestyle",
+    "type": "MultiChoice",
+    "titleRes": "onb_hobbies_t",
+    "helperRes": "onb_hobbies_h",
+    "storageGroup": "PERSONALITY",
+    "fieldKey": "hobbies",
+    "privacy": "PUBLIC_CONTROLLED",
+    "validation": [
+      {
+        "rule": "SelectionRange",
+        "min": 1,
+        "max": 5
+      }
+    ],
+    "options": [
+      {
+        "id": "reading",
+        "labelRes": "onb_hobbies_reading"
+      },
+      {
+        "id": "sports",
+        "labelRes": "onb_hobbies_sports"
+      },
+      {
+        "id": "cooking",
+        "labelRes": "onb_hobbies_cooking"
+      },
+      {
+        "id": "travel",
+        "labelRes": "onb_hobbies_travel"
+      },
+      {
+        "id": "tech",
+        "labelRes": "onb_hobbies_tech"
+      },
+      {
+        "id": "volunteering",
+        "labelRes": "onb_hobbies_volunteering"
+      },
+      {
+        "id": "art",
+        "labelRes": "onb_hobbies_art"
+      }
+    ]
+  },
+  {
+    "id": "languages_spoken",
+    "sectionId": "personality_lifestyle",
+    "type": "MultiChoice",
+    "titleRes": "onb_languages_t",
+    "storageGroup": "PERSONALITY",
+    "fieldKey": "languagesSpoken",
+    "privacy": "PUBLIC_SAFE",
+    "mirror": true,
+    "validation": [
+      {
+        "rule": "SelectionRange",
+        "min": 1,
+        "max": 6
+      }
+    ],
+    "options": [
+      {
+        "id": "arabic",
+        "labelRes": "onb_languages_arabic"
+      },
+      {
+        "id": "english",
+        "labelRes": "onb_languages_english"
+      },
+      {
+        "id": "french",
+        "labelRes": "onb_languages_french"
+      },
+      {
+        "id": "turkish",
+        "labelRes": "onb_languages_turkish"
+      },
+      {
+        "id": "urdu",
+        "labelRes": "onb_languages_urdu"
+      },
+      {
+        "id": "other",
+        "labelRes": "onb_languages_other"
+      }
+    ]
+  },
+  {
+    "id": "english_level",
+    "sectionId": "personality_lifestyle",
+    "type": "SingleChoice",
+    "titleRes": "onb_english_t",
+    "storageGroup": "PERSONALITY",
+    "fieldKey": "englishLevel",
+    "privacy": "PUBLIC_CONTROLLED",
+    "options": [
+      {
+        "id": "fluent",
+        "labelRes": "onb_english_fluent"
+      },
+      {
+        "id": "good",
+        "labelRes": "onb_english_good"
+      },
+      {
+        "id": "basic",
+        "labelRes": "onb_english_basic"
+      },
+      {
+        "id": "none",
+        "labelRes": "onb_english_none"
+      }
+    ]
+  },
+  {
+    "id": "brk_partner",
+    "sectionId": "partner_preferences",
+    "type": "SectionBreak",
+    "titleRes": "onb_brk_partner_t",
+    "helperRes": "onb_brk_partner_s",
+    "optional": true,
+    "privacy": "PUBLIC_SAFE",
+    "storageGroup": "NONE"
+  },
+  {
+    "id": "partner_age_range",
+    "sectionId": "partner_preferences",
+    "type": "SingleChoice",
+    "titleRes": "onb_partner_age_t",
+    "storageGroup": "PARTNER_PREFERENCES",
+    "fieldKey": "partnerAgeRange",
+    "privacy": "MATCH_ONLY",
+    "match": true,
+    "options": [
+      {
+        "id": "18_25",
+        "labelRes": "onb_partner_age_18_25"
+      },
+      {
+        "id": "25_30",
+        "labelRes": "onb_partner_age_25_30"
+      },
+      {
+        "id": "30_40",
+        "labelRes": "onb_partner_age_30_40"
+      },
+      {
+        "id": "40_plus",
+        "labelRes": "onb_partner_age_40_plus"
+      },
+      {
+        "id": "flexible",
+        "labelRes": "onb_partner_age_flexible"
+      }
+    ]
+  },
+  {
+    "id": "partner_location",
+    "sectionId": "partner_preferences",
+    "type": "TextInput",
+    "titleRes": "onb_partner_location_t",
+    "helperRes": "onb_partner_location_h",
+    "storageGroup": "PARTNER_PREFERENCES",
+    "fieldKey": "partnerLocation",
+    "privacy": "MATCH_ONLY",
+    "match": true
+  },
+  {
+    "id": "partner_qualities",
+    "sectionId": "partner_preferences",
+    "type": "MultiChoice",
+    "titleRes": "onb_partner_qualities_t",
+    "helperRes": "onb_partner_qualities_h",
+    "storageGroup": "PARTNER_PREFERENCES",
+    "fieldKey": "partnerQualities",
+    "privacy": "MATCH_ONLY",
+    "match": true,
+    "validation": [
+      {
+        "rule": "SelectionRange",
+        "min": 1,
+        "max": 4
+      }
+    ],
+    "options": [
+      {
+        "id": "religious",
+        "labelRes": "onb_pq_religious"
+      },
+      {
+        "id": "kind",
+        "labelRes": "onb_pq_kind"
+      },
+      {
+        "id": "ambitious",
+        "labelRes": "onb_pq_ambitious"
+      },
+      {
+        "id": "family_oriented",
+        "labelRes": "onb_pq_family"
+      },
+      {
+        "id": "educated",
+        "labelRes": "onb_pq_educated"
+      },
+      {
+        "id": "humorous",
+        "labelRes": "onb_pq_humorous"
+      }
+    ]
+  },
+  {
+    "id": "partner_religious_practice",
+    "sectionId": "partner_preferences",
+    "type": "SingleChoice",
+    "titleRes": "onb_partner_religious_t",
+    "storageGroup": "PARTNER_PREFERENCES",
+    "fieldKey": "partnerReligiousPractice",
+    "privacy": "MATCH_ONLY",
+    "match": true,
+    "options": [
+      {
+        "id": "very_practicing",
+        "labelRes": "onb_partner_rel_very"
+      },
+      {
+        "id": "practicing",
+        "labelRes": "onb_partner_rel_practicing"
+      },
+      {
+        "id": "moderate",
+        "labelRes": "onb_partner_rel_moderate"
+      },
+      {
+        "id": "open",
+        "labelRes": "onb_partner_rel_open"
+      }
+    ]
+  },
+  {
+    "id": "partner_relocation",
+    "sectionId": "partner_preferences",
+    "type": "SingleChoice",
+    "titleRes": "onb_partner_reloc_t",
+    "storageGroup": "PARTNER_PREFERENCES",
+    "fieldKey": "partnerRelocation",
+    "privacy": "MATCH_ONLY",
+    "match": true,
+    "options": [
+      {
+        "id": "relocate_to_me",
+        "labelRes": "onb_partner_reloc_to_me"
+      },
+      {
+        "id": "i_relocate",
+        "labelRes": "onb_partner_reloc_i_can"
+      },
+      {
+        "id": "either",
+        "labelRes": "onb_partner_reloc_either"
+      },
+      {
+        "id": "discuss",
+        "labelRes": "onb_discuss"
+      }
+    ]
+  },
+  {
+    "id": "brk_privacy",
+    "sectionId": "privacy_trust",
+    "type": "SectionBreak",
+    "titleRes": "onb_brk_privacy_t",
+    "helperRes": "onb_brk_privacy_s",
+    "optional": true,
+    "privacy": "PUBLIC_SAFE",
+    "storageGroup": "NONE"
+  },
+  {
+    "id": "photo_privacy",
+    "sectionId": "privacy_trust",
+    "type": "PrivacyMode",
+    "titleRes": "onb_photo_privacy_t",
+    "helperRes": "onb_photo_privacy_h",
+    "storageGroup": "PRIVACY_TRUST",
+    "fieldKey": "photoPrivacy",
+    "privacy": "PRIVATE",
+    "options": [
+      {
+        "id": "on_request",
+        "labelRes": "onb_photo_on_request"
+      },
+      {
+        "id": "after_match",
+        "labelRes": "onb_photo_after_match"
+      },
+      {
+        "id": "wali_only",
+        "labelRes": "onb_photo_wali_only"
+      },
+      {
+        "id": "blurred_public",
+        "labelRes": "onb_photo_blurred"
+      }
+    ]
+  },
+  {
+    "id": "brk_trust_info",
+    "sectionId": "privacy_trust",
+    "type": "SectionBreak",
+    "titleRes": "onb_brk_trust_t",
+    "helperRes": "onb_brk_trust_s",
+    "optional": true,
+    "privacy": "PUBLIC_SAFE",
+    "storageGroup": "NONE"
+  },
+  {
+    "id": "oath_commitment",
+    "sectionId": "privacy_trust",
+    "type": "YesNo",
+    "titleRes": "onb_oath_t",
+    "helperRes": "onb_oath_h",
+    "storageGroup": "PRIVACY_TRUST",
+    "fieldKey": "oathAccepted",
+    "privacy": "PUBLIC_SAFE",
+    "options": [
+      {
+        "id": "agree",
+        "labelRes": "onb_oath_agree"
+      },
+      {
+        "id": "not_yet",
+        "labelRes": "onb_oath_not_yet"
+      }
+    ]
+  },
+  {
+    "id": "summary",
+    "sectionId": "privacy_trust",
+    "type": "Summary",
+    "titleRes": "onb_summary_t",
+    "helperRes": "onb_summary_s",
+    "optional": false,
+    "privacy": "PUBLIC_SAFE",
+    "storageGroup": "NONE"
   }
 ]

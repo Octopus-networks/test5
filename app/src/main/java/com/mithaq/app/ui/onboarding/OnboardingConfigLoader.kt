@@ -20,10 +20,13 @@ class OnboardingConfigLoader(private val context: Context) {
         val jsonArray = JSONArray(jsonString)
         
         val sections = mapOf(
-            "identity_location" to OnboardingSection(
-                "identity_location",
-                loc("onb_sec_identity")
-            )
+            "identity_location" to OnboardingSection("identity_location", loc("onb_sec_identity")),
+            "religion_values" to OnboardingSection("religion_values", loc("onb_sec_religion")),
+            "marriage_family" to OnboardingSection("marriage_family", loc("onb_sec_marriage")),
+            "education_work_appearance" to OnboardingSection("education_work_appearance", loc("onb_sec_education")),
+            "personality_lifestyle" to OnboardingSection("personality_lifestyle", loc("onb_sec_personality")),
+            "partner_preferences" to OnboardingSection("partner_preferences", loc("onb_sec_partner")),
+            "privacy_trust" to OnboardingSection("privacy_trust", loc("onb_sec_privacy"))
         )
 
         for (i in 0 until jsonArray.length()) {
