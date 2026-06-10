@@ -26,14 +26,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mithaq.app.model.UserProfile
 import com.mithaq.app.ui.auth.AuthViewModel
+import com.mithaq.app.ui.admin.AdminViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminConsoleScreen(
-    viewModel: AuthViewModel,
+    authViewModel: AuthViewModel,
     isArabic: Boolean,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val viewModel: AdminViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return AdminViewModel(
+                    context = context,
+                    _currentUserProfile = authViewModel._currentUserProfile
+                ) as T
+            }
+        }
+    )
+
     var selectedTab by remember { mutableIntStateOf(0) }
     val pendingUsers by viewModel.pendingVerificationUsers.collectAsState(initial = emptyList())
     val allUsers by viewModel.allUsersFlow.collectAsState(initial = emptyList())
@@ -251,7 +268,7 @@ fun AdminConsoleScreen(
                     ManageMembersTab(
                         allUsers = allUsers,
                         isArabic = isArabic,
-                        currentUid = viewModel.currentUserProfile.collectAsState().value?.uid ?: "",
+                        currentUid = authViewModel.currentUserProfile.collectAsState().value?.uid ?: "",
                         viewModel = viewModel
                     )
                 }
@@ -506,7 +523,7 @@ fun ManageMembersTab(
     allUsers: List<UserProfile>,
     isArabic: Boolean,
     currentUid: String,
-    viewModel: AuthViewModel
+    viewModel: AdminViewModel
 ) {
     var userToDelete by remember { mutableStateOf<UserProfile?>(null) }
 
