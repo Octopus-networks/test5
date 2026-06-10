@@ -758,6 +758,9 @@ function buildPublicProfile(userId, profile, isEmailVerified, userMeta = {}) {
     // Incognito members must not appear in public discovery. The flag lives on the
     // server-owned users/{uid} doc; mirroring it here lets Discover filter honestly.
     isIncognito: userMeta.isIncognito == true,
+    // Premium flag (server-owned, admin/billing-set) powers the 2x-exposure interleave
+    // and the gold card highlight in discovery surfaces.
+    isPremium: userMeta.isPremium == true,
     photoPrivacyMode: "blurred_by_default",
     profileCompletionPercent:
       typeof profile.profileCompletionPercent === "number" ? profile.profileCompletionPercent : 0,

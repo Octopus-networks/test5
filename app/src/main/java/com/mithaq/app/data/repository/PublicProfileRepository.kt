@@ -57,6 +57,7 @@ class PublicProfileRepository(
                 compareByDescending<PublicProfile> { it.lastActiveAt }
                     .thenByDescending { it.updatedAt }
             )
+            .premiumWeightedInterleave()
             .take(limit.toInt())
     }
 
@@ -86,6 +87,7 @@ class PublicProfileRepository(
             hasGuardian = getBoolean("hasGuardian") == true,
             isEmailVerified = getBoolean("isEmailVerified") == true,
             isIdentityVerified = getBoolean("isIdentityVerified") == true,
+            isPremium = getBoolean("isPremium") == true,
             isIncognito = getBoolean("isIncognito") == true,
             photoPrivacyMode = getString("photoPrivacyMode") ?: "blurred_by_default",
             profileCompletionPercent = getLong("profileCompletionPercent")?.toInt() ?: 0,
@@ -111,6 +113,29 @@ class PublicProfileRepository(
         } catch (e: Exception) {
             DiscoveryDirection.Unknown
         }
+    }
+
+    private fun List<PublicProfile>.premiumWeightedInterleave(): List<PublicProfile> {
+        val premiumProfiles = filter { it.isPremium }
+        val freeProfiles = filterNot { it.isPremium }
+        if (premiumProfiles.isEmpty() || freeProfiles.isEmpty()) return this
+
+        val result = ArrayList<PublicProfile>(size)
+        var premiumIndex = 0
+        var freeIndex = 0
+
+        while (premiumIndex < premiumProfiles.size || freeIndex < freeProfiles.size) {
+            repeat(PREMIUM_WEIGHT) {
+                if (premiumIndex < premiumProfiles.size) {
+                    result += premiumProfiles[premiumIndex++]
+                }
+            }
+            if (freeIndex < freeProfiles.size) {
+                result += freeProfiles[freeIndex++]
+            }
+        }
+
+        return result
     }
 
     private fun PublicProfile.isEligibleFor(currentDirection: DiscoveryDirection): Boolean {
@@ -143,6 +168,10 @@ class PublicProfileRepository(
             normalized == "guardian" || normalized.contains("wali") -> DiscoveryDirection.Guardian
             else -> DiscoveryDirection.Unknown
         }
+    }
+
+    private companion object {
+        const val PREMIUM_WEIGHT = 2
     }
 }
 
