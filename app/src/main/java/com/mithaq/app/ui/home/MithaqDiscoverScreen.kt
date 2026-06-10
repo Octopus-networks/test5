@@ -316,10 +316,12 @@ private fun DiscoverProfileContent(
                 }
             }
         }
-        state.errorMessage != null -> {
+        state.errorMessageRes != null || state.errorMessage != null -> {
             MithaqEmptyState(
                 title = localizedString(isArabic, R.string.discover_load_error_title, R.string.discover_load_error_title_ar),
-                message = localizedString(isArabic, R.string.discover_load_error_message, R.string.discover_load_error_message_ar),
+                message = state.errorMessageRes?.let { localizedString(isArabic, it, state.errorMessageResAr ?: it) } 
+                          ?: state.errorMessage 
+                          ?: localizedString(isArabic, R.string.discover_load_error_message, R.string.discover_load_error_message_ar),
                 icon = Icons.Filled.Refresh,
                 actionLabel = localizedString(isArabic, R.string.common_retry, R.string.common_retry_ar),
                 onAction = onRetry

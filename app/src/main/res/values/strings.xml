@@ -1001,4 +1001,6 @@
     <string name="msg_photo_approved_ar">تمت الموافقة على الوصول للصورة.</string>
     <string name="msg_photo_declined">Photo request declined.</string>
     <string name="msg_photo_declined_ar">تم رفض طلب الصورة.</string>
+    <string name="msg_err_load_profiles">Could not load public profiles right now.</string>
+    <string name="msg_err_load_profiles_ar">تعذر تحميل الملفات الشخصية العامة في الوقت الحالي.</string>
 </resources>
