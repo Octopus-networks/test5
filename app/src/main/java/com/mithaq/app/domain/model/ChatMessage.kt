@@ -17,5 +17,6 @@ data class ChatMessage(
     val createdAt: Date? = null,
     val updatedAt: Date? = null,
     val editedAt: Date? = null,
-    val deletedAt: Date? = null
+    val deletedAt: Date? = null,
+    val readAt: Date? = null
 )

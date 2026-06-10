@@ -408,7 +408,14 @@ private fun ChatScreen(
 
     LaunchedEffect(room.chatId, currentUserId, otherUserId) {
         viewModel.listenToMessages(room.chatId)
+        viewModel.loadPremiumStatus(currentUserId)
         safetyViewModel.loadBlockState(currentUserId, otherUserId)
+    }
+
+    LaunchedEffect(state.messages) {
+        if (state.messages.any { it.senderId != currentUserId && it.status == "sent" }) {
+            viewModel.markIncomingMessagesRead(room.chatId, currentUserId)
+        }
     }
     LaunchedEffect(isAtTop, state.hasMoreOlder, state.isLoadingOlder, hasAutoScrolledInitial) {
         if (isAtTop && hasAutoScrolledInitial && state.hasMoreOlder &&
@@ -602,6 +609,7 @@ private fun ChatScreen(
                                 message = message,
                                 isMine = message.senderId == currentUserId,
                                 currentUserId = currentUserId,
+                                isPremium = state.isPremiumUser,
                                 onReact = { emoji -> viewModel.setReaction(room.chatId, message.messageId, emoji) }
                             )
                         }
@@ -884,6 +892,7 @@ private fun ChatMessageBubble(
     message: ChatMessage,
     isMine: Boolean,
     currentUserId: String,
+    isPremium: Boolean,
     onReact: (String?) -> Unit
 ) {
     var showReactionBar by remember(message.messageId) { mutableStateOf(false) }
@@ -948,15 +957,35 @@ private fun ChatMessageBubble(
                 }
                 message.createdAt?.let { createdAt ->
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = SimpleDateFormat("h:mm a", Locale.getDefault()).format(createdAt),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isMine) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f)
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = SimpleDateFormat("h:mm a", Locale.getDefault()).format(createdAt),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isMine) {
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f)
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+                            }
+                        )
+                        if (isMine && isPremium) {
+                            if (message.status == "read") {
+                                Text(
+                                    text = "✓✓",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                Text(
+                                    text = "✓",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+                                )
+                            }
                         }
-                    )
+                    }
                 }
             }
             if (message.reactions.isNotEmpty()) {
