@@ -139,31 +139,6 @@ data class CachedUserProfile(
     val timezone: String
 )
 
-@Entity(
-    tableName = "cached_messages",
-    primaryKeys = ["roomId", "senderId", "timestamp"]
-)
-data class CachedMessage(
-    val roomId: String,
-    val senderId: String,
-    val content: String,
-    val timestamp: Long,
-    val translatedContent: String?
-)
-
-@Entity(tableName = "cached_chat_rooms")
-data class CachedChatRoom(
-    @PrimaryKey val roomId: String,
-    val memberIds: List<String>,
-    val isChaperoned: Boolean,
-    val waliEmail: String?,
-    val lastMessage: String?,
-    val lastMessageTimestamp: Long,
-    val dailyPrayers: Map<String, List<String>> = emptyMap(),
-    val prayerStreaks: Map<String, Int> = emptyMap(),
-    val goldRewardUnlocked: Boolean = false
-)
-
 class MithaqConverters {
     @TypeConverter
     fun fromStringList(value: List<String>?): String {
@@ -293,41 +268,6 @@ interface UserDao {
     suspend fun deleteUser(uid: String)
 }
 
-@Dao
-interface ChatDao {
-    @Query("SELECT * FROM cached_chat_rooms WHERE roomId = :roomId")
-    suspend fun getChatRoom(roomId: String): CachedChatRoom?
-
-    @Query("SELECT * FROM cached_chat_rooms WHERE roomId = :roomId")
-    fun getChatRoomFlow(roomId: String): Flow<CachedChatRoom?>
-
-    @Query("SELECT * FROM cached_chat_rooms")
-    fun getAllChatRoomsFlow(): Flow<List<CachedChatRoom>>
-
-    @Query("SELECT * FROM cached_chat_rooms")
-    suspend fun getAllChatRooms(): List<CachedChatRoom>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertChatRoom(room: CachedChatRoom)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertChatRooms(rooms: List<CachedChatRoom>)
-
-    @Query("SELECT * FROM cached_messages WHERE roomId = :roomId ORDER BY timestamp ASC")
-    fun getMessagesForRoomFlow(roomId: String): Flow<List<CachedMessage>>
-
-    @Query("SELECT * FROM cached_messages WHERE roomId = :roomId ORDER BY timestamp ASC")
-    suspend fun getMessagesForRoom(roomId: String): List<CachedMessage>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMessage(message: CachedMessage)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMessages(messages: List<CachedMessage>)
-
-    @Query("DELETE FROM cached_messages WHERE roomId = :roomId")
-    suspend fun clearMessagesForRoom(roomId: String)
-}
 
 /**
  * Local Room database used purely as an OFFLINE CACHE of Firestore-backed data
@@ -339,14 +279,16 @@ interface ChatDao {
  * future migration tests (export dir is set via the `room.schemaLocation` kapt arg).
  */
 @Database(
-    entities = [CachedUserProfile::class, CachedMessage::class, CachedChatRoom::class],
-    version = 9,
+    entities = [CachedUserProfile::class],
+    // v10: dropped the legacy CachedMessage/CachedChatRoom tables with the chatRooms
+    // system. Cache-only DB + fallbackToDestructiveMigration, so the bump just wipes
+    // the local cache on upgrade — never edit an exported schema json in place.
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(MithaqConverters::class)
 abstract class MithaqDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
-    abstract fun chatDao(): ChatDao
 
     companion object {
         @Volatile

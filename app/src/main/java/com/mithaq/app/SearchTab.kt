@@ -44,7 +44,6 @@ import com.mithaq.app.ui.auth.LoginScreen
 import com.mithaq.app.ui.auth.RegisterScreen
 import com.mithaq.app.ui.chat.ChaperonedChatBanner
 import com.mithaq.app.ui.chat.ChatBubble
-import com.mithaq.app.ui.chat.ChaperonedChatViewModel
 import com.mithaq.app.ui.filter.SearchFilterBottomSheet
 import com.mithaq.app.ui.filter.SearchViewModel
 import com.mithaq.app.ui.guardian.GuardianViewModel

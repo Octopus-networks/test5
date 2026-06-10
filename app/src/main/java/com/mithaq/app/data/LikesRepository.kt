@@ -72,14 +72,16 @@ class LikesRepository(private val context: Context) {
 
                 // SEND AUTOMATIC MESSAGE to toUid
                 val fromName = context.getSharedPreferences("mithaq_mock_auth", Context.MODE_PRIVATE).getString("name", "عضو")
-                sendMockAutomaticMessage(fromUid, toUid, "لقد أعجب $fromName بملفك الشخصي!")
+                // sendMockAutomaticMessage(fromUid, toUid, "لقد أعجب $fromName بملفك الشخصي!")
 
                 // QUEUE NOTIFICATION for the recipient (toUid)
+                /*
                 queueMockNotification(
                     toUid,
                     "ميثاق - إعجاب جديد",
                     "أعجب $fromName بملفك الشخصي للتو!"
                 )
+                */
             }
 
             // Check if toUid liked fromUid (Mutual)
@@ -101,7 +103,7 @@ class LikesRepository(private val context: Context) {
                     .apply()
                 
                 // Create a mock chat room
-                createMockChatRoom(fromUid, toUid)
+                // createMockChatRoom(fromUid, toUid)
             }
             return mutual
         } else {
@@ -277,11 +279,13 @@ class LikesRepository(private val context: Context) {
                 prefs.edit().putString("views_$viewedUid", array.toString()).apply()
 
                 // QUEUE NOTIFICATION for the viewed user
+                /*
                 queueMockNotification(
                     viewedUid,
                     "ميثاق - زائر جديد",
                     "هناك عضو قام بزيارة ملفك الشخصي للتو!"
                 )
+                */
             }
 
             // Profiles viewed by viewerUid
@@ -484,107 +488,4 @@ class LikesRepository(private val context: Context) {
         return myFavs.intersect(whoFavsMe.toSet()).toList()
     }
 
-    // ================= HELPERS FOR CHATROOMS =================
-
-    private fun createMockChatRoom(uid1: String, uid2: String) {
-        try {
-            val chatPrefs = context.getSharedPreferences("mithaq_mock_chat", Context.MODE_PRIVATE)
-            val roomsStr = chatPrefs.getString("mithaq_mock_rooms", "[]") ?: "[]"
-            val array = JSONArray(roomsStr)
-            
-            val roomId = if (uid1 < uid2) "${uid1}_${uid2}" else "${uid2}_${uid1}"
-            var exists = false
-            for (i in 0 until array.length()) {
-                if (array.getJSONObject(i).getString("roomId") == roomId) exists = true
-            }
-            if (!exists) {
-                val roomObj = JSONObject().apply {
-                    put("roomId", roomId)
-                    val members = JSONArray().apply { put(uid1); put(uid2) }
-                    put("memberIds", members)
-                    put("isChaperoned", false)
-                    put("waliEmail", null)
-                    put("lastMessage", "لقد تم التطابق! ابدأ المحادثة الآن.")
-                    put("lastMessageTimestamp", System.currentTimeMillis())
-                }
-                array.put(roomObj)
-                chatPrefs.edit().putString("mithaq_mock_rooms", array.toString()).apply()
-            }
-        } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
-        }
     }
-
-    private suspend fun createLiveChatRoom(uid1: String, uid2: String) {
-        try {
-            val roomId = if (uid1 < uid2) "${uid1}_${uid2}" else "${uid2}_${uid1}"
-            val roomRef = db.collection("chatRooms").document(roomId)
-            val snap = roomRef.get().await()
-            if (!snap.exists()) {
-                val roomData = hashMapOf(
-                    "memberIds" to listOf(uid1, uid2),
-                    "isChaperoned" to false,
-                    "waliEmail" to null,
-                    "lastMessage" to "لقد تم التطابق! ابدأ المحادثة الآن.",
-                    "lastMessageTimestamp" to System.currentTimeMillis()
-                )
-                roomRef.set(roomData).await()
-            }
-        } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
-        }
-    }
-
-    private fun sendMockAutomaticMessage(fromUid: String, toUid: String, content: String) {
-        try {
-            val roomId = if (fromUid < toUid) "${fromUid}_${toUid}" else "${toUid}_${fromUid}"
-            val chatPrefs = context.getSharedPreferences("mithaq_mock_chat", Context.MODE_PRIVATE)
-            
-            // 1. Ensure Room exists
-            createMockChatRoom(fromUid, toUid)
-            
-            // 2. Add message to history
-            val messagesStr = chatPrefs.getString("messages_$roomId", "[]") ?: "[]"
-            val messagesArray = JSONArray(messagesStr)
-            val msgObj = JSONObject().apply {
-                put("senderId", fromUid)
-                put("content", content)
-                put("timestamp", System.currentTimeMillis())
-            }
-            messagesArray.put(msgObj)
-            chatPrefs.edit().putString("messages_$roomId", messagesArray.toString()).apply()
-            
-            // 3. Update last message in room metadata
-            val roomsStr = chatPrefs.getString("mithaq_mock_rooms", "[]") ?: "[]"
-            val roomsArray = JSONArray(roomsStr)
-            for (i in 0 until roomsArray.length()) {
-                val room = roomsArray.getJSONObject(i)
-                if (room.getString("roomId") == roomId) {
-                    room.put("lastMessage", content)
-                    room.put("lastMessageTimestamp", System.currentTimeMillis())
-                }
-            }
-            chatPrefs.edit().putString("mithaq_mock_rooms", roomsArray.toString()).apply()
-
-        } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
-        }
-    }
-
-    private fun queueMockNotification(targetUid: String, title: String, body: String) {
-        try {
-            val queuePrefs = context.getSharedPreferences("mithaq_notification_queue", Context.MODE_PRIVATE)
-            val queueStr = queuePrefs.getString("queue_$targetUid", "[]") ?: "[]"
-            val array = JSONArray(queueStr)
-            val notifObj = JSONObject().apply {
-                put("title", title)
-                put("body", body)
-                put("timestamp", System.currentTimeMillis())
-            }
-            array.put(notifObj)
-            queuePrefs.edit().putString("queue_$targetUid", array.toString()).apply()
-        } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
-        }
-    }
-}

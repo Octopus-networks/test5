@@ -10,6 +10,5 @@ object BetaFeatureGates {
     const val GEMINI_AI = false
     const val VOICE_INTRO = false
     const val VOICE_CALL = false
-    const val LEGACY_CHATROOMS = false
     const val LEGACY_WALI_DASHBOARD = false
 }
