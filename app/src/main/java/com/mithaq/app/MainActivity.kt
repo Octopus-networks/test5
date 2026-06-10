@@ -53,9 +53,6 @@ import com.mithaq.app.ui.auth.EntryDecisionScreen
 import com.mithaq.app.ui.auth.ForgotPasswordScreen
 import com.mithaq.app.ui.auth.LoginScreen
 import com.mithaq.app.ui.auth.RegisterScreen
-import com.mithaq.app.ui.chat.ChaperonedChatBanner
-import com.mithaq.app.ui.chat.ChatBubble
-import com.mithaq.app.ui.chat.ChaperonedChatViewModel
 import com.mithaq.app.ui.filter.SearchFilterBottomSheet
 import com.mithaq.app.ui.filter.SearchViewModel
 import com.mithaq.app.ui.guardian.GuardianViewModel
@@ -1656,42 +1653,6 @@ fun HomeScreen(
                     val totalViews = likesRepository.getProfileVisitors(currentUserId).size
                     val seenViews = badgePrefs.getInt("seen_views_$currentUserId", 0)
                     if (selectedTab != 3) viewsBadgeCount = maxOf(0, totalViews - seenViews)
-
-                    // Chat badge: count rooms with unread messages
-                    if (BetaFeatureGates.LEGACY_CHATROOMS && selectedTab != 2) {
-                        val isMockMode = com.mithaq.app.Config.isMock()
-                        if (isMockMode) {
-                            val chatPrefs = context.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
-                            val roomsStr = chatPrefs.getString("mithaq_mock_rooms", "[]") ?: "[]"
-                            val roomsArr = org.json.JSONArray(roomsStr)
-                            var unreadRooms = 0
-                            for (i in 0 until roomsArr.length()) {
-                                val room = roomsArr.getJSONObject(i)
-                                val roomId = room.getString("roomId")
-                                val lastMsgTs = room.optLong("lastMessageTimestamp", 0L)
-                                val lastSeenTs = badgePrefs.getLong("chat_seen_$roomId", 0L)
-                                if (lastMsgTs > lastSeenTs) unreadRooms++
-                            }
-                            chatBadgeCount = unreadRooms
-                        } else {
-                            // Production: count rooms with newer lastMessageTimestamp
-                            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                            try {
-                                val snap = db.collection("chatRooms")
-                                    .whereArrayContains("memberIds", currentUserId)
-                                    .get()
-                                    .await()
-                                var unreadRooms = 0
-                                for (doc in snap.documents) {
-                                    val roomId = doc.id
-                                    val lastMsgTs = doc.getLong("lastMessageTimestamp") ?: 0L
-                                    val lastSeenTs = badgePrefs.getLong("chat_seen_$roomId", 0L)
-                                    if (lastMsgTs > lastSeenTs) unreadRooms++
-                                }
-                                chatBadgeCount = unreadRooms
-                            } catch (_: Exception) {}
-                        }
-                    }
                 } catch (_: Exception) {}
             }
             kotlinx.coroutines.delay(10_000)
@@ -1883,24 +1844,14 @@ fun HomeScreen(
                         initialSubTab = 1
                     )
                     2 -> {
-                        if (BetaFeatureGates.LEGACY_CHATROOMS) {
-                            ChatTabContent(
-                                currentUser = profile,
-                                targetUser = selectedChatUser,
-                                onSelectTargetUser = { selectedChatUser = it },
-                                guardianViewModel = guardianViewModel,
-                                onNavigateToUpgrade = { onNavigateToScreen("premium_store") }
-                            )
-                        } else {
-                            BetaFeatureUnavailableScreen(
-                                isArabic = isArabic,
-                                titleEnglish = "Legacy chat is paused for beta",
-                                titleArabic = "المحادثات القديمة غير متاحة في النسخة التجريبية",
-                                messageEnglish = "Use the Messages tab in the beta experience for approved secure chats.",
-                                messageArabic = "استخدم تبويب الرسائل في تجربة البيتا للمحادثات الآمنة بعد الموافقة.",
-                                onPrimaryAction = { selectedTab = 0 }
-                            )
-                        }
+                        BetaFeatureUnavailableScreen(
+                            isArabic = isArabic,
+                            titleEnglish = "Legacy chat is paused for beta",
+                            titleArabic = "المحادثات القديمة غير متاحة في النسخة التجريبية",
+                            messageEnglish = "Use the Messages tab in the beta experience for approved secure chats.",
+                            messageArabic = "استخدم تبويب الرسائل في تجربة البيتا للمحادثات الآمنة بعد الموافقة.",
+                            onPrimaryAction = { selectedTab = 0 }
+                        )
                     }
                     3 -> AlertsHubContent(
                         currentUser = profile,

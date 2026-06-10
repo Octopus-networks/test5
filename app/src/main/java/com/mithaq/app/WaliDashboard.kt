@@ -41,9 +41,6 @@ import com.mithaq.app.model.*
 import com.mithaq.app.ui.auth.AuthViewModel
 import com.mithaq.app.ui.auth.LoginScreen
 import com.mithaq.app.ui.auth.RegisterScreen
-import com.mithaq.app.ui.chat.ChaperonedChatBanner
-import com.mithaq.app.ui.chat.ChatBubble
-import com.mithaq.app.ui.chat.ChaperonedChatViewModel
 import com.mithaq.app.ui.filter.SearchFilterBottomSheet
 import com.mithaq.app.ui.filter.SearchViewModel
 import com.mithaq.app.ui.guardian.GuardianViewModel
@@ -69,10 +66,6 @@ import com.mithaq.app.ui.admin.AdminConsoleScreen
 import com.mithaq.app.ui.limit.PremiumStoreScreen
 import com.mithaq.app.ui.match.QuestionnaireScreen
 import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
-import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
-import com.mithaq.app.ui.chat.CallState
-import com.mithaq.app.ui.chat.ChatMessage
-import com.mithaq.app.security.SecureScreen
 import com.mithaq.app.security.SafetyUtils
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -105,10 +98,7 @@ fun WaliDashboardScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var wardProfile by remember { mutableStateOf<UserProfile?>(null) }
-    var activeRooms by remember { mutableStateOf<List<ChatRoom>>(emptyList()) }
-    var roomPartners by remember { mutableStateOf<Map<String, UserProfile>>(emptyMap()) }
     var isLoadingWard by remember { mutableStateOf(false) }
-    var selectedMonitoringChat by remember { mutableStateOf<UserProfile?>(null) }
 
     val isMock = com.mithaq.app.Config.isMock()
     val wardUid = currentUserProfile?.wardUid ?: if (isMock) "mock_user_123" else ""
@@ -169,7 +159,6 @@ fun WaliDashboardScreen(
             com.mithaq.app.ui.photo.PhotoAccessManager().revokePhotoAccess(wardUid, approvedUserId)
         }
     }
-
     fun loadWardData() {
         if (wardUid.isBlank()) {
             isLoadingWard = false
@@ -214,6 +203,7 @@ fun WaliDashboardScreen(
                     photoAccessApprovedUsers = approvedList,
                     photoAccessRequests = requestsList
                 )
+                isLoadingWard = false
             } else {
                 val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
                 try {
@@ -245,171 +235,15 @@ fun WaliDashboardScreen(
                 } catch (e: Exception) {
                     com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
                 }
-            }
-
-            if (isMock) {
-                val prefs = context.getSharedPreferences("mithaq_mock_chat", android.content.Context.MODE_PRIVATE)
-                val roomsJsonStr = prefs.getString("mithaq_mock_rooms", null)
-                val roomsList = mutableListOf<ChatRoom>()
-                if (roomsJsonStr != null) {
-                    try {
-                        val array = org.json.JSONArray(roomsJsonStr)
-                        for (i in 0 until array.length()) {
-                            val obj = array.getJSONObject(i)
-                            val roomId = obj.getString("roomId")
-                            val memberIdsArr = obj.getJSONArray("memberIds")
-                            val memberIds = mutableListOf<String>()
-                            for (j in 0 until memberIdsArr.length()) {
-                                memberIds.add(memberIdsArr.getString(j))
-                            }
-                            val isChaperoned = obj.optBoolean("isChaperoned", false)
-                            val waliEmail = obj.optString("waliEmail", null)
-                            val lastMessage = obj.optString("lastMessage", null)
-                            val lastMessageTimestamp = obj.optLong("lastMessageTimestamp", 0L)
-                            roomsList.add(ChatRoom(roomId, memberIds, isChaperoned, waliEmail, lastMessage, lastMessageTimestamp))
-                        }
-                    } catch (e: Exception) {
-                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
-                    }
-                }
-
-                val filteredRooms = roomsList.filter { it.memberIds.contains(wardUid) }
-                activeRooms = filteredRooms.sortedByDescending { it.lastMessageTimestamp }
-                
-                val partnersMap = mutableMapOf<String, UserProfile>()
-                for (room in filteredRooms) {
-                    val partnerId = room.memberIds.firstOrNull { it != wardUid } ?: ""
-                    partnersMap[room.roomId] = getMockUserProfile(partnerId)
-                }
-                roomPartners = partnersMap
                 isLoadingWard = false
-            } else {
-                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                db.collection("chatRooms")
-                    .whereArrayContains("memberIds", wardUid)
-                    .get()
-                    .addOnSuccessListener { snapshot ->
-                        val roomsList = snapshot.documents.mapNotNull { doc ->
-                            try {
-                                val roomId = doc.id
-                                val memberIds = doc.get("memberIds") as? List<String> ?: emptyList()
-                                val isChaperoned = doc.getBoolean("isChaperoned") ?: false
-                                val waliEmail = doc.getString("waliEmail")
-                                val lastMessage = doc.getString("lastMessage")
-                                val lastMessageTimestamp = doc.getLong("lastMessageTimestamp") ?: 0L
-                                ChatRoom(roomId, memberIds, isChaperoned, waliEmail, lastMessage, lastMessageTimestamp)
-                            } catch (e: Exception) {
-                                null
-                            }
-                        }
-
-                        activeRooms = roomsList.sortedByDescending { it.lastMessageTimestamp }
-                        val partnersMap = mutableMapOf<String, UserProfile>()
-                        val partnerFetchCount = roomsList.size
-                        if (partnerFetchCount == 0) {
-                            isLoadingWard = false
-                        } else {
-                            var fetched = 0
-                            for (room in roomsList) {
-                                val partnerId = room.memberIds.firstOrNull { it != wardUid }
-                                if (partnerId != null) {
-                                    db.collection("users").document(partnerId).get()
-                                        .addOnSuccessListener { userDoc ->
-                                            if (userDoc.exists()) {
-                                                val name = userDoc.getString("name") ?: ""
-                                                val genderStr = userDoc.getString("gender") ?: "MALE"
-                                                val gender = if (genderStr == "MALE") Gender.MALE else Gender.FEMALE
-                                                val age = userDoc.getLong("age")?.toInt() ?: 25
-                                                val city = userDoc.getString("city") ?: ""
-                                                val country = userDoc.getString("country") ?: ""
-                                                val imageUrl = userDoc.getString("imageUrl") ?: ""
-                                                val verificationStatus = userDoc.getString("verificationStatus") ?: "NONE"
-                                                partnersMap[room.roomId] = UserProfile(
-                                                    uid = partnerId,
-                                                    name = name,
-                                                    gender = gender,
-                                                    age = age,
-                                                    city = city,
-                                                    country = country,
-                                                    imageUrl = imageUrl,
-                                                    verificationStatus = verificationStatus
-                                                )
-                                            }
-                                            fetched++
-                                            if (fetched == partnerFetchCount) {
-                                                roomPartners = partnersMap
-                                                isLoadingWard = false
-                                            }
-                                        }
-                                        .addOnFailureListener {
-                                            fetched++
-                                            if (fetched == partnerFetchCount) {
-                                                roomPartners = partnersMap
-                                                isLoadingWard = false
-                                            }
-                                        }
-                                } else {
-                                    fetched++
-                                    if (fetched == partnerFetchCount) {
-                                        roomPartners = partnersMap
-                                        isLoadingWard = false
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .addOnFailureListener {
-                        isLoadingWard = false
-                    }
             }
         }
     }
+
+
 
     LaunchedEffect(currentUserProfile?.uid) {
         loadWardData()
-    }
-
-    if (selectedMonitoringChat != null) {
-        val partner = selectedMonitoringChat!!
-        val roomId = remember(wardUid, partner.uid) {
-            val first = minOf(wardUid, partner.uid)
-            val second = maxOf(wardUid, partner.uid)
-            "${first}_${second}"
-        }
-
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = if (isArabic) "مراقبة: ${partner.name}" else "Monitoring: ${partner.name}",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            VerificationBadge(status = partner.verificationStatus)
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { selectedMonitoringChat = null }) {
-                            Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                        }
-                    }
-                )
-            }
-        ) { padding ->
-            Box(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-            ) {
-                ReadOnlyChaperonedChat(
-                    roomId = roomId,
-                    context = context,
-                    isArabic = isArabic
-                )
-            }
-        }
-        return
     }
 
     Scaffold(
@@ -537,61 +371,6 @@ fun WaliDashboardScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                // Safety Alerts Section
-                Text(
-                    text = if (isArabic) "تنبيهات الأمان (تبادل معلومات اتصال)" else "Safety Alerts (Contact Info Detected)",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error
-                )
-                
-                var alertsFound by remember { mutableStateOf(false) }
-                
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        activeRooms.forEach { room ->
-                            val partner = roomPartners[room.roomId] ?: getMockUserProfile(room.memberIds.firstOrNull { it != wardUid } ?: "")
-                            // In a real app, we'd fetch all messages. For demo, we check the last message.
-                            if (room.lastMessage != null && SafetyUtils.containsContactInfo(room.lastMessage)) {
-                                alertsFound = true
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = if (isArabic) "تنبيه في محادثة ${partner.name}" else "Alert in chat with ${partner.name}",
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                        Text(
-                                            text = room.lastMessage,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            maxLines = 1,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    IconButton(onClick = { selectedMonitoringChat = partner }) {
-                                        Icon(Icons.Default.Visibility, contentDescription = "View", tint = MaterialTheme.colorScheme.error)
-                                    }
-                                }
-                            }
-                        }
-                        
-                        if (!alertsFound) {
-                            Text(
-                                text = if (isArabic) "لا توجد تنبيهات أمان حالياً." else "No safety alerts at this time.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -699,135 +478,8 @@ fun WaliDashboardScreen(
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = if (isArabic) "مراقبة المحادثات النشطة" else "Monitor Active Conversations",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                if (activeRooms.isEmpty()) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    ) {
-                        Box(modifier = Modifier.padding(24.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = if (isArabic) "لا توجد محادثات نشطة لابنتك حالياً." else "No active conversations for your ward.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        activeRooms.forEach { room ->
-                            val partner = roomPartners[room.roomId] ?: getMockUserProfile(room.memberIds.firstOrNull { it != wardUid } ?: "")
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedMonitoringChat = partner },
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(modifier = Modifier.size(48.dp)) {
-                                        UserProfileImage(
-                                            imageUrl = partner.imageUrl,
-                                            gender = partner.gender,
-                                            isBlurred = false,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(text = partner.name, fontWeight = FontWeight.Bold)
-                                            VerificationBadge(status = partner.verificationStatus)
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = room.lastMessage ?: "",
-                                            maxLines = 1,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    if (room.lastMessageTimestamp > 0L) {
-                                        Text(
-                                            text = formatDateTime(room.lastMessageTimestamp),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 }
-
-@Composable
-fun ReadOnlyChaperonedChat(
-    roomId: String,
-    context: android.content.Context,
-    isArabic: Boolean
-) {
-    val chatViewModel = remember(roomId) { ChaperonedChatViewModel(roomId = roomId, context = context) }
-    val messages by chatViewModel.messages.collectAsState()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-        ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Read Only",
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Text(
-                    text = if (isArabic)
-                        "وضع مراقبة ولي الأمر (قراءة فقط - المحادثة مشفرة ومسجلة)"
-                    else
-                        "Guardian Monitor Mode (Read-Only - Chat is secure & chaperoned)",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            messages.forEach { msg ->
-                val isMe = msg.senderId == "mock_user_123" || msg.senderId == "mock_user"
-                ChatBubble(
-                    messageText = msg.content,
-                    isCurrentUser = isMe
-                )
-            }
-        }
-    }
 }
+
