@@ -111,6 +111,7 @@
     <string name="discover_location_note">Nearby filters will use city or GPS later without showing exact distance now.</string>
     <string name="discover_load_error_title">Could not load public profiles</string>
     <string name="discover_load_error_message">Check your connection and try again.</string>
+    <string name="discover_load_error_message_ar">تحقق من الاتصال وحاول مرة أخرى.</string>
     <string name="discover_no_profiles_title">No public profiles yet</string>
     <string name="discover_no_profiles_message">Completed profiles that choose to appear in search will show here.</string>
     <string name="discover_no_filter_results_title">No results for this filter</string>
@@ -240,8 +241,14 @@
     <string name="discover_title_ar">اكتشف توافقًا جادًا</string>
     <string name="discover_subtitle_ar">بطاقات منظمة من البيانات العامة الآمنة فقط.</string>
     <string name="discover_location_note_ar">فلتر القرب سيستخدم المدينة أو GPS لاحقًا دون عرض مسافة دقيقة الآن.</string>
+    <string name="notif_adhan_title">Time for %s prayer</string>
+    <string name="notif_adhan_title_ar">حان وقت صلاة %s</string>
+    <string name="notif_adhan_body">Allahu Akbar, it is now time for prayer.</string>
+    <string name="notif_adhan_body_ar">الله أكبر، حان الآن موعد الصلاة.</string>
+    <string name="notif_pre_adhan_title">%1$s prayer in %2$d minutes</string>
+    <string name="notif_pre_adhan_title_ar">باقي %2$d دقائق على صلاة %1$s</string>
+
     <string name="discover_load_error_title_ar">تعذر تحميل الملفات العامة</string>
-    <string name="discover_load_error_message_ar">تحقق من الاتصال وحاول مرة أخرى.</string>
     <string name="discover_no_profiles_title_ar">لا توجد ملفات عامة بعد</string>
     <string name="discover_no_profiles_message_ar">ستظهر هنا الملفات المكتملة التي اختارت الظهور في البحث.</string>
     <string name="discover_no_filter_results_title_ar">لا توجد نتائج لهذا الفلتر</string>

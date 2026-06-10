@@ -460,8 +460,11 @@ fun AdhanSettingsSectionFixed(
 
     var expandedCalc by remember { mutableStateOf(false) }
     var expandedSound by remember { mutableStateOf(false) }
+    var expandedPreReminder by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+    val prefs = context.getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
+    var preReminderMin by remember { mutableStateOf(prefs.getString("adhan_pre_reminder_min", "0") ?: "0") }
     val locationPermissionsState = rememberMultiplePermissionsState(
         permissions = listOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -501,10 +504,18 @@ fun AdhanSettingsSectionFixed(
 
     val soundOptions = mapOf(
         "TAKBEER" to if (isArabic) "تكبيرة صغيرة" else "Short Takbeer",
+        "ADHAN_FULL" to if (isArabic) "أذان كامل" else "Full Adhan",
         "FULL_ADHAN_MECCA" to if (isArabic) "أذان الحرم المكي" else "Mecca Adhan",
         "FULL_ADHAN_MEDINA" to if (isArabic) "أذان الحرم المدني" else "Medina Adhan",
         "BIRD_CHIRP" to if (isArabic) "تغريد طيور" else "Bird Chirp",
         "SILENT" to if (isArabic) "صامت (إشعار فقط)" else "Silent (Notification only)"
+    )
+
+    val preReminderOptions = mapOf(
+        "0" to if (isArabic) "بدون تذكير" else "Off",
+        "5" to if (isArabic) "5 دقائق قبل الصلاة" else "5 minutes before",
+        "10" to if (isArabic) "10 دقائق قبل الصلاة" else "10 minutes before",
+        "15" to if (isArabic) "15 دقيقة قبل الصلاة" else "15 minutes before"
     )
 
     Card(
@@ -616,6 +627,38 @@ fun AdhanSettingsSectionFixed(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Pre-Prayer Reminder Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = expandedPreReminder,
+                    onExpandedChange = { expandedPreReminder = !expandedPreReminder }
+                ) {
+                    OutlinedTextField(
+                        readOnly = true,
+                        value = preReminderOptions[preReminderMin] ?: preReminderOptions["0"]!!,
+                        onValueChange = { },
+                        label = { Text(if (isArabic) "تذكير قبل الصلاة" else "Pre-Prayer Reminder") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPreReminder) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedPreReminder,
+                        onDismissRequest = { expandedPreReminder = false }
+                    ) {
+                        preReminderOptions.forEach { (key, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    preReminderMin = key
+                                    expandedPreReminder = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -623,6 +666,7 @@ fun AdhanSettingsSectionFixed(
             Button(
                 onClick = {
                     isSaving = true
+                    prefs.edit().putString("adhan_pre_reminder_min", preReminderMin).apply()
                     coroutineScope.launch {
                         val success = AdhanScheduler.enableAndScheduleAdhan(
                             context = context,

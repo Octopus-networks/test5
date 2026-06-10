@@ -90,6 +90,15 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.mithaq.app.action.ADHAN_ALARM" />
+                <action android:name="com.mithaq.app.action.PRE_ADHAN_ALARM" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".receiver.PrayerLoggedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.mithaq.app.action.LOG_PRAYER" />
             </intent-filter>
         </receiver>
 
