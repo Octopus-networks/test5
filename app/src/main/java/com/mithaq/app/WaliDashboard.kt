@@ -216,36 +216,8 @@ fun WaliDashboardScreen(
                 )
                 isLoadingWard = false
             } else {
-                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                try {
-                    val doc = db.collection("users").document(wardUid).get().await()
-                    if (doc.exists()) {
-                        val name = doc.getString("name") ?: ""
-                        val genderStr = doc.getString("gender") ?: "FEMALE"
-                        val gender = if (genderStr == "MALE") Gender.MALE else Gender.FEMALE
-                        val age = doc.getLong("age")?.toInt() ?: 25
-                        val city = doc.getString("city") ?: ""
-                        val country = doc.getString("country") ?: ""
-                        val imageUrl = doc.getString("imageUrl") ?: ""
-                        val photoApproved = doc.get("photoAccessApprovedUsers") as? List<String> ?: emptyList()
-                        val photoRequests = doc.get("photoAccessRequests") as? List<String> ?: emptyList()
-                        val verificationStatus = doc.getString("verificationStatus") ?: "NONE"
-                        wardProfile = UserProfile(
-                            uid = wardUid,
-                            name = name,
-                            gender = gender,
-                            age = age,
-                            city = city,
-                            country = country,
-                            imageUrl = imageUrl,
-                            photoAccessApprovedUsers = photoApproved,
-                            photoAccessRequests = photoRequests,
-                            verificationStatus = verificationStatus
-                        )
-                    }
-                } catch (e: Exception) {
-                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
-                }
+                val repository = com.mithaq.app.data.repository.WaliRepository()
+                repository.getWardProfile(wardUid)?.let { wardProfile = it }
                 isLoadingWard = false
             }
         }

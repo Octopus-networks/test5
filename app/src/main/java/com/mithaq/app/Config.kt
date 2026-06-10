@@ -1,7 +1,5 @@
 package com.mithaq.app
 
-import com.google.firebase.firestore.FirebaseFirestore
-
 /**
  * Global configuration for Mithaq.
  * Release builds are locked down by Gradle BuildConfig.
@@ -24,8 +22,8 @@ object Config {
     fun isMock(): Boolean {
         if (BuildConfig.IS_PRODUCTION) return false
         return try {
-            val db = FirebaseFirestore.getInstance()
-            val apiKey = db.app.options.apiKey ?: ""
+            val app = com.google.firebase.FirebaseApp.getInstance()
+            val apiKey = app.options.apiKey ?: ""
             apiKey == "mock-api-key-for-testing" || apiKey.contains("mock")
         } catch (e: Exception) {
             true
