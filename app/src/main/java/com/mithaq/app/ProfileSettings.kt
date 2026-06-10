@@ -179,6 +179,7 @@ fun ModestyTabContent(
     onRefreshProfile: () -> Unit,
     isArabic: Boolean,
     authViewModel: AuthViewModel,
+    profileEditViewModel: com.mithaq.app.ui.profile.ProfileEditViewModel,
     profileSettingsViewModel: ProfileSettingsViewModel,
     onNavigateToScreen: (String) -> Unit
 ) {
@@ -352,7 +353,7 @@ fun ModestyTabContent(
             }
 
             val newList = currentUser.additionalImages + finalUrl
-            authViewModel.updateAdditionalImages(newList, context)
+            profileEditViewModel.updateAdditionalImages(newList, context)
             isUploadingImage = false
             onRefreshProfile()
         }
@@ -456,7 +457,7 @@ fun ModestyTabContent(
                         savingName = true
                         coroutineScope.launch {
                             try {
-                                authViewModel.updateBasicInfo(nameText, context)
+                                profileEditViewModel.updateBasicInfo(nameText, context)
                                 android.widget.Toast.makeText(
                                     context,
                                     if (isArabic) "تم تحديث الاسم بنجاح!" else "Name updated successfully!",
@@ -680,7 +681,7 @@ fun ModestyTabContent(
                                     .background(MaterialTheme.colorScheme.error)
                                     .clickable {
                                         val newList = currentUser.additionalImages.filter { it != img }
-                                        authViewModel.updateAdditionalImages(newList, context)
+                                        profileEditViewModel.updateAdditionalImages(newList, context)
                                         onRefreshProfile()
                                     },
                                 contentAlignment = Alignment.Center
@@ -849,7 +850,7 @@ fun ModestyTabContent(
                         savingBio = true
                         coroutineScope.launch {
                             try {
-                                authViewModel.updateBio(aboutYourselfText, idealPartnerText, context)
+                                profileEditViewModel.updateBio(aboutYourselfText, idealPartnerText, context)
                                 android.widget.Toast.makeText(
                                     context,
                                     if (isArabic) "تم حفظ التعديلات بنجاح!" else "Changes saved successfully!",
@@ -1458,6 +1459,7 @@ fun ProfileSettingsScreen(
     onRefreshProfile: () -> Unit,
     isArabic: Boolean,
     authViewModel: AuthViewModel,
+    profileEditViewModel: com.mithaq.app.ui.profile.ProfileEditViewModel,
     guardianViewModel: GuardianViewModel,
     profileSettingsViewModel: ProfileSettingsViewModel,
     onNavigateToScreen: (String) -> Unit,
@@ -1493,6 +1495,7 @@ fun ProfileSettingsScreen(
                 onRefreshProfile = onRefreshProfile,
                 isArabic = isArabic,
                 authViewModel = authViewModel,
+                profileEditViewModel = profileEditViewModel,
                 profileSettingsViewModel = profileSettingsViewModel,
                 onNavigateToScreen = onNavigateToScreen
             )

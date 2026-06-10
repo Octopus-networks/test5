@@ -861,6 +861,18 @@ fun MithaqAppNavigation(
     // ViewModels initialized safely
     val coroutineScope = rememberCoroutineScope()
     val authViewModel = remember { AuthViewModel(context = context) }
+    val profileEditViewModel: com.mithaq.app.ui.profile.ProfileEditViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return com.mithaq.app.ui.profile.ProfileEditViewModel(
+                    context = context,
+                    _currentUserProfile = authViewModel._currentUserProfile,
+                    _authState = authViewModel._authState,
+                    fetchCurrentUserProfile = { uid -> authViewModel.fetchCurrentUserProfile(uid) }
+                ) as T
+            }
+        }
+    )
     val searchViewModel = remember { SearchViewModel(context = context) }
     val guardianViewModel = remember { GuardianViewModel() }
     val profileSettingsViewModel = remember { ProfileSettingsViewModel() }
@@ -1278,7 +1290,7 @@ fun MithaqAppNavigation(
                         onCompleteSuccess = {
                             authViewModel.fetchCurrentUserProfile(currentUserId)
                         },
-                        viewModel = authViewModel,
+                        profileEditViewModel = profileEditViewModel,
                         isArabic = isArabic,
                         onLanguageChange = onLanguageChange
                     )
@@ -1408,7 +1420,7 @@ fun MithaqAppNavigation(
                 currentAnswers = currentUserProfile?.questionnaireAnswers ?: emptyMap(),
                 isArabic = isArabic,
                 onSaveAnswers = { answers ->
-                    authViewModel.saveQuestionnaireAnswers(answers)
+                    profileEditViewModel.saveQuestionnaireAnswers(answers)
                     currentScreen = "home"
                 },
                 onBack = { currentScreen = "home" }
@@ -1421,6 +1433,7 @@ fun MithaqAppNavigation(
                 onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
                 isArabic = isArabic,
                 authViewModel = authViewModel,
+                profileEditViewModel = profileEditViewModel,
                 guardianViewModel = guardianViewModel,
                 profileSettingsViewModel = profileSettingsViewModel,
                 onNavigateToScreen = { target -> currentScreen = target },
