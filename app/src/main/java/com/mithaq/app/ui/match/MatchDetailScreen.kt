@@ -203,12 +203,7 @@ fun MatchDetailScreen(
                             color = Color.White
                         )
                         if (isVerified && isCompatible) {
-                            Icon(
-                                imageVector = Icons.Default.Verified,
-                                contentDescription = "Verified Member",
-                                tint = Color(0xFF2196F3),
-                                modifier = Modifier.size(24.dp)
-                            )
+                            com.mithaq.app.ui.components.VerifiedBadge(modifier = Modifier.size(24.dp))
                         }
                         if (isCompatible && partner.subscriptionPlan == "Gold (Prayer Reward)") {
                             Surface(

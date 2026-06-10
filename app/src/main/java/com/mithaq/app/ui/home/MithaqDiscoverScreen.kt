@@ -415,12 +415,18 @@ fun MithaqPublicProfileCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = profile.displayTitle(isArabic),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentGold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = profile.displayTitle(isArabic),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentGold
+                        )
+                        if (profile.isIdentityVerified) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            com.mithaq.app.ui.components.VerifiedBadge()
+                        }
+                    }
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
