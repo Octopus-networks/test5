@@ -157,15 +157,12 @@ fun MithaqDiscoverScreen(
             )
         }
         Spacer(modifier = Modifier.height(18.dp))
-        InterestRequestMessage(state = interestState)
-        PhotoRequestMessage(state = photoState)
-        ChatRequestMessage(state = chatState)
-        if (interestState.message != null ||
-            interestState.errorMessage != null ||
-            photoState.message != null ||
-            photoState.errorMessage != null ||
-            chatState.message != null ||
-            chatState.errorMessage != null
+        InterestRequestMessage(state = interestState, isArabic = isArabic)
+        PhotoRequestMessage(state = photoState, isArabic = isArabic)
+        ChatRequestMessage(state = chatState, isArabic = isArabic)
+        if (interestState.messageRes != null || interestState.errorMessageRes != null || interestState.errorMessage != null ||
+            photoState.messageRes != null || photoState.errorMessageRes != null || photoState.errorMessage != null ||
+            chatState.messageRes != null || chatState.errorMessageRes != null || chatState.errorMessage != null
         ) {
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -178,6 +175,9 @@ fun MithaqDiscoverScreen(
             chatState = chatState,
             onSendInterest = { toUserId ->
                 interestRequestViewModel.sendInterest(currentUserId, toUserId)
+            },
+            onCancelInterest = { toUserId ->
+                interestRequestViewModel.cancelInterest(currentUserId, "${currentUserId}_$toUserId")
             },
             onRequestPhoto = { toUserId ->
                 photoRequestViewModel.requestPhoto(currentUserId, toUserId)
@@ -230,9 +230,9 @@ fun PublicProfileFilterRow(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun InterestRequestMessage(state: InterestRequestUiState) {
-    val message = state.errorMessage ?: state.message ?: return
-    val isError = state.errorMessage != null
+private fun InterestRequestMessage(state: InterestRequestUiState, isArabic: Boolean) {
+    val messageText = state.errorMessage ?: state.errorMessageRes?.let { localizedString(isArabic, it, state.errorMessageResAr ?: it) } ?: state.messageRes?.let { localizedString(isArabic, it, state.messageResAr ?: it) } ?: return
+    val isError = state.errorMessage != null || state.errorMessageRes != null
     val borderColor = if (isError) ErrorRed.copy(alpha = 0.5f) else PrimaryEmeraldLight.copy(alpha = 0.4f)
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -241,7 +241,7 @@ private fun InterestRequestMessage(state: InterestRequestUiState) {
         border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
-            text = message,
+            text = messageText,
             modifier = Modifier.padding(14.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFFF2EFEA)
@@ -250,9 +250,9 @@ private fun InterestRequestMessage(state: InterestRequestUiState) {
 }
 
 @Composable
-private fun PhotoRequestMessage(state: PhotoRequestUiState) {
-    val message = state.errorMessage ?: state.message ?: return
-    val isError = state.errorMessage != null
+private fun PhotoRequestMessage(state: PhotoRequestUiState, isArabic: Boolean) {
+    val messageText = state.errorMessage ?: state.errorMessageRes?.let { localizedString(isArabic, it, state.errorMessageResAr ?: it) } ?: state.messageRes?.let { localizedString(isArabic, it, state.messageResAr ?: it) } ?: return
+    val isError = state.errorMessage != null || state.errorMessageRes != null
     val borderColor = if (isError) ErrorRed.copy(alpha = 0.5f) else PrimaryEmeraldLight.copy(alpha = 0.4f)
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -261,7 +261,7 @@ private fun PhotoRequestMessage(state: PhotoRequestUiState) {
         border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
-            text = message,
+            text = messageText,
             modifier = Modifier.padding(14.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFFF2EFEA)
@@ -270,9 +270,9 @@ private fun PhotoRequestMessage(state: PhotoRequestUiState) {
 }
 
 @Composable
-private fun ChatRequestMessage(state: ChatRequestUiState) {
-    val message = state.errorMessage ?: state.message ?: return
-    val isError = state.errorMessage != null
+private fun ChatRequestMessage(state: ChatRequestUiState, isArabic: Boolean) {
+    val messageText = state.errorMessage ?: state.errorMessageRes?.let { localizedString(isArabic, it, state.errorMessageResAr ?: it) } ?: state.messageRes?.let { localizedString(isArabic, it, state.messageResAr ?: it) } ?: return
+    val isError = state.errorMessage != null || state.errorMessageRes != null
     val borderColor = if (isError) ErrorRed.copy(alpha = 0.5f) else PrimaryEmeraldLight.copy(alpha = 0.4f)
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -281,7 +281,7 @@ private fun ChatRequestMessage(state: ChatRequestUiState) {
         border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
-            text = message,
+            text = messageText,
             modifier = Modifier.padding(14.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFFF2EFEA)
@@ -302,6 +302,7 @@ private fun DiscoverProfileContent(
     photoState: PhotoRequestUiState,
     chatState: ChatRequestUiState,
     onSendInterest: (String) -> Unit,
+    onCancelInterest: (String) -> Unit = {},
     onRequestPhoto: (String) -> Unit,
     onRequestChat: (String) -> Unit,
     onOpenChat: (String) -> Unit = {},
@@ -348,6 +349,7 @@ private fun DiscoverProfileContent(
                     photoState = photoState,
                     chatState = chatState,
                     onSendInterest = onSendInterest,
+                    onCancelInterest = onCancelInterest,
                     onRequestPhoto = onRequestPhoto,
                     onRequestChat = onRequestChat,
                     onOpenChat = onOpenChat,
@@ -372,6 +374,7 @@ fun MithaqPublicProfileCard(
     photoState: PhotoRequestUiState = PhotoRequestUiState(),
     chatState: ChatRequestUiState = ChatRequestUiState(),
     onSendInterest: (String) -> Unit = {},
+    onCancelInterest: (String) -> Unit = {},
     onRequestPhoto: (String) -> Unit = {},
     onRequestChat: (String) -> Unit = {},
     onOpenChat: (String) -> Unit = {}
@@ -445,17 +448,21 @@ fun MithaqPublicProfileCard(
                 }
                 // Heart = express interest, using the existing Send-interest workflow
                 // (InterestRequestViewModel via onSendInterest). No separate like system.
-                // Filled once an interest request is pending/accepted; tappable only when a new
-                // interest can be sent (not self, not already sent/sending).
+                // Filled once an interest request is pending/accepted. A PENDING interest can
+                // be taken back by tapping the heart again (cancel); accepted stays locked —
+                // unwinding an accepted interest belongs to the requests page.
                 val heartStatus = interestState.sentStatusByUserId[profile.userId]
                 val heartSending = profile.userId in interestState.sendingToUserIds
                 val heartActive = heartStatus == "pending" || heartStatus == "accepted" || heartSending
                 val canHeart = currentUserId.isNotBlank() &&
                         profile.userId != currentUserId &&
                         !heartSending &&
-                        (heartStatus == null || heartStatus == "cancelled")
+                        (heartStatus == null || heartStatus == "cancelled" || heartStatus == "pending")
                 IconButton(
-                    onClick = { onSendInterest(profile.userId) },
+                    onClick = {
+                        if (heartStatus == "pending") onCancelInterest(profile.userId)
+                        else onSendInterest(profile.userId)
+                    },
                     enabled = canHeart,
                     modifier = Modifier
                         .clip(CircleShape)

@@ -63,6 +63,7 @@ class ChatRequestRepository(
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("chatRequests")
             .whereEqualTo("fromUserId", userId)
+            .limit(100)
             .get()
             .await()
             .documents
@@ -74,6 +75,7 @@ class ChatRequestRepository(
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("chatRequests")
             .whereEqualTo("toUserId", userId)
+            .limit(100)
             .get()
             .await()
             .documents

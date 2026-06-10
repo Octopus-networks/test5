@@ -62,6 +62,7 @@ class PhotoRequestRepository(
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("photoRequests")
             .whereEqualTo("fromUserId", userId)
+            .limit(100)
             .get()
             .await()
             .documents
@@ -73,6 +74,7 @@ class PhotoRequestRepository(
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("photoRequests")
             .whereEqualTo("toUserId", userId)
+            .limit(100)
             .get()
             .await()
             .documents
