@@ -265,10 +265,17 @@ fun NotificationSettingsScreen(
                     NotificationSoundPickerDialog(
                         isArabic = isArabic,
                         selected = selectedSound,
-                        onSelect = { sound ->
+                        onPreview = { sound -> previewSound(sound) },
+                        onSave = { sound ->
                             selectedSound = sound
                             NotificationSoundPreferences.setSelected(context, sound)
-                            previewSound(sound)
+                            stopPreview()
+                            showSoundDialog = false
+                            android.widget.Toast.makeText(
+                                context,
+                                if (isArabic) "تم حفظ الصوت ✓" else "Sound saved ✓",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
                         },
                         onDismiss = {
                             stopPreview()
@@ -305,10 +312,17 @@ fun NotificationSettingsScreen(
                     CategorySoundPickerDialog(
                         isArabic = isArabic,
                         selected = categoryOverrides[category],
-                        onSelect = { sound ->
+                        onPreview = { sound -> previewSound(sound ?: selectedSound) },
+                        onSave = { sound ->
                             categoryOverrides = categoryOverrides + (category to sound)
                             NotificationSoundPreferences.setOverride(context, category, sound)
-                            previewSound(sound ?: selectedSound)
+                            stopPreview()
+                            soundDialogCategory = null
+                            android.widget.Toast.makeText(
+                                context,
+                                if (isArabic) "تم حفظ الصوت ✓" else "Sound saved ✓",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
                         },
                         onDismiss = {
                             stopPreview()
@@ -443,6 +457,10 @@ private fun SettingActionCard(
 
 private fun soundDisplayName(sound: NotificationSound, isArabic: Boolean): String = when (sound) {
     NotificationSound.DEFAULT -> if (isArabic) "افتراضي" else "Default"
+    NotificationSound.MARIMBA -> if (isArabic) "ماريمبا" else "Marimba"
+    NotificationSound.CRYSTAL -> if (isArabic) "كريستال" else "Crystal"
+    NotificationSound.AURORA -> if (isArabic) "أورورا" else "Aurora"
+    NotificationSound.PEBBLE -> if (isArabic) "حصاة" else "Pebble"
     NotificationSound.CHIME -> if (isArabic) "رنّة" else "Chime"
     NotificationSound.DING -> if (isArabic) "دينغ" else "Ding"
     NotificationSound.SOFT -> if (isArabic) "ناعم" else "Soft"
@@ -463,9 +481,12 @@ private fun categoryDisplayName(category: NotificationCategory, isArabic: Boolea
 private fun CategorySoundPickerDialog(
     isArabic: Boolean,
     selected: NotificationSound?,
-    onSelect: (NotificationSound?) -> Unit,
+    onPreview: (NotificationSound?) -> Unit,
+    onSave: (NotificationSound?) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Staged: tapping a row previews only; nothing persists until Save is pressed.
+    var pending by remember { mutableStateOf(selected) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = if (isArabic) "صوت الإشعار" else "Notification sound") },
@@ -474,12 +495,12 @@ private fun CategorySoundPickerDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onSelect(null) }
+                        .clickable { pending = null; onPreview(null) }
                         .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    RadioButton(selected = selected == null, onClick = { onSelect(null) })
+                    RadioButton(selected = pending == null, onClick = { pending = null; onPreview(null) })
                     Text(
                         text = if (isArabic) "اتبع الافتراضي" else "Follow default",
                         style = MaterialTheme.typography.bodyLarge,
@@ -490,12 +511,12 @@ private fun CategorySoundPickerDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(sound) }
+                            .clickable { pending = sound; onPreview(sound) }
                             .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        RadioButton(selected = sound == selected, onClick = { onSelect(sound) })
+                        RadioButton(selected = sound == pending, onClick = { pending = sound; onPreview(sound) })
                         Text(
                             text = soundDisplayName(sound, isArabic),
                             style = MaterialTheme.typography.bodyLarge,
@@ -506,8 +527,13 @@ private fun CategorySoundPickerDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = { onSave(pending) }) {
+                Text(text = if (isArabic) "حفظ" else "Save")
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = if (isArabic) "تم" else "Done")
+                Text(text = if (isArabic) "إلغاء" else "Cancel")
             }
         }
     )
@@ -517,9 +543,12 @@ private fun CategorySoundPickerDialog(
 private fun NotificationSoundPickerDialog(
     isArabic: Boolean,
     selected: NotificationSound,
-    onSelect: (NotificationSound) -> Unit,
+    onPreview: (NotificationSound) -> Unit,
+    onSave: (NotificationSound) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Staged: tapping a row previews only; nothing persists until Save is pressed.
+    var pending by remember { mutableStateOf(selected) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = if (isArabic) "صوت الإشعار" else "Notification sound") },
@@ -529,14 +558,14 @@ private fun NotificationSoundPickerDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(sound) }
+                            .clickable { pending = sound; onPreview(sound) }
                             .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         RadioButton(
-                            selected = sound == selected,
-                            onClick = { onSelect(sound) }
+                            selected = sound == pending,
+                            onClick = { pending = sound; onPreview(sound) }
                         )
                         Text(
                             text = soundDisplayName(sound, isArabic),
@@ -548,8 +577,13 @@ private fun NotificationSoundPickerDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = { onSave(pending) }) {
+                Text(text = if (isArabic) "حفظ" else "Save")
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = if (isArabic) "تم" else "Done")
+                Text(text = if (isArabic) "إلغاء" else "Cancel")
             }
         }
     )
