@@ -128,6 +128,12 @@ fun MithaqMessagesScreen(
     }
 
     if (selectedRoom != null) {
+        // System back closes the open conversation (mirrors the on-screen back arrow)
+        // instead of bubbling up to the app-exit dialog.
+        androidx.activity.compose.BackHandler {
+            viewModel.closeChat()
+            viewModel.loadChatRooms(currentUserId)
+        }
         ChatScreen(
             room = selectedRoom,
             currentUserId = currentUserId,
