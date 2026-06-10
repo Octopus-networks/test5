@@ -7,90 +7,109 @@
 > **📋 Planned**.
 >
 > Canonical messaging system = **`chats/*` (new)**. `chatRooms/*` is legacy and not built upon.
+> Current `main` includes PRs #74-#96; latest release tag is `v2.1.0` at PR #93.
 
 ## Auth & onboarding
 | Feature | Status | Notes / evidence |
 |---|---|---|
 | Email/password auth + email verification | ✅ Done | `AuthViewModel`, gated by `isVerifiedEmailUser()` in rules |
 | Password reset / email verification deep links | ✅ Done | `docs/auth/`, manifest deep links |
-| Profile onboarding (structured question engine) | ✅ Done | `ui/onboarding/OnboardingFlow.kt`; legacy wizard not yet removed |
+| Mandatory profile onboarding | ✅ Done | one 58-step question engine; incomplete users cannot enter the main experience |
+| Data-driven onboarding configuration | ✅ Done | `assets/onboarding/onboarding_steps.json`; all sections load from JSON with a static fallback and consistency gate |
+| Onboarding → matchable user mirror | ✅ Done | `mirrorProfileToUser` maps structured `profiles/{uid}` answers into `users/{uid}` |
 
 ## Discovery, matching & requests
 | Feature | Status | Notes / evidence |
 |---|---|---|
 | Discovery / search from `publicProfiles` mirror | ✅ Done | `PublicProfileRepository`, server-owned mirror |
-| Discover opposite-gender filter | ✅ Done | merged via `phase-16a` (Phase 16) |
-| Interest → photo → chat request flow | ✅ Done | deterministic ids, gated transitions in repos + rules |
-| Likes / mutual match | ✅ Done | mutual computed server-side (`onLikeCreated`) |
+| Discover opposite-gender filter | ✅ Done | direction filtering in `PublicProfileRepository` |
+| Incognito exclusion from Discover / Search | ✅ Done | `isIncognito` mirrored server-side and filtered before presentation |
+| Like / unlike toggle + mutual match | ✅ Done | heart action toggles; mutual match computed server-side (`onLikeCreated`) |
+| Interest → photo → chat request flow | ✅ Done | deterministic ids and rules-gated transitions |
+| Server-created chat requests + daily cap | ✅ Done | `recordChatInitiation` atomically enforces 3 free initiations per UTC day; premium is unlimited; client creates are denied |
 | Compatibility scoring | ✅ Done | `ui/match/MatchScoreCalculator.kt` |
 
 ## Chat
 | Feature | Status | Notes / evidence |
 |---|---|---|
-| Text chat (**canonical `chats/*` stack**) | ✅ Done | `ChatRepository` + `ChatMessageRepository`; **room creation is client-side — flagged for backend move before production** |
-| Chat image attachments | ✅ Done | `chat_attachments/{chatId}/{messageId}` storage rule + notify function (deployed) |
-| Chat voice notes | ✅ Done | record + playback (Android-only; no backend change) |
-| Message reactions (emoji) | ✅ Done | WhatsApp-style reactions; rules deployed |
-| Chaperoned chat + wali logs | 🟡 Foundation (legacy) | built on **legacy `chatRooms/*`**; the canonical `chats/*` stack has no wali logging yet. **Out of scope for launch** — re-implement on `chats/*` later (see TECH_DEBT / ARCHITECTURE §3.1) |
+| Text chat (**canonical `chats/*` stack**) | ✅ Done | `ChatRepository` + `ChatMessageRepository`; room creation requires an approved chat request and rules validation |
+| Chat image attachments | ✅ Done | `chat_attachments/{chatId}/{messageId}` Storage rule + notification function |
+| Chat voice notes | ✅ Done | record + playback |
+| Message reactions (emoji) | ✅ Done | participant-scoped reaction updates in rules |
+| Premium read receipts | ✅ Done | recipients write `readAt`; only premium senders see the read indicator |
+| Chaperoned chat + wali logs | 🟡 Foundation (legacy) | implemented on legacy `chatRooms/*`; re-implement on canonical `chats/*` later |
+
+## Premium entitlements
+> The perks are implemented on current `main`, but **billing is OFF**. Premium status is
+> server/admin controlled until Google Play Billing and purchase verification are added.
+
+| Feature | Status | Notes / evidence |
+|---|---|---|
+| Incognito | ✅ Done | premium setting; member is hidden from Discover / Search while enabled |
+| Boost | ✅ Done | bounded premium re-rank in `SearchViewModel`; preserves relevance rather than hard-sorting all premium first |
+| Read receipts | ✅ Done | premium message senders see when messages are read |
+| Profile Highlight | ✅ Done | reusable `PremiumHighlight` renders a gold border around premium profile cards |
+| 2x Exposure | ✅ Done | deterministic 2:1 premium/free interleave in Discover while preserving recency inside each group |
+| Gold / Platinum purchase flow | 🖼️ UI-only | store UI exists; `BetaFeatureGates.PREMIUM_BILLING = false`; no Google Play Billing |
 
 ## Trust, safety & verification
 | Feature | Status | Notes / evidence |
 |---|---|---|
 | Identity verification (ID + selfie + ML Kit) | ✅ Done | upload → `verification/{uid}/`, PENDING → wali/admin approval |
-| Trust badges (verified / guardian) in discovery | ✅ Done | mirrored from `users/{uid}` via Cloud Functions |
-| Photo privacy (request + approved viewers) | ✅ Done | unauthorized viewers render a preset avatar; **real photo bytes are never loaded/cached** (merged via `phase-16c`) |
-| Logout/login state isolation | ✅ Done | per-user ViewModel keys; no cross-account leak on a shared device (merged via `phase-16b`) |
-| Admin console (users, premium, roles, verification) | ✅ Done | via callable Cloud Functions (admin-gated) |
-| Admin moderation — reports & photo review | ✅ Done | `AdminModerationRepository`, 3-layer admin gating |
-| Admin moderation — ban / suspend | 🟡 Foundation | **records state only; NOT enforced** anywhere (`Moderation.kt`, `AdminModerationScreen` TODO) |
-| Bidirectional block filtering in discovery | 📋 Planned | block exists, but discovery does not yet filter blocked users both ways |
+| Verified badge in profile surfaces | ✅ Done | reusable `VerifiedBadge`; `isIdentityVerified` mirrored into `publicProfiles` |
+| Photo privacy (request + approved viewers) | ✅ Done | Firestore metadata and Storage bytes are both access-gated |
+| Photo-access revocation | ✅ Done | owner deletes the approved request; Storage access stops immediately |
+| Logout/login state isolation | ✅ Done | per-user ViewModel keys prevent cross-account state leakage |
+| Bidirectional block enforcement | ✅ Done | Firestore and Storage rules deny protected interaction/media paths when either member blocked the other |
+| Admin console (users, premium, roles, verification) | ✅ Done | callable Cloud Functions, admin-gated |
+| Admin moderation — reports & photo review | ✅ Done | `AdminModerationRepository`, UI/ViewModel/rules gating |
+| Admin moderation — suspend / ban | ✅ Done | Auth account disabled, refresh tokens revoked, and interactive writes denied until reactivated |
+| Real admin account deletion | ✅ Done | deletes Firebase Auth identity, Firestore documents/subcollections, Storage media, and writes an audit record |
 
 ## Profile hub & account settings (`ui/profile`)
-All 10 hub cards are wired (PR #60). The hub raises `onOpenXxx` callbacks → `MithaqMainExperience` → `MainActivity` routes.
+All 10 hub cards are wired. The hub raises `onOpenXxx` callbacks → `MithaqMainExperience` →
+`MainActivity` routes.
 
 | Feature | Status | Notes / evidence |
 |---|---|---|
 | My photos management | ✅ Done | `MyPhotosScreen` |
-| Edit profile (info, bio, modesty, guardian) | ✅ Done | `ProfileSettingsScreen` (re-enabled); AI bio button gated behind `BetaFeatureGates.GEMINI_AI` |
-| Privacy — per-field public visibility | ✅ Done | hide age / location / marital status / marriage timeline; stored at `profiles/{uid}.privacyTrust`, honored by `buildPublicProfile` (functions deployed) |
-| Photo privacy management (approve / reject / revoke) | ✅ Done | `PhotoPrivacyScreen` + `PhotoAccessManager` (owner-write, no rules change) |
-| Prayer settings (Adhan) | ✅ Done | `PrayerSettingsScreen` reuses `AdhanSettingsSectionFixed` |
-| Notification settings | ✅ Done | Phase 13C; global + per-type toggles |
-| Language / theme | ✅ Done | `AppSettingsScreen` (Arabic ⇄ English + dark mode) |
-| Security — biometric app lock | 🟡 Foundation | setting persists + verified via a biometric prompt, **but lock-on-launch is NOT enforced yet** (`SecuritySettingsScreen`) |
+| Edit profile (info, bio, modesty, guardian) | ✅ Done | `ProfileSettingsScreen`; Gemini action remains gated |
+| Privacy — per-field public visibility | ✅ Done | stored at `profiles/{uid}.privacyTrust`, honored by `buildPublicProfile` |
+| Photo privacy management (approve / reject / revoke) | ✅ Done | `PhotoPrivacyScreen` + `PhotoAccessManager`; revocation enforced by rules |
+| Prayer settings (Adhan) | ✅ Done | location-aware `AdhanScheduler` + `PrayerSettingsScreen` |
+| Notification settings | ✅ Done | global + per-type toggles |
+| Language / theme | ✅ Done | Arabic ⇄ English + dark mode |
+| Security — biometric app lock | ✅ Done | opt-in per-user setting is enforced at app launch; disabled users are not prompted |
 | Support & help (FAQ + email contact) | ✅ Done | `SupportScreen` |
-| Guardian (Wali) invite / status | ✅ Done | `GuardianScreen` + `GuardianViewModel` (user-side invite; **not** the gated wali-account dashboard) |
+| Guardian (Wali) invite / status | ✅ Done | `GuardianScreen` + `GuardianViewModel` |
 
 ## Notifications
 | Feature | Status | Notes / evidence |
 |---|---|---|
-| Push notifications (FCM) | ✅ Done | Phase 13A/B/C; `users/{uid}/fcmTokens`, Cloud Function triggers (interest / photo / chat request, message, photo moderation) |
+| Push notifications (FCM) | ✅ Done | `users/{uid}/fcmTokens`, Cloud Function triggers |
 | Per-type notification sounds | ✅ Done | bundled `res/raw` chimes; global default + per-category override |
-| Notification preferences gating | ✅ Done | `users/{uid}/notificationSettings/preferences` honored in functions |
+| Notification preferences gating | ✅ Done | `users/{uid}/notificationSettings/preferences` honored in Functions |
 
 ## Islamic & lifestyle
 | Feature | Status | Notes / evidence |
 |---|---|---|
-| Adhan scheduling / prayer tracking | ✅ Done | exact-alarm based |
+| Location-based Adhan scheduling / prayer tracking | ✅ Done | location requested on app open; exact-alarm scheduling uses per-location prayer times |
 
-## Deferred / incomplete (Phase 17 decisions)
+## Deferred / incomplete
 | Feature | Status | Notes / evidence |
 |---|---|---|
-| Premium / subscription (Gold, Platinum) | 🖼️ UI-only | **simulated checkout, no Google Play Billing**; production purchase returns an error; only admin can grant premium. Decision: **defer** |
-| Daily chat limit (free vs premium) | 📋 Planned | `ChatLimitManager` exists but **has zero call sites** — not enforced |
-| AI matchmaker / Gemini assistance | 🖼️ UI-only / debug | release ships an empty Gemini key by design. Decision: **hide** unless a backend proxy exists |
-| Voice call | 🖼️ UI-only | scaffolding only. Decision: **hide** in first release |
+| Google Play Billing + purchase verification | 📋 Planned | premium perks exist, but real purchases remain disabled |
+| AI matchmaker / Gemini assistance | 🖼️ UI-only / debug | release ships an empty key; keep hidden without a backend proxy |
+| Voice call | 🖼️ UI-only | scaffolding only; keep hidden |
+| Wali monitoring on canonical chat | 🟡 Foundation | still tied to legacy `chatRooms/*` |
 
-## Known "before production" gaps (cross-reference)
+## Known "before production" gaps
 
-- Move chat-room creation + chat-limit/premium gate to Cloud Functions (client-trusted today).
-- Real billing integration for premium (Phase 19).
-- Enforce ban/suspension.
-- Enforce the biometric app lock on app launch/resume (the setting exists; enforcement does not).
-- Re-implement chaperoned/wali monitoring on the canonical `chats/*` stack; retire legacy stacks.
-- Hide incomplete features (Voice Call / Billing / Gemini) for the first release (Phase 17).
+- Add Google Play Billing with server-side receipt verification and entitlement lifecycle.
+- Re-implement chaperoned/wali monitoring on canonical `chats/*`; retire legacy chat code.
+- Consider moving final `chats/*` room creation behind a callable; current rules already require
+  an approved server-created chat request and validate the room shape.
+- Verify the latest Functions / Firestore / Storage deployment in every environment.
+- Complete signed-release and two-account on-device smoke testing.
 
-✅ **Profile hub complete (PR #60):** all 10 account-settings cards wired; per-field Privacy shipped full-stack (Android + `mirrorPublicProfile` deployed); Support & Security screens built with coding agents (Antigravity / Codex).
-✅ **Resolved in Phase 16:** real photo privacy, logout state isolation, Discover gender filter (merged via `phase-16a/b/c`; the duplicate `fix/*` PRs #40/#41/#42 are superseded and can be closed).
-
-See [`TECH_DEBT.md`](./TECH_DEBT.md) for the engineering backlog behind the open gaps.
+See [`TECH_DEBT.md`](./TECH_DEBT.md) for the engineering backlog behind the remaining gaps.
