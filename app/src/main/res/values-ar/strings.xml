@@ -402,6 +402,8 @@
     <string name="request_received_photo_ar">طلب صورة وارد</string>
     <string name="request_chat">طلب تواصل</string>
     <string name="request_chat_ar">طلب تواصل</string>
+    <string name="request_priority">أولوية</string>
+    <string name="request_priority_ar">أولوية</string>
     <string name="request_chat_approval_note">تبدأ المحادثة المحترمة بعد الموافقة فقط، ولا يتم إنشاء رسائل في هذه المرحلة.</string>
     <string name="request_chat_approval_note_ar">تبدأ المحادثة المحترمة بعد الموافقة فقط، ولا يتم إنشاء رسائل في هذه المرحلة.</string>
     <string name="request_sent_chat">طلب تواصل مرسل</string>
