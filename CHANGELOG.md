@@ -7,45 +7,71 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-> **Note on versions:** the dated `[1.0.0]`–`[2.0.0]` sections below are a documentation
-> narrative. The repository currently has **no matching git tags**, and day-to-day work is
-> tracked by the phase-based [`ROADMAP.md`](./ROADMAP.md). Treat the compare links at the
-> bottom as indicative until real tags are cut.
+> `v2.1.0` is a real tag at PR #93. The older dated sections remain a documentation
+> narrative and may not have matching tags.
 
 ### Added
-- **Profile hub activated (PR #60):** all 10 account-settings cards in `ui/profile` are now wired —
-  edit profile, per-field **Privacy**, photo-access management, Adhan/prayer settings, notification
-  settings, language & theme, biometric app-lock setting, support (FAQ + contact), and guardian
-  (wali) invite. New screens: `PrivacySettingsScreen`, `PhotoPrivacyScreen`, `PrayerSettingsScreen`,
-  `SecuritySettingsScreen`, `SupportScreen`, `GuardianScreen` (Support & Security built with coding
-  agents). The hub raises `onOpenXxx` callbacks → `MithaqMainExperience` → `MainActivity` routes.
-- **Per-field public-profile privacy (full-stack):** users can hide age / location / marital status /
-  marriage timeline from discovery. Flags stored at `profiles/{uid}.privacyTrust`; the
-  `mirrorPublicProfile` Cloud Function now blanks the hidden fields in `publicProfiles` (deployed).
-- **Photo-access management screen:** owners can approve / reject / revoke photo-view requests
-  (`PhotoAccessManager.rejectPhotoAccess` added; owner-write only, no rules change).
-- **Security hardening (guardian/wali):** guardian/wali binding now requires a **verified**
-  email (`email_verified == true`) in both Firestore rules and the
-  `requireAdminOrAssignedWali` Cloud Function, so a wali must prove inbox ownership.
-- **`mirrorPublicProfileOnUserChange` Cloud Function:** re-mirrors `publicProfiles` when a
-  user's `verificationStatus`/`guardianStatus` changes, so discovery trust badges stay current
-  (previously hardcoded to `false`).
-- **Tightened Firestore rules** for `reports`, `profile_views`, and `favorites` (strict field
-  allow-lists, self-target prevention, length caps).
-- Project documentation: [`ROADMAP.md`](./ROADMAP.md), [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md),
-  [`docs/FEATURE_STATUS.md`](./docs/FEATURE_STATUS.md), [`docs/TECH_DEBT.md`](./docs/TECH_DEBT.md);
-  per-topic docs reorganized under `docs/`.
-- `BootReceiver` - dedicated broadcast receiver for `BOOT_COMPLETED` and `LOCKED_BOOT_COMPLETED` that restores Adhan alarms and WorkManager sync automatically after device reboot.
-- `ensureBackgroundServicesRunning()` in `MainActivity` - silently re-queues WorkManager and reschedules Adhan alarms every time the app opens, recovering gracefully from a Force Stop.
-- `FOREGROUND_SERVICE_DATA_SYNC` permission for future foreground worker support.
-- `directBootAware="true"` on `BootReceiver` so it fires before the first unlock screen on Android 7+.
-- Language badges and technology stack shields in `README.md`.
-- Branch protection workflow in `.github/workflows/protect-main.yml` to block force-pushes on main.
-- **`Release APK` workflow** (`.github/workflows/release.yml`): builds and attaches a downloadable APK to a GitHub Release on a `v*` tag or manual dispatch (debug-signed pre-release for now; see [`docs/ops/release.md`](./docs/ops/release.md)).
+- **Premium Profile Highlight (PRs #94-#95):** premium cards render with a reusable gold border
+  across profile surfaces.
+- **2x Exposure (PR #96):** Discover uses a deterministic 2:1 premium/free interleave while
+  preserving recency within each group.
 
 ### Changed
-- `AdhanReceiver` is now `exported="false"` and only handles `ADHAN_ALARM` actions (Boot recovery delegated to `BootReceiver`).
-- Last logged-in UID is now persisted in `mithaq_prefs` so `BootReceiver` can restart WorkManager without requiring the user to re-open the app.
+- **Crash reporting (PR #94):** Android `printStackTrace()` calls in production sources now
+  report non-fatal exceptions through Firebase Crashlytics.
+
+---
+
+## [2.1.0] - 2026-06-10
+
+### Added
+- **Profile hub:** all account-settings cards are wired, including edit profile, per-field
+  privacy, photo-access management, prayer/notification settings, language/theme, app lock,
+  support, and guardian invite.
+- **Per-field public-profile privacy:** age, location, marital status, and marriage timeline
+  visibility are stored in `profiles/{uid}.privacyTrust` and honored by `buildPublicProfile`.
+- **Photo-access management:** owners can approve, reject, and revoke photo-view requests.
+- **Public-profile trust refresh:** `mirrorPublicProfileOnUserChange` re-mirrors discovery data
+  when verification, guardian, Incognito, or Premium state changes.
+- **Boot recovery and release tooling:** `BootReceiver` restores Adhan/WorkManager scheduling,
+  and the `Release APK` workflow publishes testable APK artifacts from `v*` tags.
+- **Mandatory unified onboarding (PRs #75, #82-#83):** one 58-step flow now gates entry to the
+  app; all sections load from JSON with a consistency check against the static fallback.
+- **Onboarding → user mirror (PR #77):** `mirrorProfileToUser` maps structured onboarding
+  answers into the matchable `users/{uid}` document.
+- **Location-based Adhan (PR #76):** app-open location permission and per-location prayer-time
+  scheduling.
+- **Premium perks:** Incognito browsing (PR #78), bounded Boost re-ranking (PR #79), and
+  premium sender Read receipts (PR #80). Premium remains admin/server granted; billing is OFF.
+- **Verified badge (PR #81):** reusable trust badge shown on verified member profiles.
+
+### Changed
+- **Likes (PR #74):** the heart action now toggles like / unlike instead of being like-only.
+- **Cloud Functions runtime (PRs #84, #90):** Node 22, modular Firebase Admin APIs,
+  `firebase-admin ^13.10.0`, and `firebase-functions ^7.2.5`.
+- `AdhanReceiver` handles only `ADHAN_ALARM`; reboot recovery belongs to `BootReceiver`.
+- The last signed-in UID is persisted so background services can recover after reboot.
+- Version bumped to `2.1.0` / versionCode 21 and released as `v2.1.0` (PR #93).
+
+### Security
+- Guardian/wali binding requires verified email ownership in rules and Functions.
+- Rules for reports, profile views, and favorites use stricter field allow-lists and
+  self-target/length validation.
+- **Photo-access revocation (PR #85):** revoking approval now removes the document checked by
+  Storage rules, immediately cutting off private-photo downloads.
+- **Incognito discovery privacy (PR #86):** Incognito members are mirrored and excluded from
+  Discover.
+- **Bidirectional block enforcement (PR #87):** Firestore and Storage rules enforce blocks on
+  protected interactions and media.
+- **Real account deletion (PR #88):** admin deletion removes Firebase Auth, Firestore identity
+  data/subcollections, Storage media, and records an audit entry.
+- **App lock enforcement (PR #89):** biometric launch gating respects the signed-in user's
+  per-account setting.
+- **Moderation enforcement (PR #91):** SUSPENDED/BANNED disables Auth, revokes refresh tokens,
+  and denies interactive writes.
+- **Server-created chat requests (PR #92):** the callable atomically validates accepted
+  interest, enforces the free daily quota, and creates the request; direct client creates are
+  denied.
 
 ---
 
@@ -162,7 +188,8 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   These compare links assume git tags v1.0.0…v2.0.0 exist. They do NOT exist yet — cut real
   tags before relying on them. Repo slug corrected to the actual remote.
 -->
-[Unreleased]: https://github.com/Octopus-networks/test5/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Octopus-networks/test5/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/Octopus-networks/test5/releases/tag/v2.1.0
 [2.0.0]: https://github.com/Octopus-networks/test5/compare/v1.5.0...v2.0.0
 [1.5.0]: https://github.com/Octopus-networks/test5/compare/v1.2.0...v1.5.0
 [1.2.0]: https://github.com/Octopus-networks/test5/compare/v1.0.0...v1.2.0

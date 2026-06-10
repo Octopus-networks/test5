@@ -16,7 +16,7 @@
 <!-- ── Backend & Services ──────────────────────────────────────────────── -->
 ![Firebase](https://img.shields.io/badge/Firebase%20BOM-33.1.0-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 ![Firebase Services](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20Storage%20%7C%20FCM%20%7C%20Functions-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
-![Cloud Functions](https://img.shields.io/badge/Cloud%20Functions-Node.js%2020-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
+![Cloud Functions](https://img.shields.io/badge/Cloud%20Functions-Node.js%2022-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![Room](https://img.shields.io/badge/Room-2.8.4-6200EE?style=for-the-badge&logo=sqlite&logoColor=white)
 
 <!-- ── AI & ML ──────────────────────────────────────────────────────────── -->
@@ -34,7 +34,7 @@
 ![Branch Protection](https://img.shields.io/badge/Branch-Protected%20%7C%20No%20Force%20Push-red?style=for-the-badge&logo=git&logoColor=white)
 
 <!-- ── App Metadata ────────────────────────────────────────────────────── -->
-![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.1.0-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-Proprietary-lightgrey?style=for-the-badge)
 
 </div>
@@ -48,7 +48,7 @@ Mithaq is a Kotlin Android application for privacy-first Islamic matchmaking. It
 | Doc | Purpose |
 |---|---|
 | [`ROADMAP.md`](ROADMAP.md) | Phase-based roadmap (Phase 0–21), current focus, and what's next |
-| [`HANDOFF.md`](HANDOFF.md) | Current state, roles (ChatGPT / Codex / Android Studio / Claude), and live PR status |
+| [`HANDOFF.md`](HANDOFF.md) | Current release/main state, roles, recent merged work, and operational follow-ups |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design — `chats/*` is the canonical messaging stack (`chatRooms/*` is legacy) |
 | [`docs/FEATURE_STATUS.md`](docs/FEATURE_STATUS.md) | Honest per-feature status (Done / Foundation / UI-only / Planned) |
 | [`docs/TECH_DEBT.md`](docs/TECH_DEBT.md) | Engineering backlog from architecture + code reviews |
@@ -62,11 +62,13 @@ Mithaq is a Kotlin Android application for privacy-first Islamic matchmaking. It
 
 ## Current Status
 
+- Latest release: `v2.1.0` (versionCode 21); `main` includes post-release PRs #94-#96
 - Package: `com.mithaq.app`
 - Platform: Android
 - Language: Kotlin
 - UI: Jetpack Compose + Material 3
-- Backend: Firebase Auth, Firestore, Storage, and Cloud Messaging
+- Backend: Firebase Auth, Firestore, Storage, Cloud Messaging, and modular Cloud Functions v2
+- Functions runtime: Node 22, `firebase-admin ^13.10.0`, `firebase-functions ^7.2.5`
 - Local cache: Room
 - Verification: Google ML Kit Face Detection
 - AI features: Gemini SDK hooks for guided chat assistance
@@ -76,32 +78,49 @@ Mithaq is a Kotlin Android application for privacy-first Islamic matchmaking. It
 > For the accurate, honest status of each feature (some are foundation-only or UI-only), see
 > [`docs/FEATURE_STATUS.md`](docs/FEATURE_STATUS.md).
 
-- Structured profile onboarding with religious, demographic, lifestyle, and guardian fields.
+- Mandatory 58-step onboarding, loaded from JSON behind a consistency gate and mirrored
+  server-side into the matchable `users/{uid}` profile.
 - Discovery and advanced search filters (age, sect, prayer habits, modesty, relocation, and more) from a server-owned `publicProfiles` mirror.
+- Like / unlike toggle with server-computed mutual matches.
 - Compatibility scoring in `com.mithaq.app.ui.match`.
-- Interest → photo → chat request flow with deterministic, rules-gated transitions.
-- Secure chat on the canonical `chats/*` stack with **image attachments, voice notes, and emoji reactions**.
+- Interest → photo → server-created chat request flow with deterministic, rules-gated transitions
+  and a server-authoritative free daily chat cap.
+- Secure chat on the canonical `chats/*` stack with **image attachments, voice notes, emoji
+  reactions, and premium read receipts**.
 - Push notifications (FCM) with **per-type sounds** and granular, server-honored preferences.
-- Identity verification (ID + selfie + ML Kit) with verified / guardian trust badges.
+- Identity verification (ID + selfie + ML Kit) with reusable Verified / guardian trust badges.
 - Guardian (Wali) invitation and oversight flows.
-- Photo privacy: blurred-by-default with per-viewer request / approve / revoke control.
+- Photo privacy: blurred-by-default with per-viewer request / approve / revoke control enforced
+  for both Firestore metadata and Storage bytes.
 - **Account hub** (`ui/profile`): edit profile, per-field public-visibility privacy, photo-access management, Adhan/prayer settings, notification settings, language & theme, biometric app lock, support, and guardian invite.
-- Adhan scheduling with exact-alarm support.
-- Premium store UI *(simulated checkout — no live billing yet; see FEATURE_STATUS)*.
-- Biometric app lock and screenshot protection for sensitive screens.
+- Location-based Adhan scheduling with exact-alarm support.
+- Five active premium perks: **Incognito, Boost, Read receipts, Profile Highlight, and 2x
+  Exposure**. The store remains simulated and live billing is still OFF.
+- Opt-in biometric app lock and screenshot protection for sensitive screens.
 
 ## Security Updates
 
-The latest cleanup hardens the app and repository:
+The PR #84-#92 security sweep and follow-up quality work harden the app and repository:
 
 - Firebase App Check is initialized in Android; release builds use Play Integrity.
-- Cloud Functions now own privileged admin changes and server-created notifications.
-- Firestore rules now block client-side privilege escalation for admin, premium, verification, wali, and ward fields.
+- Cloud Functions use the modular v2 API on Node 22 and own privileged admin changes,
+  server-created notifications, onboarding mirroring, and chat-request quota enforcement.
+- Firestore rules block client-side privilege escalation for admin, premium, verification,
+  wali, and ward fields.
 - Premium upgrades are no longer granted directly by the client in production mode.
-- Guardian status values are normalized to `NONE`, `PENDING`, and `VERIFIED`.
-- Chat rooms, messages, notifications, favorites, photo requests, and wali access now have stricter Firestore validation.
-- Unsupported Adhan receiver broadcasts are ignored.
-- Generated APKs, IDE metadata, Kotlin error logs, and old template code were removed from version control.
+- Revoking photo access deletes the approval that Storage rules consult, immediately stopping
+  private-photo downloads.
+- Incognito profiles are excluded from discovery, and bidirectional blocks are enforced in
+  Firestore and Storage rules.
+- Admin deletion removes the Firebase Auth account, Firestore identity data/subcollections,
+  private media, and records an audit entry.
+- SUSPENDED/BANNED moderation disables Auth accounts, revokes refresh tokens, and blocks
+  interactive writes while the token expires.
+- The biometric app lock now prompts only when the signed-in user enabled it.
+- Direct client chat-request creation is denied; the callable creates requests and enforces the
+  free-tier daily limit atomically.
+- Android catch paths report exceptions through Firebase Crashlytics instead of
+  `printStackTrace()`.
 
 ## Repository Layout
 
