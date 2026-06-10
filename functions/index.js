@@ -176,14 +176,42 @@ exports.setUserRole = onCall(secureCallable, async (request) => {
   return { ok: true };
 });
 
-exports.deleteUserProfile = onCall(secureCallable, async (request) => {
+// Heavy accounts (many photos/subcollections) can exceed the default 60s budget.
+exports.deleteUserProfile = onCall({ ...secureCallable, timeoutSeconds: 300 }, async (request) => {
   await requireAdmin(request);
   const targetUid = requireString(request.data, "targetUid");
   if (targetUid === request.auth.uid) {
     throw new HttpsError("failed-precondition", "Admins cannot delete their own account here.");
   }
 
-  await db.collection("users").doc(targetUid).delete();
+  // Auth first: kills sign-in immediately so the client cannot recreate data while
+  // the cleanup below runs. A missing Auth user (already deleted) is fine.
+  try {
+    await admin.auth().deleteUser(targetUid);
+  } catch (error) {
+    if (error.code !== "auth/user-not-found") {
+      throw error;
+    }
+  }
+
+  // Identity documents, including subcollections (users/{uid}/chatLimits,
+  // userPhotos/{uid}/photos). Deleting users/{uid} also triggers the public-profile
+  // mirror, which is idempotent with the direct publicProfiles delete below.
+  await db.recursiveDelete(db.collection("users").doc(targetUid));
+  await db.recursiveDelete(db.collection("profiles").doc(targetUid));
+  await db.recursiveDelete(db.collection("userPhotos").doc(targetUid));
+  await db.collection("publicProfiles").doc(targetUid).delete();
+
+  // Stored media: private photos, legacy profile images ({uid}.jpg and
+  // {uid}_additional_N.jpg share the uid prefix), voice intro, verification evidence.
+  const bucket = admin.storage().bucket();
+  await Promise.all([
+    bucket.deleteFiles({ prefix: `user_photos/${targetUid}/` }),
+    bucket.deleteFiles({ prefix: `profiles/${targetUid}` }),
+    bucket.deleteFiles({ prefix: `voices/${targetUid}` }),
+    bucket.deleteFiles({ prefix: `verification/${targetUid}/` }),
+  ]);
+
   await db.collection("adminAuditLogs").add(auditPayload(request, "deleteUserProfile", targetUid));
   return { ok: true };
 });
