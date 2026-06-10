@@ -22,5 +22,6 @@ data class PublicProfile(
     val photoPrivacyMode: String = "blurred_by_default",
     val profileCompletionPercent: Int = 0,
     val lastActiveAt: Date? = null,
+    val memberSince: Date? = null,
     val updatedAt: Date? = null
 )
