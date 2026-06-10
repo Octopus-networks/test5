@@ -135,6 +135,8 @@
 
     <string name="search_title">Search</string>
     <string name="search_subtitle">Safe filtering on public data only, without exposing private details.</string>
+    <string name="search_query_placeholder">Search by name, city, or country…</string>
+    <string name="search_query_placeholder_ar">ابحث بالاسم أو المدينة أو الدولة…</string>
     <string name="search_location_note">Nearby filters temporarily use the same results until city/GPS filtering is ready.</string>
     <string name="search_load_error_title">Could not load search results</string>
     <string name="search_load_error_message">Public profile data is not available now. Try again.</string>

@@ -10,14 +10,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -32,6 +39,7 @@ import com.mithaq.app.ui.components.MithaqStateIllustration
 import com.mithaq.app.ui.components.MithaqIllustrationType
 import com.mithaq.app.ui.components.MithaqLoadingSkeleton
 import com.mithaq.app.ui.components.SkeletonType
+import com.mithaq.app.domain.model.PublicProfile
 import com.mithaq.app.ui.home.DiscoverUiState
 import com.mithaq.app.ui.home.DiscoverViewModel
 import com.mithaq.app.ui.home.MithaqPublicProfileCard
@@ -62,6 +70,8 @@ fun MithaqSearchScreen(
     val interestState by interestRequestViewModel.state.collectAsState()
     val photoState by photoRequestViewModel.state.collectAsState()
     val chatState by chatRequestViewModel.state.collectAsState()
+    // The whole point of a Search tab: free-text matching on top of the chip filters.
+    var searchQuery by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -82,6 +92,24 @@ fun MithaqSearchScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(18.dp))
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            placeholder = {
+                Text(localizedString(isArabic, R.string.search_query_placeholder, R.string.search_query_placeholder_ar))
+            },
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(Icons.Filled.Close, contentDescription = null)
+                    }
+                }
+            }
+        )
+        Spacer(modifier = Modifier.height(12.dp))
         PublicProfileFilterRow(
             isArabic = isArabic,
             selectedFilter = state.selectedFilter,
@@ -96,8 +124,19 @@ fun MithaqSearchScreen(
             )
         }
         Spacer(modifier = Modifier.height(18.dp))
+        val query = searchQuery.trim()
+        val profiles = if (query.isEmpty()) {
+            state.visibleProfiles
+        } else {
+            state.visibleProfiles.filter {
+                it.displayName.contains(query, ignoreCase = true) ||
+                    it.city.contains(query, ignoreCase = true) ||
+                    it.country.contains(query, ignoreCase = true)
+            }
+        }
         SearchResultsContent(
             state = state,
+            profiles = profiles,
             isArabic = isArabic,
             currentUserId = currentUserId,
             interestState = interestState,
@@ -105,6 +144,9 @@ fun MithaqSearchScreen(
             chatState = chatState,
             onSendInterest = { toUserId ->
                 interestRequestViewModel.sendInterest(currentUserId, toUserId)
+            },
+            onCancelInterest = { toUserId ->
+                interestRequestViewModel.cancelInterest(currentUserId, "${currentUserId}_$toUserId")
             },
             onRequestPhoto = { toUserId ->
                 photoRequestViewModel.requestPhoto(currentUserId, toUserId)
@@ -121,12 +163,14 @@ fun MithaqSearchScreen(
 @Composable
 private fun SearchResultsContent(
     state: DiscoverUiState,
+    profiles: List<PublicProfile>,
     isArabic: Boolean,
     currentUserId: String,
     interestState: InterestRequestUiState,
     photoState: PhotoRequestUiState,
     chatState: ChatRequestUiState,
     onSendInterest: (String) -> Unit,
+    onCancelInterest: (String) -> Unit = {},
     onRequestPhoto: (String) -> Unit,
     onRequestChat: (String) -> Unit,
     onOpenChat: (String) -> Unit = {},
@@ -156,7 +200,8 @@ private fun SearchResultsContent(
                 icon = Icons.Filled.Search
             )
         }
-        state.hasNoFilterResults -> {
+        profiles.isEmpty() -> {
+            // Covers both an empty chip-filter result and a text query with no hits.
             MithaqEmptyState(
                 title = localizedString(isArabic, R.string.search_no_matching_title, R.string.search_no_matching_title_ar),
                 message = localizedString(isArabic, R.string.search_no_matching_message, R.string.search_no_matching_message_ar),
@@ -164,7 +209,7 @@ private fun SearchResultsContent(
             )
         }
         else -> {
-            state.visibleProfiles.forEach { profile ->
+            profiles.forEach { profile ->
                 MithaqPublicProfileCard(
                     profile = profile,
                     isArabic = isArabic,
@@ -173,6 +218,7 @@ private fun SearchResultsContent(
                     photoState = photoState,
                     chatState = chatState,
                     onSendInterest = onSendInterest,
+                    onCancelInterest = onCancelInterest,
                     onRequestPhoto = onRequestPhoto,
                     onRequestChat = onRequestChat,
                     onOpenChat = onOpenChat,

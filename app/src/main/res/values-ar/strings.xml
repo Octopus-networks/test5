@@ -122,6 +122,8 @@
     <string name="discover_new_members">أعضاء جدد</string>
     <string name="search_title">البحث</string>
     <string name="search_subtitle">فلترة آمنة على البيانات العامة فقط، دون كشف بيانات خاصة.</string>
+    <string name="search_query_placeholder">ابحث بالاسم أو المدينة أو الدولة…</string>
+    <string name="search_query_placeholder_ar">ابحث بالاسم أو المدينة أو الدولة…</string>
     <string name="search_location_note">فلتر القرب مؤقتًا يعتمد على نفس النتائج لحين تجهيز المدينة أو GPS.</string>
     <string name="search_load_error_title">تعذر تحميل نتائج البحث</string>
     <string name="search_load_error_message">البيانات العامة غير متاحة الآن. حاول مرة أخرى.</string>
