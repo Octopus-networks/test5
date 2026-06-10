@@ -6,6 +6,7 @@ data class ChatRequest(
     val requestId: String = "",
     val fromUserId: String = "",
     val toUserId: String = "",
+    val fromUserIsPremium: Boolean = false,
     val status: String = "pending",
     val relatedInterestRequestId: String = "",
     val createdChatId: String = "",

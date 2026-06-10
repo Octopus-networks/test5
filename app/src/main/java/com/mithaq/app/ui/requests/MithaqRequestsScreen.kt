@@ -1,6 +1,7 @@
 package com.mithaq.app.ui.requests
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,8 @@ import com.mithaq.app.ui.components.MithaqStateIllustration
 import com.mithaq.app.ui.components.MithaqIllustrationType
 import com.mithaq.app.ui.components.MithaqLoadingSkeleton
 import com.mithaq.app.ui.components.SkeletonType
+import com.mithaq.app.ui.theme.AccentGold
+import com.mithaq.app.ui.theme.AccentGoldDeep
 
 @Composable
 private fun localizedString(isArabic: Boolean, englishResId: Int, arabicResId: Int): String =
@@ -668,7 +671,12 @@ private fun ChatRequestCard(
         name = displayName.ifBlank { localizedString(isArabic, R.string.request_member_fallback, R.string.request_member_fallback_ar) },
         location = publicProfile.locationLabel(),
         status = request.status,
-        isArabic = isArabic
+        isArabic = isArabic,
+        priorityLabel = if (request.fromUserIsPremium) {
+            localizedString(isArabic, R.string.request_priority, R.string.request_priority_ar)
+        } else {
+            null
+        }
     ) {
         Text(
             text = localizedString(isArabic, R.string.request_chat_approval_note, R.string.request_chat_approval_note_ar),
@@ -746,6 +754,7 @@ private fun InterestStatusCard(
     location: String,
     status: String,
     isArabic: Boolean,
+    priorityLabel: String? = null,
     actions: @Composable () -> Unit = {}
 ) {
     val softGold = Color(0xFFF2CA50)
@@ -765,11 +774,39 @@ private fun InterestStatusCard(
         border = BorderStroke(1.dp, statusColor.copy(alpha = 0.16f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = softGold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = softGold
+                )
+                if (priorityLabel != null) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = AccentGold.copy(alpha = 0.14f),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = AccentGold.copy(alpha = 0.55f),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = priorityLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AccentGoldDeep,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = name,

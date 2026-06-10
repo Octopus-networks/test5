@@ -196,6 +196,7 @@ class ChatRequestRepository(
             requestId = getString("requestId") ?: id,
             fromUserId = getString("fromUserId").orEmpty(),
             toUserId = getString("toUserId").orEmpty(),
+            fromUserIsPremium = getBoolean("fromUserIsPremium") ?: false,
             status = getString("status") ?: "pending",
             relatedInterestRequestId = getString("relatedInterestRequestId").orEmpty(),
             createdChatId = getString("createdChatId").orEmpty(),

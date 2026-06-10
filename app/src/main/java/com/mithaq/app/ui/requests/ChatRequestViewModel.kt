@@ -51,7 +51,12 @@ class ChatRequestViewModel(
                     isLoadingRequests = false,
                     sentStatusByUserId = sent.associate { it.toUserId to it.status },
                     sentRequests = sent,
-                    receivedPendingRequests = received.filter { it.status == "pending" },
+                    receivedPendingRequests = received
+                        .filter { it.status == "pending" }
+                        .sortedWith(
+                            compareByDescending<ChatRequest> { it.fromUserIsPremium }
+                                .thenByDescending { it.updatedAt ?: it.createdAt }
+                        ),
                     receivedHistoryRequests = received.filter { it.status != "pending" },
                     publicProfilesByUserId = profiles
                 )

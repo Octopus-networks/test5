@@ -202,6 +202,7 @@ exports.recordChatInitiation = onCall(secureCallable, async (request) => {
       requestId: requestRef.id,
       fromUserId: uid,
       toUserId,
+      fromUserIsPremium: isPremium,
       status: "pending",
       relatedInterestRequestId,
       requiresGuardianApproval: false,
