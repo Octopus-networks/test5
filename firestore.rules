@@ -344,6 +344,9 @@ service cloud.firestore {
         request.resource.data.toUserId != request.auth.uid &&
         requestId == request.auth.uid + "_" + request.resource.data.toUserId &&
         request.resource.data.status == "pending" &&
+        // A block in either direction also stops new interest requests (S3 follow-up:
+        // the sweep covered chats/messages but not the request documents themselves).
+        noBlockBetween(request.auth.uid, request.resource.data.toUserId) &&
         request.resource.data.keys().hasOnly([
           "requestId",
           "fromUserId",
@@ -393,6 +396,8 @@ service cloud.firestore {
         request.resource.data.toUserId != request.auth.uid &&
         requestId == request.auth.uid + "_" + request.resource.data.toUserId &&
         request.resource.data.status == "pending" &&
+        // A block in either direction also stops new photo requests.
+        noBlockBetween(request.auth.uid, request.resource.data.toUserId) &&
         hasAcceptedInterest(request.auth.uid, request.resource.data.toUserId) &&
         request.resource.data.keys().hasOnly([
           "requestId",
@@ -419,6 +424,20 @@ service cloud.firestore {
           request.resource.data.toUserId == resource.data.toUserId &&
           request.resource.data.status in ["approved", "declined"] &&
           changedOnly(["status", "updatedAt"])
+        ) ||
+        (
+          // The requester may re-open their own cancelled/declined request. The client
+          // re-requests with set(merge), which lands here as an update; without this
+          // clause every re-request after a decline/cancel was silently denied.
+          // Blocks gate it too, so it cannot be used to pester someone after a block.
+          resource.data.fromUserId == request.auth.uid &&
+          resource.data.status in ["cancelled", "declined"] &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId &&
+          request.resource.data.status == "pending" &&
+          noBlockBetween(request.auth.uid, resource.data.toUserId) &&
+          hasAcceptedInterest(request.auth.uid, resource.data.toUserId) &&
+          changedOnly(["status", "createdAt", "updatedAt", "relatedInterestRequestId"])
         )
       );
       // The photo owner may revoke a grant at any time. Storage reads are keyed off
