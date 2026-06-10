@@ -36,7 +36,7 @@ import com.mithaq.app.ui.common.MithaqQuestionArtwork
 fun CompleteProfileScreen(
     userId: String,
     onCompleteSuccess: () -> Unit,
-    viewModel: AuthViewModel,
+    profileEditViewModel: com.mithaq.app.ui.profile.ProfileEditViewModel,
     isArabic: Boolean,
     onLanguageChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
@@ -47,7 +47,7 @@ fun CompleteProfileScreen(
     var currentStep by remember { mutableStateOf(1) }
     var localError by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
-    val currentProfile by viewModel.currentUserProfile.collectAsState()
+    val currentProfile by profileEditViewModel.currentUserProfile.collectAsState()
 
     // Screen 1: Basics
     var name by remember(currentProfile?.uid, currentProfile?.name) {
@@ -316,7 +316,7 @@ fun CompleteProfileScreen(
                                             } else {
                                                 localError = null
                                                 isLoading = true
-                                                viewModel.updateGoogleUserProfile(
+                                                profileEditViewModel.updateGoogleUserProfile(
                                                     userId = userId,
                                                     name = name,
                                                     username = username,
