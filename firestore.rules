@@ -404,7 +404,10 @@ service cloud.firestore {
           changedOnly(["status", "updatedAt"])
         )
       );
-      allow delete: if false;
+      // The photo owner may revoke a grant at any time. Storage reads are keyed off
+      // this document's "approved" status, so deleting it is what actually cuts off
+      // download access; it also lets the requester cleanly re-request later.
+      allow delete: if isVerifiedEmailUser() && resource.data.toUserId == request.auth.uid;
     }
 
     match /chatRequests/{requestId} {
