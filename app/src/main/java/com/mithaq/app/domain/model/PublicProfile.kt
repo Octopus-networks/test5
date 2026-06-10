@@ -17,6 +17,7 @@ data class PublicProfile(
     val hasGuardian: Boolean = false,
     val isEmailVerified: Boolean = false,
     val isIdentityVerified: Boolean = false,
+    val isIncognito: Boolean = false,
     val photoPrivacyMode: String = "blurred_by_default",
     val profileCompletionPercent: Int = 0,
     val lastActiveAt: Date? = null,
