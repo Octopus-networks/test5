@@ -71,6 +71,11 @@ fun MithaqMainExperience(
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember(currentUserId) { mutableStateOf(MithaqMainTab.Home) }
+    // System back from any bottom tab returns to Home first (standard Android pattern);
+    // only the Home tab lets the outer handler show the exit dialog.
+    androidx.activity.compose.BackHandler(enabled = selectedTab != MithaqMainTab.Home) {
+        selectedTab = MithaqMainTab.Home
+    }
     val interestRequestViewModel: InterestRequestViewModel = viewModel(key = "mithaq_interest_requests_$currentUserId")
     val photoRequestViewModel: PhotoRequestViewModel = viewModel(key = "mithaq_photo_requests_$currentUserId")
     val chatRequestViewModel: ChatRequestViewModel = viewModel(key = "mithaq_chat_requests_$currentUserId")

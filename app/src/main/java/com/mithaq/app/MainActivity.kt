@@ -771,20 +771,24 @@ fun MithaqAppNavigation(
     var suppressNextHistoryPush by remember { mutableStateOf(false) }
     var lastScreenForHistory by remember { mutableStateOf(currentScreen) }
     val navRootScreens = remember { setOf(Routes.Home, Routes.Login, Routes.Entry, Routes.Splash) }
-    LaunchedEffect(currentScreen) {
-        val previous = lastScreenForHistory
-        lastScreenForHistory = currentScreen
-        if (currentScreen == previous) return@LaunchedEffect
-        if (suppressNextHistoryPush) {
-            suppressNextHistoryPush = false
-            return@LaunchedEffect
-        }
-        if (currentScreen in navRootScreens) {
-            screenBackStack.clear()
-        } else if (previous !in setOf(Routes.Splash, Routes.Login, Routes.Entry) &&
-            screenBackStack.lastOrNull() != previous
-        ) {
-            screenBackStack.add(previous)
+    // snapshotFlow (not a keyed LaunchedEffect) so rapid multi-hop transitions are
+    // observed in order and none are dropped. Each screen appears at most once in the
+    // history (re-visiting pulls it to the top) so back never walks A→B→A→B loops.
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.snapshotFlow { currentScreen }.collect { screen ->
+            val previous = lastScreenForHistory
+            lastScreenForHistory = screen
+            if (screen == previous) return@collect
+            if (suppressNextHistoryPush) {
+                suppressNextHistoryPush = false
+                return@collect
+            }
+            if (screen in navRootScreens) {
+                screenBackStack.clear()
+            } else if (previous !in setOf(Routes.Splash, Routes.Login, Routes.Entry)) {
+                screenBackStack.remove(previous)
+                screenBackStack.add(previous)
+            }
         }
     }
     var currentUserId by remember { mutableStateOf("") }
