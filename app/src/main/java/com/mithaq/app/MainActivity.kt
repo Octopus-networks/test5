@@ -1362,7 +1362,7 @@ fun MithaqAppNavigation(
             if (currentUserProfile?.isAdmin == true) {
                 androidx.activity.compose.BackHandler { currentScreen = "home" }
                 AdminConsoleScreen(
-                    viewModel = authViewModel,
+                    authViewModel = authViewModel,
                     isArabic = isArabic,
                     onBack = { currentScreen = "home" }
                 )

@@ -96,6 +96,17 @@ fun WaliDashboardScreen(
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val coroutineScope = rememberCoroutineScope()
+    
+    val adminViewModel: com.mithaq.app.ui.admin.AdminViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return com.mithaq.app.ui.admin.AdminViewModel(
+                    context = context,
+                    _currentUserProfile = authViewModel._currentUserProfile
+                ) as T
+            }
+        }
+    )
 
     var wardProfile by remember { mutableStateOf<UserProfile?>(null) }
     var isLoadingWard by remember { mutableStateOf(false) }
@@ -336,7 +347,7 @@ fun WaliDashboardScreen(
                         ) {
                             Button(
                                 onClick = {
-                                    authViewModel.adminUpdateVerification(wardUid, "VERIFIED")
+                                    adminViewModel.adminUpdateVerification(wardUid, "VERIFIED")
                                     loadWardData()
                                 },
                                 modifier = Modifier.weight(1f),
@@ -347,7 +358,7 @@ fun WaliDashboardScreen(
                             }
                             Button(
                                 onClick = {
-                                    authViewModel.adminUpdateVerification(wardUid, "NONE")
+                                    adminViewModel.adminUpdateVerification(wardUid, "NONE")
                                     loadWardData()
                                 },
                                 modifier = Modifier.weight(1f),
