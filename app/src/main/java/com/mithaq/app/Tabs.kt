@@ -796,6 +796,17 @@ fun LikesTabContent(
                                                 IconButton(
                                                     onClick = {
                                                         coroutineScope.launch {
+                                                            // Toggle: liking back is undoable, like every other heart (#74).
+                                                            if (likesRepository.getLikesList(currentUser.uid).contains(partner.uid)) {
+                                                                likesRepository.removeLike(currentUser.uid, partner.uid)
+                                                                android.widget.Toast.makeText(
+                                                                    context,
+                                                                    if (isArabic) "تم إلغاء الإعجاب" else "Like removed",
+                                                                    android.widget.Toast.LENGTH_SHORT
+                                                                ).show()
+                                                                refresh()
+                                                                return@launch
+                                                            }
                                                             val isMutual = likesRepository.addLike(currentUser.uid, partner.uid)
                                                             if (isMutual) {
                                                                 android.widget.Toast.makeText(

@@ -332,7 +332,20 @@ fun MatchDetailScreen(
                             .background(MaterialTheme.colorScheme.primary)
                             .clickable {
                                 coroutineScope.launch {
+                                    // Toggle, sharing the screen's isLiked state with the other
+                                    // heart button so both stay in sync (#74 follow-up).
+                                    if (isLiked) {
+                                        likesRepository.removeLike(currentUser.uid, partner.uid)
+                                        isLiked = false
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            if (isArabic) "تم إلغاء الإعجاب" else "Like removed",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                        return@launch
+                                    }
                                     val isMutual = likesRepository.addLike(currentUser.uid, partner.uid)
+                                    isLiked = true
                                     if (isMutual) {
                                         android.widget.Toast.makeText(
                                             context,
