@@ -31,8 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
+
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -55,7 +54,7 @@ fun PrivacySettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val firestore = remember { FirebaseFirestore.getInstance() }
+    val repository = remember { com.mithaq.app.data.repository.PrivacySettingsRepository() }
     val scope = rememberCoroutineScope()
 
     var showAge by remember(currentUserId) { mutableStateOf(true) }
@@ -69,17 +68,13 @@ fun PrivacySettingsScreen(
     // Load current privacy prefs from profiles/{uid}.privacy
     LaunchedEffect(currentUserId) {
         try {
-            val userSnap = firestore.collection("users").document(currentUserId).get().await()
-            isPremium = userSnap.getBoolean("isPremium") ?: false
-            isIncognito = userSnap.getBoolean("isIncognito") ?: false
-
-            val snap = firestore.collection("profiles").document(currentUserId).get().await()
-            @Suppress("UNCHECKED_CAST")
-            val privacy = snap.get("privacyTrust") as? Map<String, Any?> ?: emptyMap()
-            showAge = (privacy["showAge"] as? Boolean) ?: true
-            showLocation = (privacy["showLocation"] as? Boolean) ?: true
-            showMaritalStatus = (privacy["showMaritalStatus"] as? Boolean) ?: true
-            showMarriageTimeline = (privacy["showMarriageTimeline"] as? Boolean) ?: true
+            val data = repository.getPrivacySettings(currentUserId)
+            isPremium = data.isPremium
+            isIncognito = data.isIncognito
+            showAge = data.showAge
+            showLocation = data.showLocation
+            showMaritalStatus = data.showMaritalStatus
+            showMarriageTimeline = data.showMarriageTimeline
         } catch (_: Exception) {
             // Keep defaults (all visible) on read failure.
         } finally {
@@ -88,22 +83,15 @@ fun PrivacySettingsScreen(
     }
 
     suspend fun persist() {
-        val privacy = mapOf(
-            "showAge" to showAge,
-            "showLocation" to showLocation,
-            "showMaritalStatus" to showMaritalStatus,
-            "showMarriageTimeline" to showMarriageTimeline
-        )
         try {
-            firestore.collection("profiles")
-                .document(currentUserId)
-                .set(mapOf("privacyTrust" to privacy), SetOptions.merge())
-                .await()
-            
-            firestore.collection("users")
-                .document(currentUserId)
-                .update("isIncognito", isIncognito)
-                .await()
+            repository.updatePrivacySettings(
+                uid = currentUserId,
+                isIncognito = isIncognito,
+                showAge = showAge,
+                showLocation = showLocation,
+                showMaritalStatus = showMaritalStatus,
+                showMarriageTimeline = showMarriageTimeline
+            )
         } catch (_: Exception) {
             Toast.makeText(
                 context,
