@@ -58,9 +58,8 @@ fun QuestionScreen(
 
     fun handleBack() {
         if (state.isLoading) return
-        if (state.canGoBack) {
-            viewModel.goBack()
-        }
+        if (state.canGoBack) viewModel.goBack()
+        else if (state.isEditMode) onExitRequested()
     }
 
     BackHandler {
@@ -109,6 +108,21 @@ fun QuestionScreen(
                         text = stringResource(id = if (isArabic) R.string.profile_completion_audit_subtitle_ar else R.string.profile_completion_audit_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        } else if (state.isEditMode) {
+            androidx.compose.material3.Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(id = if (isArabic) R.string.answers_editor_title_ar else R.string.answers_editor_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

@@ -86,6 +86,7 @@ fun MithaqProfileHubScreen(
     onOpenPhotoPrivacy: () -> Unit = {},
     onOpenPrivacy: () -> Unit = {},
     onOpenGuardian: () -> Unit = {},
+    onOpenAnswersEditor: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var openItem by remember(currentUserId) { mutableStateOf<ProfileHubItem?>(null) }
@@ -178,12 +179,29 @@ fun MithaqProfileHubScreen(
         comingSoonProfileItems.forEach { item ->
             when (item.titleResId) {
                 // Phase 1: My Profile opens the full ProfileSettings editor.
-                R.string.profile_hub_my_profile_title -> ProfileHubRow(
-                    item = item,
-                    isArabic = isArabic,
-                    showComingSoon = false,
-                    onClick = onOpenProfileSettings
-                )
+                R.string.profile_hub_my_profile_title -> {
+                    ProfileHubRow(
+                        item = item,
+                        isArabic = isArabic,
+                        showComingSoon = false,
+                        onClick = onOpenProfileSettings
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    // Answers editor: edit any onboarding answer post-registration (canonical
+                    // profiles/{uid} store; server mirrors fan out to users/publicProfiles).
+                    ProfileHubRow(
+                        item = ProfileHubItem(
+                            R.string.profile_hub_answers_title,
+                            R.string.profile_hub_answers_title_ar,
+                            R.string.profile_hub_answers_subtitle,
+                            R.string.profile_hub_answers_subtitle_ar,
+                            Icons.Filled.CheckCircle
+                        ),
+                        isArabic = isArabic,
+                        showComingSoon = false,
+                        onClick = onOpenAnswersEditor
+                    )
+                }
                 // Phase 13C: Notifications is a real screen (no longer "Coming Soon").
                 R.string.profile_hub_notifications_title -> ProfileHubRow(
                     item = item,

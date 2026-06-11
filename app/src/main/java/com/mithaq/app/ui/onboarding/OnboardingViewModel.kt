@@ -47,6 +47,19 @@ class OnboardingViewModel(
         )
     }
 
+    fun startSectionEdit(sectionSteps: List<OnboardingStep>, prefill: Map<String, OnboardingAnswer>) {
+        val subset = sectionSteps.filter { it.isPersisted }
+        _state.value = OnboardingState(
+            steps = subset,
+            currentStepIndex = 0,
+            answers = prefill,
+            isLoading = false,
+            validationMessage = null,
+            isComplete = false,
+            isEditMode = true
+        )
+    }
+
     fun saveCompletionCache(userId: String, completed: Boolean) {
         repository.saveCompletionCache(userId, completed)
     }
