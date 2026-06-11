@@ -148,17 +148,21 @@ class MainActivity : FragmentActivity() {
         setContent {
             var isArabic by remember { mutableStateOf(false) }
             var isDarkMode by remember { mutableStateOf(false) }
-            var isBiometricAuthenticated by remember { mutableStateOf(false) }
             val biometricManager = remember { BiometricAuthManager(this) }
+            // App Lock is opt-in per account (Security settings). Decided synchronously
+            // BEFORE the first frame so users without App Lock never see the locked
+            // screen flash on launch; a device merely supporting biometrics is not consent.
+            val appLockRequired = remember {
+                val signedInUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                signedInUid != null &&
+                    getSharedPreferences("mithaq_security_prefs", MODE_PRIVATE)
+                        .getBoolean("app_lock_enabled_$signedInUid", false) &&
+                    biometricManager.isBiometricAvailable()
+            }
+            var isBiometricAuthenticated by remember { mutableStateOf(!appLockRequired) }
 
             LaunchedEffect(Unit) {
-                // App Lock is opt-in per account (Security settings). Only prompt when the
-                // signed-in user enabled it; a device merely supporting biometrics is not consent.
-                val signedInUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-                val appLockEnabled = signedInUid != null &&
-                    getSharedPreferences("mithaq_security_prefs", MODE_PRIVATE)
-                        .getBoolean("app_lock_enabled_$signedInUid", false)
-                if (appLockEnabled && biometricManager.isBiometricAvailable()) {
+                if (appLockRequired) {
                     biometricManager.showBiometricPrompt(
                         activity = this@MainActivity,
                         title = if (isArabic) "المصادقة البيومترية" else "Biometric Authentication",
@@ -166,8 +170,6 @@ class MainActivity : FragmentActivity() {
                         onSuccess = { isBiometricAuthenticated = true },
                         onError = { if (!BuildConfig.IS_PRODUCTION) isBiometricAuthenticated = true }
                     )
-                } else {
-                    isBiometricAuthenticated = true
                 }
             }
 
@@ -823,13 +825,20 @@ fun MithaqAppNavigation(
         showExitDialog = true
     }
 
+    // Shared by the system back handler and on-screen back arrows so both walk the
+    // same visit history (an arrow targeting a route that no longer exists renders
+    // a blank screen — the old prayer-hub arrow bug).
+    val popScreenHistory: () -> Unit = {
+        suppressNextHistoryPush = true
+        currentScreen = screenBackStack.removeLastOrNull() ?: Routes.Home
+    }
+
     // One global handler replaces the old per-screen "back = home" handlers: back now
     // walks the recorded visit history one screen at a time, landing on Home when the
     // history runs out (screens with their own deeper BackHandler, e.g. the profile
     // hub's sub-pages or onboarding, still take priority while they are enabled).
     androidx.activity.compose.BackHandler(enabled = currentScreen !in navRootScreens) {
-        suppressNextHistoryPush = true
-        currentScreen = screenBackStack.removeLastOrNull() ?: Routes.Home
+        popScreenHistory()
     }
 
     var selectedMatchProfile by remember { mutableStateOf<UserProfile?>(null) }
@@ -964,10 +973,21 @@ fun MithaqAppNavigation(
     fun routeVerifiedUser(userId: String) {
         currentUserId = userId
         com.mithaq.app.notification.NotificationSyncWorker.schedule(context)
-        currentScreen = Routes.OnboardingQuestion
+        // Route from the local completion cache (written by OnboardingRepository) so
+        // returning users land on Home directly instead of the questions screen
+        // flashing while Firestore answers. The async check below still corrects the
+        // route, but only when its verdict differs from the cache — otherwise it
+        // would yank users back if they already navigated elsewhere meanwhile.
+        val cachedCompleted = context
+            .getSharedPreferences("mithaq_onboarding_engine_v2", android.content.Context.MODE_PRIVATE)
+            .getBoolean("completed_$userId", false)
+        hasDismissedOnboarding = cachedCompleted
+        currentScreen = if (cachedCompleted) Routes.Home else Routes.OnboardingQuestion
         onboardingViewModel.loadCompletionStatus(userId) { completed ->
             hasDismissedOnboarding = completed
-            currentScreen = if (completed) Routes.Home else Routes.OnboardingQuestion
+            if (completed != cachedCompleted) {
+                currentScreen = if (completed) Routes.Home else Routes.OnboardingQuestion
+            }
         }
     }
 
@@ -1480,7 +1500,7 @@ fun MithaqAppNavigation(
                     currentScreen = "prayer_settings"
                 },
                 onOpenQibla = { currentScreen = "qibla" },
-                onBack = { currentScreen = "profile_hub" }
+                onBack = popScreenHistory
             )
         }
         "qibla" -> {
@@ -1571,7 +1591,9 @@ fun MithaqAppNavigation(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 authViewModel = authViewModel,
                 isArabic = isArabic,
-                onBack = { currentScreen = "prayer_hub" }
+                // Reached from the prayer hub, the main experience, AND app settings —
+                // only the visit history knows which one to return to.
+                onBack = popScreenHistory
             )
         }
         "app_settings" -> {
