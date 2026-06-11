@@ -122,6 +122,12 @@ class AdhanReceiver : BroadcastReceiver() {
         val channelId = channelIdFor(soundPattern)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // v1 channels were created while the adhan files were missing, freezing the
+            // system alarm tone as their sound (channel sound is immutable after
+            // creation). Drop the legacy channel so settings don't show a dead entry.
+            notificationManager.deleteNotificationChannel(
+                "${CHANNEL_ID}_${soundPattern.lowercase(Locale.ROOT)}"
+            )
             val channel = NotificationChannel(
                 channelId,
                 "Adhan Notifications",
@@ -249,6 +255,9 @@ class AdhanReceiver : BroadcastReceiver() {
     }
 
     private fun channelIdFor(soundPattern: String): String {
-        return "${CHANNEL_ID}_${soundPattern.lowercase(Locale.ROOT)}"
+        // _v2 because channel sound is frozen at creation time: the v1 channels were
+        // created before the adhan recordings were bundled, so they are stuck on the
+        // system alarm tone. A new id makes Android pick up the real sound.
+        return "${CHANNEL_ID}_${soundPattern.lowercase(Locale.ROOT)}_v2"
     }
 }

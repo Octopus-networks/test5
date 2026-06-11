@@ -524,13 +524,15 @@ fun AdhanSettingsSectionFixed(
         "ISNA" to if (isArabic) "الجمعية الإسلامية لأمريكا الشمالية" else "ISNA (North America)"
     )
 
+    // Labels describe the bundled freely-licensed recordings honestly (see
+    // docs/AUDIO_CREDITS.md); pattern keys are stable because they are persisted
+    // in SharedPreferences and resolved by name in AdhanReceiver.
     val soundOptions = listOf(
-        "TAKBEER" to (if (isArabic) "تكبيرة صغيرة" else "Short Takbeer"),
-        "ADHAN_FULL" to (if (isArabic) "أذان كامل" else "Full Adhan"),
+        "TAKBEER" to (if (isArabic) "أذان مختصر (٢٧ ثانية)" else "Short Adhan (27s)"),
+        "ADHAN_FULL" to (if (isArabic) "أذان كامل (٣ دقائق)" else "Full Adhan (3 min)"),
         "ADHAN_MAKKAH" to context.getString(if (isArabic) R.string.muezzin_makkah_ar else R.string.muezzin_makkah),
         "ADHAN_MADINAH" to context.getString(if (isArabic) R.string.muezzin_madinah_ar else R.string.muezzin_madinah),
         "ADHAN_EGYPT" to context.getString(if (isArabic) R.string.muezzin_egypt_ar else R.string.muezzin_egypt),
-        "ADHAN_AQSA" to context.getString(if (isArabic) R.string.muezzin_aqsa_ar else R.string.muezzin_aqsa),
         "BIRD_CHIRP" to (if (isArabic) "تغريد طيور" else "Bird Chirp"),
         "SILENT" to (if (isArabic) "صامت (إشعار فقط)" else "Silent (Notification only)")
     )
@@ -699,6 +701,12 @@ fun AdhanSettingsSectionFixed(
                                         )
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = context.getString(if (isArabic) R.string.muezzin_credits_ar else R.string.muezzin_credits),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
                             }
                         },
                         confirmButton = {
