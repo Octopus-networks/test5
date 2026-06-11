@@ -99,15 +99,26 @@ function auditPayload(request, action, targetUid, extra = {}) {
 exports.setVerificationStatus = onCall(secureCallable, async (request) => {
   const targetUid = requireString(request.data, "targetUid");
   const status = requireString(request.data, "status").toUpperCase();
-  if (!["NONE", "PENDING", "VERIFIED"].includes(status)) {
+  if (!["NONE", "PENDING", "VERIFIED", "REJECTED"].includes(status)) {
     throw new HttpsError("invalid-argument", "Unsupported verification status.");
   }
+  // A rejection must carry a member-facing reason; it is cleared on any other
+  // decision so a later re-submission never shows a stale reason.
+  const rawReason = typeof (request.data || {}).reason === "string" ? request.data.reason.trim() : "";
+  if (status === "REJECTED" && rawReason.length === 0) {
+    throw new HttpsError("invalid-argument", "A rejection reason is required.");
+  }
+  const reason = rawReason.slice(0, 300);
 
   await requireAdminOrAssignedWali(request, targetUid);
   await db.collection("users").doc(targetUid).update({
     verificationStatus: status,
+    verificationRejectionReason: status === "REJECTED" ? reason : FieldValue.delete(),
   });
-  await db.collection("adminAuditLogs").add(auditPayload(request, "setVerificationStatus", targetUid, { status }));
+  await db.collection("adminAuditLogs").add(auditPayload(request, "setVerificationStatus", targetUid, {
+    status,
+    ...(status === "REJECTED" ? { reason } : {}),
+  }));
   return { ok: true };
 });
 
@@ -877,6 +888,48 @@ exports.mirrorPublicProfileOnUserChange = onDocumentWritten(
     }
 
     await syncPublicProfile(userId);
+  }
+);
+
+// Verification decision notifications: tell the member when an admin verifies or
+// rejects their identity submission (setVerificationStatus performs the users write
+// that triggers this). Bodies intentionally carry no document details; the rejection
+// reason is admin-written, member-facing text. No TYPE_TO_PREF entry on purpose:
+// account-level decisions are gated only by the master notificationsEnabled toggle.
+exports.onVerificationDecision = onDocumentWritten(
+  { document: "users/{userId}", region },
+  async (event) => {
+    const before = event.data && event.data.before;
+    const after = event.data && event.data.after;
+    if (!after || !after.exists) {
+      return;
+    }
+    const beforeStatus = before && before.exists
+      ? String(before.get("verificationStatus") || "NONE").toUpperCase()
+      : "NONE";
+    const afterStatus = String(after.get("verificationStatus") || "NONE").toUpperCase();
+    if (beforeStatus === afterStatus) {
+      return;
+    }
+
+    if (afterStatus === "VERIFIED") {
+      await createNotification({
+        recipientUid: event.params.userId,
+        title: "تم توثيق حسابك ✓",
+        body: "مبروك! تم توثيق هويتك وحصل حسابك على الشارة الزرقاء.",
+        type: "verification_decision",
+      });
+    } else if (afterStatus === "REJECTED") {
+      const reason = String(after.get("verificationRejectionReason") || "").trim();
+      await createNotification({
+        recipientUid: event.params.userId,
+        title: "تحديث طلب التوثيق",
+        body: reason
+          ? "لم يتم قبول طلب التوثيق: " + reason + " — يمكنك إعادة التقديم من ملفك الشخصي."
+          : "لم يتم قبول طلب التوثيق. يمكنك إعادة التقديم من ملفك الشخصي.",
+        type: "verification_decision",
+      });
+    }
   }
 );
 
