@@ -66,7 +66,11 @@ object AdhanScheduler {
         val resolvedSoundPattern = soundPattern
             ?: prefs.getString("adhan_sound_pattern", "TAKBEER")
             ?: "TAKBEER"
-        val today = DateComponents.from(Date())
+        // DateComponents.from(Date) resolves the calendar date in UTC, which is the
+        // PREVIOUS local day between midnight and UTC offset (e.g. 00:00–02:59 in
+        // GMT+3) — every prayer time then comes out a day stale. Always build the
+        // components from the LOCAL calendar.
+        val today = localDateComponents(Calendar.getInstance())
         val parameters = calculationParametersFor(resolvedCalculationMethod)
 
         val prayerTimes = PrayerTimes(coordinates, today, parameters)
@@ -77,7 +81,7 @@ object AdhanScheduler {
             val tomorrow = Calendar.getInstance().apply {
                 add(Calendar.DAY_OF_YEAR, 1)
             }
-            val tomorrowComponents = DateComponents.from(tomorrow.time)
+            val tomorrowComponents = localDateComponents(tomorrow)
             val tomorrowPrayerTimes = PrayerTimes(coordinates, tomorrowComponents, parameters)
             nextAdhan = Prayer.FAJR to tomorrowPrayerTimes.timeForPrayer(Prayer.FAJR)
         }
@@ -195,6 +199,13 @@ object AdhanScheduler {
             .apply()
         Log.d(TAG, "Cancelled Adhan alarms")
     }
+
+    /** Local-calendar DateComponents (DateComponents.from(Date) is UTC-based). */
+    fun localDateComponents(cal: Calendar): DateComponents = DateComponents(
+        cal.get(Calendar.YEAR),
+        cal.get(Calendar.MONTH) + 1,
+        cal.get(Calendar.DAY_OF_MONTH)
+    )
 
     private fun nextPrayerTime(prayerTimes: PrayerTimes): Pair<Prayer, Date>? {
         val now = Date()
