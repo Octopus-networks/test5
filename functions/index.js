@@ -16,7 +16,12 @@ const db = getFirestore();
 const region = "us-central1";
 const secureCallable = {
   region,
-  enforceAppCheck: true,
+  // App Check enforcement is OFF until the app ships through Google Play:
+  // the Play Integrity provider can only mint tokens for Play-installed
+  // builds, so enforcing it rejects every sideloaded/debug client with 401
+  // before the handler runs. Auth + per-function authorization checks below
+  // remain the real gate. Re-enable at Play launch.
+  enforceAppCheck: false,
 };
 
 function requireAuth(request) {
