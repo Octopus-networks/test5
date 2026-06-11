@@ -963,6 +963,8 @@ fun MithaqAppNavigation(
         }
     }
     var hasDismissedOnboarding by remember { mutableStateOf(false) }
+    var profileAuditCompleted by remember { mutableStateOf(false) }
+    var profileAuditActive by remember { mutableStateOf(false) }
     var onboardingAnsweredCount by remember { mutableStateOf(0) }
     var onboardingCompletionPercent by remember { mutableStateOf(0) }
     val publicRoutes = remember {
@@ -1205,7 +1207,12 @@ fun MithaqAppNavigation(
                     onboardingAnsweredCount = answeredQuestions
                     onboardingCompletionPercent = profileCompletionPercent
                     hasDismissedOnboarding = true
-                    currentScreen = Routes.OnboardingComplete
+                    if (profileAuditActive) {
+                        profileAuditActive = false
+                        currentScreen = Routes.Home
+                    } else {
+                        currentScreen = Routes.OnboardingComplete
+                    }
                 }
             )
         }
@@ -1258,6 +1265,20 @@ fun MithaqAppNavigation(
             )
         }
         Routes.Home -> {
+            LaunchedEffect(currentUserId, hasDismissedOnboarding) {
+                if (hasDismissedOnboarding && currentUserProfile?.isWaliAccount != true &&
+                    !profileAuditCompleted && currentUserId.isNotEmpty()
+                ) {
+                    profileAuditCompleted = true
+                    val missing = onboardingViewModel.findMissingRequiredSteps(currentUserId)
+                    if (missing.isNotEmpty()) {
+                        profileAuditActive = true
+                        onboardingViewModel.startCompletionAudit(currentUserId, missing)
+                        currentScreen = Routes.OnboardingQuestion
+                    }
+                }
+            }
+
             if (currentUserProfile?.isWaliAccount == true && !BetaFeatureGates.LEGACY_WALI_DASHBOARD) {
                 BetaFeatureUnavailableScreen(
                     isArabic = isArabic,

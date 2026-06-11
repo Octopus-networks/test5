@@ -1070,4 +1070,10 @@
     <string name="muezzin_save">Save</string>
     <string name="muezzin_save_ar">حفظ</string>
 
+    <!-- Profile Completeness Audit -->
+    <string name="profile_completion_audit_title">Complete your profile</string>
+    <string name="profile_completion_audit_title_ar">أكمل ملفك الشخصي</string>
+    <string name="profile_completion_audit_subtitle">A few required answers are missing. Completing them improves your match results.</string>
+    <string name="profile_completion_audit_subtitle_ar">بعض الإجابات المطلوبة ناقصة. إكمالها يحسّن نتائج التوافق.</string>
+
 </resources>

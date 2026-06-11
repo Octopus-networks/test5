@@ -31,6 +31,55 @@ class OnboardingRepository(
         }
     }
 
+    suspend fun findMissingRequiredSteps(userId: String): List<String> {
+        if (userId.isBlank()) return emptyList()
+        return try {
+            val snapshot = firestore.collection("profiles").document(userId).get().await()
+            val profileData = snapshot.data ?: return emptyList()
+
+            val missingStepIds = mutableListOf<String>()
+            // Default-arg steps() resolves a context via FirebaseApp, so the audit uses the
+            // same JSON-loaded step list as the live flow (static fallback otherwise).
+            val steps = com.mithaq.app.ui.onboarding.MithaqOnboardingFlow.steps()
+
+            for (step in steps) {
+                if (step.isPersisted && step.required) {
+                    val groupKey = step.storageGroup.firestoreKey
+                    if (groupKey.isBlank() || step.fieldKey.isBlank()) continue
+
+                    val groupData = profileData[groupKey] as? Map<*, *>
+                    val value = groupData?.get(step.fieldKey)
+
+                    val isMissing = when (step.type) {
+                        QuestionType.MultiChoice -> {
+                            val list = value as? List<*>
+                            list == null || list.isEmpty()
+                        }
+                        QuestionType.SingleChoice,
+                        QuestionType.YesNo,
+                        QuestionType.SearchableList,
+                        QuestionType.PrivacyMode,
+                        QuestionType.TextInput,
+                        QuestionType.LongTextInput -> {
+                            val str = value as? String
+                            str == null || str.isBlank()
+                        }
+                        QuestionType.NumberInput -> {
+                            value !is Number
+                        }
+                        else -> true
+                    }
+                    if (isMissing) {
+                        missingStepIds.add(step.id)
+                    }
+                }
+            }
+            missingStepIds
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     suspend fun saveOnboardingAnswers(
         userId: String,
         answers: Map<String, OnboardingAnswer>,

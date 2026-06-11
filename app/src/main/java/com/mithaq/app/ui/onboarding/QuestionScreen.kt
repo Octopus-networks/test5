@@ -91,6 +91,29 @@ fun QuestionScreen(
         onContinue = { viewModel.continueToNext(userId) },
         onSkip = viewModel::skipOptional
     ) {
+        if (state.isAuditMode) {
+            androidx.compose.material3.Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(id = if (isArabic) R.string.profile_completion_audit_title_ar else R.string.profile_completion_audit_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(id = if (isArabic) R.string.profile_completion_audit_subtitle_ar else R.string.profile_completion_audit_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+
         if (state.isLoading) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
