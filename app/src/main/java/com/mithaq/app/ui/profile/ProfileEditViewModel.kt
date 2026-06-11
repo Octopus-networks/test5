@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -13,6 +14,11 @@ import com.mithaq.app.model.Gender
 import com.mithaq.app.model.UserProfile
 import com.mithaq.app.ui.auth.AuthState
 import kotlinx.coroutines.flow.asStateFlow
+
+data class CanonicalProfileFields(
+    val displayName: String? = null,
+    val idealDay: String? = null
+)
 
 class ProfileEditViewModel(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -26,6 +32,31 @@ class ProfileEditViewModel(
     private val db = context?.let { MithaqDatabase.getDatabase(it) }
     private val userDao = db?.userDao()
     val currentUserProfile: kotlinx.coroutines.flow.StateFlow<UserProfile?> = _currentUserProfile.asStateFlow()
+
+    suspend fun loadCanonicalFields(uid: String): CanonicalProfileFields {
+        if (uid.isBlank()) return CanonicalProfileFields()
+        if (isMockMode()) {
+            val prefs = context?.getSharedPreferences(
+                "mithaq_mock_auth",
+                android.content.Context.MODE_PRIVATE
+            )
+            return CanonicalProfileFields(
+                displayName = prefs?.getString("displayName", null)
+                    ?: prefs?.getString("username", null)
+                    ?: _currentUserProfile.value?.username,
+                idealDay = prefs?.getString("aboutYourself", null)
+                    ?: _currentUserProfile.value?.aboutYourself
+            )
+        }
+
+        val snapshot = firestore.collection("profiles").document(uid).get().await()
+        val basicInfo = snapshot.get("basicInfo") as? Map<*, *>
+        val personality = snapshot.get("personality") as? Map<*, *>
+        return CanonicalProfileFields(
+            displayName = basicInfo?.get("displayName") as? String,
+            idealDay = personality?.get("idealDay") as? String
+        )
+    }
 
     fun saveQuestionnaireAnswers(answers: Map<String, String>) {
         viewModelScope.launch {
@@ -114,59 +145,91 @@ class ProfileEditViewModel(
         }
     }
 
-    fun updateBio(aboutYourself: String, idealPartner: String, context: android.content.Context) {
-        viewModelScope.launch {
-            val current = _currentUserProfile.value ?: return@launch
-            val updated = current.copy(aboutYourself = aboutYourself, idealPartner = idealPartner)
-            _currentUserProfile.value = updated
-            userDao?.insertUser(updated.toCached())
-            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
-            prefs.edit().apply {
-                putString("aboutYourself", aboutYourself)
-                putString("idealPartner", idealPartner)
-                apply()
-            }
-            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
-            } catch (e: Exception) {
-                true
-            }
-            if (!isMock && current.uid.isNotEmpty()) {
-                try {
-                    firestore.collection("users").document(current.uid)
-                        .update("aboutYourself", aboutYourself, "idealPartner", idealPartner).await()
-                } catch (e: Exception) {
-                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
-                }
-            }
+    suspend fun updateBio(
+        aboutYourself: String,
+        idealPartner: String,
+        context: android.content.Context
+    ) {
+        val current = checkNotNull(_currentUserProfile.value) {
+            "Current user profile is unavailable."
         }
+        if (!isMockMode()) {
+            check(current.uid.isNotEmpty()) { "Current user id is unavailable." }
+            val userRef = firestore.collection("users").document(current.uid)
+            val profileRef = firestore.collection("profiles").document(current.uid)
+            firestore.runBatch { batch ->
+                batch.update(
+                    userRef,
+                    "aboutYourself",
+                    aboutYourself,
+                    "idealPartner",
+                    idealPartner
+                )
+                batch.set(
+                    profileRef,
+                    mapOf("personality" to mapOf("idealDay" to aboutYourself)),
+                    SetOptions.merge()
+                )
+            }.await()
+        }
+
+        val updated = current.copy(aboutYourself = aboutYourself, idealPartner = idealPartner)
+        _currentUserProfile.value = updated
+        userDao?.insertUser(updated.toCached())
+        context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString("aboutYourself", aboutYourself)
+            .putString("idealPartner", idealPartner)
+            .apply()
     }
 
-    fun updateBasicInfo(name: String, context: android.content.Context) {
-        viewModelScope.launch {
-            val current = _currentUserProfile.value ?: return@launch
-            val updated = current.copy(name = name)
-            _currentUserProfile.value = updated
-            userDao?.insertUser(updated.toCached())
-            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
-            prefs.edit().apply {
-                putString("name", name)
-                apply()
-            }
-            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
-            } catch (e: Exception) {
-                true
-            }
-            if (!isMock && current.uid.isNotEmpty()) {
-                try {
-                    firestore.collection("users").document(current.uid)
-                        .update("name", name).await()
-                } catch (e: Exception) {
-                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
-                }
-            }
+    suspend fun updateBasicInfo(name: String, context: android.content.Context) {
+        val current = checkNotNull(_currentUserProfile.value) {
+            "Current user profile is unavailable."
         }
+        if (!isMockMode()) {
+            check(current.uid.isNotEmpty()) { "Current user id is unavailable." }
+            val userRef = firestore.collection("users").document(current.uid)
+            val profileRef = firestore.collection("profiles").document(current.uid)
+            firestore.runBatch { batch ->
+                batch.update(userRef, "name", name)
+                batch.set(
+                    profileRef,
+                    mapOf("basicInfo" to mapOf("firstName" to name)),
+                    SetOptions.merge()
+                )
+            }.await()
+        }
+
+        val updated = current.copy(name = name)
+        _currentUserProfile.value = updated
+        userDao?.insertUser(updated.toCached())
+        context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString("name", name)
+            .apply()
+    }
+
+    suspend fun updateDisplayName(displayName: String, context: android.content.Context) {
+        val current = checkNotNull(_currentUserProfile.value) {
+            "Current user profile is unavailable."
+        }
+        if (!isMockMode()) {
+            check(current.uid.isNotEmpty()) { "Current user id is unavailable." }
+            firestore.collection("profiles").document(current.uid).set(
+                mapOf("basicInfo" to mapOf("displayName" to displayName)),
+                SetOptions.merge()
+            ).await()
+        }
+
+        val updated = current.copy(username = displayName)
+        _currentUserProfile.value = updated
+        userDao?.insertUser(updated.toCached())
+        context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString("displayName", displayName)
+            .putString("username", displayName)
+            .apply()
     }
 
     fun updateGender(gender: Gender, context: android.content.Context) {
@@ -267,30 +330,34 @@ class ProfileEditViewModel(
         }
     }
 
-    fun updateAdditionalImages(images: List<String>, context: android.content.Context) {
-        viewModelScope.launch {
-            val current = _currentUserProfile.value ?: return@launch
-            val updated = current.copy(additionalImages = images)
-            _currentUserProfile.value = updated
-            userDao?.insertUser(updated.toCached())
-            val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
-            val arr = org.json.JSONArray()
-            images.forEach { arr.put(it) }
-            prefs.edit().putString("additionalImages", arr.toString()).apply()
-            
-            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
-            } catch (e: Exception) {
-                true
-            }
-            if (!isMock && current.uid.isNotEmpty()) {
-                try {
-                    firestore.collection("users").document(current.uid)
-                        .update("additionalImages", images).await()
-                } catch (e: Exception) {
-                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
-                }
-            }
+    suspend fun updateAdditionalImages(images: List<String>, context: android.content.Context) {
+        val current = checkNotNull(_currentUserProfile.value) {
+            "Current user profile is unavailable."
+        }
+        if (!isMockMode()) {
+            check(current.uid.isNotEmpty()) { "Current user id is unavailable." }
+            firestore.collection("users").document(current.uid)
+                .update("additionalImages", images).await()
+        }
+
+        val updated = current.copy(additionalImages = images)
+        _currentUserProfile.value = updated
+        userDao?.insertUser(updated.toCached())
+        val arr = org.json.JSONArray()
+        images.forEach { arr.put(it) }
+        context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString("additionalImages", arr.toString())
+            .apply()
+    }
+
+    private fun isMockMode(): Boolean {
+        if (com.mithaq.app.Config.IS_PRODUCTION) return false
+        return try {
+            auth.app?.options?.apiKey == "mock-api-key-for-testing" ||
+                auth.app?.options?.apiKey?.contains("mock") == true
+        } catch (e: Exception) {
+            true
         }
     }
 }
