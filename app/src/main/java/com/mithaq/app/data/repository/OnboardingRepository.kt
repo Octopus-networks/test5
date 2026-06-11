@@ -80,6 +80,66 @@ class OnboardingRepository(
         }
     }
 
+    suspend fun loadExistingAnswers(userId: String, steps: List<OnboardingStep>): Map<String, OnboardingAnswer> {
+        if (userId.isBlank()) return emptyMap()
+        return try {
+            val snapshot = firestore.collection("profiles").document(userId).get().await()
+            val profileData = snapshot.data ?: return emptyMap()
+
+            val prefill = mutableMapOf<String, OnboardingAnswer>()
+
+            for (step in steps) {
+                if (step.isPersisted) {
+                    val groupKey = step.storageGroup.firestoreKey
+                    if (groupKey.isBlank() || step.fieldKey.isBlank()) continue
+
+                    val groupData = profileData[groupKey] as? Map<*, *>
+                    if (groupData == null) continue
+
+                    val value = groupData[step.fieldKey]
+                    if (value == null) continue
+
+                    when (step.type) {
+                        QuestionType.MultiChoice -> {
+                            val list = (value as? List<*>)?.map { it.toString() }
+                            if (!list.isNullOrEmpty()) {
+                                prefill[step.id] = OnboardingAnswer(stepId = step.id, selectedOptionIds = list)
+                            }
+                        }
+                        QuestionType.SingleChoice,
+                        QuestionType.YesNo,
+                        QuestionType.SearchableList,
+                        QuestionType.PrivacyMode -> {
+                            val str = value as? String
+                            if (!str.isNullOrBlank()) {
+                                prefill[step.id] = OnboardingAnswer(stepId = step.id, selectedOptionIds = listOf(str))
+                            }
+                        }
+                        QuestionType.NumberInput -> {
+                            val num = (value as? Number)?.toInt()
+                            if (num != null) {
+                                prefill[step.id] = OnboardingAnswer(stepId = step.id, number = num)
+                            }
+                        }
+                        QuestionType.TextInput,
+                        QuestionType.LongTextInput -> {
+                            val str = value as? String
+                            if (!str.isNullOrBlank()) {
+                                prefill[step.id] = OnboardingAnswer(stepId = step.id, text = str)
+                            }
+                        }
+                        else -> {
+                            // Should not be reached for persisted steps
+                        }
+                    }
+                }
+            }
+            prefill
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
     suspend fun saveOnboardingAnswers(
         userId: String,
         answers: Map<String, OnboardingAnswer>,

@@ -1080,4 +1080,12 @@
     <string name="profile_completion_audit_subtitle">A few required answers are missing. Completing them improves your match results.</string>
     <string name="profile_completion_audit_subtitle_ar">بعض الإجابات المطلوبة ناقصة. إكمالها يحسّن نتائج التوافق.</string>
 
+    <!-- Profile Answers Editor -->
+    <string name="answers_editor_title">Edit my answers</string>
+    <string name="answers_editor_title_ar">تعديل إجاباتي</string>
+    <string name="profile_hub_answers_title">My Answers</string>
+    <string name="profile_hub_answers_title_ar">إجاباتي</string>
+    <string name="profile_hub_answers_subtitle">Edit your matching answers: location, education, marriage plans and more</string>
+    <string name="profile_hub_answers_subtitle_ar">عدّل إجابات التوافق: الموقع، التعليم، خطط الزواج وغيرها</string>
+
 </resources>

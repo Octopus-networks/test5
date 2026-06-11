@@ -1347,6 +1347,7 @@ fun MithaqAppNavigation(
                     onOpenPhotoPrivacy = { currentScreen = "photo_privacy" },
                     onOpenPrivacy = { currentScreen = "privacy_settings" },
                     onOpenGuardian = { currentScreen = "guardian" },
+                    onOpenAnswersEditor = { currentScreen = "edit_answers" },
                     onSignOut = {
                         authViewModel.signOut()
                         com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
@@ -1615,6 +1616,13 @@ fun MithaqAppNavigation(
                 // Reached from the prayer hub, the main experience, AND app settings —
                 // only the visit history knows which one to return to.
                 onBack = popScreenHistory
+            )
+        }
+        "edit_answers" -> {
+            com.mithaq.app.ui.onboarding.ProfileAnswersEditorScreen(
+                currentUserId = currentUserId,
+                isArabic = isArabic,
+                onClose = popScreenHistory
             )
         }
         "app_settings" -> {
