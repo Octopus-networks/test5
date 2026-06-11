@@ -1055,16 +1055,20 @@
     <string name="qibla_calibrate_ar">حرّك هاتفك على شكل 8 للمعايرة</string>
 
     <!-- Muezzin Options -->
-    <string name="muezzin_makkah">Makkah</string>
-    <string name="muezzin_makkah_ar">مكة المكرمة</string>
-    <string name="muezzin_madinah">Madinah</string>
-    <string name="muezzin_madinah_ar">المدينة المنورة</string>
-    <string name="muezzin_egypt">Egyptian</string>
-    <string name="muezzin_egypt_ar">مصري</string>
+    <string name="muezzin_makkah">Serene Adhan (2:34)</string>
+    <string name="muezzin_makkah_ar">أذان هادئ (٢:٣٤)</string>
+    <string name="muezzin_madinah">Madinah Adhan — short clip (0:30)</string>
+    <string name="muezzin_madinah_ar">أذان المدينة — مقطع قصير (٠:٣٠)</string>
+    <string name="muezzin_egypt">Sunnah-style Adhan (1:27)</string>
+    <string name="muezzin_egypt_ar">أذان على السنّة (١:٢٧)</string>
     <string name="muezzin_aqsa">Al-Aqsa</string>
     <string name="muezzin_aqsa_ar">الأقصى</string>
     <string name="muezzin_not_added">(file not added yet)</string>
     <string name="muezzin_not_added_ar">(الملف غير مُضاف بعد)</string>
+    <string name="muezzin_credits">Recordings courtesy of Wikimedia Commons contributors (CC BY-SA / CC0 / Public Domain).</string>
+    <string name="muezzin_credits_ar">التسجيلات من مساهمي ويكيميديا كومنز (رخص المشاع الإبداعي والملكية العامة).</string>
+    <string name="qibla_no_sensor">Your device has no compass sensor, so the dial cannot rotate. Use the Qibla bearing shown below with a physical compass.</string>
+    <string name="qibla_no_sensor_ar">جهازك لا يحتوي على حسّاس بوصلة، لذلك لا يمكن للقرص أن يدور. استخدم زاوية اتجاه القبلة الموضحة بالأسفل مع بوصلة خارجية.</string>
     <string name="muezzin_cancel">Cancel</string>
     <string name="muezzin_cancel_ar">إلغاء</string>
     <string name="muezzin_save">Save</string>

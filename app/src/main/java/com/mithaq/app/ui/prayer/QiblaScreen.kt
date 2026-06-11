@@ -147,6 +147,10 @@ private fun QiblaCompassContent(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     var needsCalibration by remember { mutableStateOf(false) }
+    // Budget devices often ship without a magnetometer; without it (or a rotation
+    // vector) the dial can never rotate, so tell the user instead of showing a dead
+    // compass.
+    var hasCompassSensor by remember { mutableStateOf(true) }
     
     // Sensor values
     var rawAzimuth by remember { mutableStateOf(0f) }
@@ -180,7 +184,10 @@ private fun QiblaCompassContent(
                 var success = false
 
                 if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
-                    SensorManager.getRotationMatrixFromVector(rMatrix, event.values)
+                    // Some Samsung sensors report 5 values; getRotationMatrixFromVector
+                    // throws unless the vector is truncated to 4.
+                    val vector = if (event.values.size > 4) event.values.copyOf(4) else event.values
+                    SensorManager.getRotationMatrixFromVector(rMatrix, vector)
                     success = true
                 } else {
                     if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
@@ -232,6 +239,8 @@ private fun QiblaCompassContent(
             }
         }
 
+        hasCompassSensor = rotationVectorSensor != null || (accelSensor != null && magSensor != null)
+
         if (rotationVectorSensor != null) {
             hasRotationVector = true
             sensorManager.registerListener(listener, rotationVectorSensor, SensorManager.SENSOR_DELAY_UI)
@@ -267,6 +276,20 @@ private fun QiblaCompassContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.weight(1f))
+
+        if (!hasCompassSensor) {
+            Text(
+                text = localizedString(isArabic, R.string.qibla_no_sensor, R.string.qibla_no_sensor_ar),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+        }
 
         // Compass Display
         val compassColor = if (isAligned) Color(0xFFF2CA50) else MaterialTheme.colorScheme.onSurfaceVariant
