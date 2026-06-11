@@ -95,16 +95,22 @@ class AdhanReceiver : BroadcastReceiver() {
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val isSilent = soundPattern == "SILENT"
-        val isAdhanFull = soundPattern == "ADHAN_FULL"
+        val isAdhanVariant = soundPattern.startsWith("ADHAN_")
         
         val soundUri: Uri? = if (isSilent) {
             null
         } else {
-            val resName = if (isAdhanFull) "adhan_short" else soundPattern.lowercase(Locale.ROOT)
+            val resName = if (soundPattern == "ADHAN_FULL") "adhan_short" else soundPattern.lowercase(Locale.ROOT)
             var resId = context.resources.getIdentifier(resName, "raw", context.packageName)
-            if (resId == 0 && isAdhanFull) {
+            
+            // Fallback chain for missing adhan files
+            if (resId == 0 && isAdhanVariant) {
+                resId = context.resources.getIdentifier("adhan_short", "raw", context.packageName)
+            }
+            if (resId == 0 && isAdhanVariant) {
                 resId = context.resources.getIdentifier("takbeer", "raw", context.packageName)
             }
+            
             if (resId != 0) {
                 Uri.parse("android.resource://${context.packageName}/$resId")
             } else {
