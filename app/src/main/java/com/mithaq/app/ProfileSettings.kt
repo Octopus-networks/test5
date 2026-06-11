@@ -49,8 +49,6 @@ import com.mithaq.app.ui.guardian.GuardianViewModel
 import com.mithaq.app.ui.guardian.InviteGuardianDialog
 import com.mithaq.app.ui.match.MatchScoreBadge
 import com.mithaq.app.ui.match.MatchScoreCalculator
-import com.mithaq.app.ui.photo.PhotoAccessRequestCard
-import com.mithaq.app.ui.photo.PhotoAccessState
 import com.mithaq.app.ui.photo.UserProfileImage
 import com.mithaq.app.ui.photo.BrotherhoodAvatars
 import com.mithaq.app.ui.photo.SisterhoodAvatars
@@ -101,6 +99,12 @@ fun GuardianTabContent(
     val guardianName = currentUser.guardianName
     val guardianEmail = currentUser.guardianEmail
     val guardianStatus = currentUser.guardianStatus ?: "None"
+    val localizedGuardianStatus = when (guardianStatus.uppercase()) {
+        "PENDING" -> if (isArabic) "قيد الانتظار" else "Pending"
+        "VERIFIED" -> if (isArabic) "موثق" else "Verified"
+        "NONE" -> if (isArabic) "غير مدعو" else "Not invited"
+        else -> if (isArabic) "غير مدعو" else "Not invited"
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is com.mithaq.app.ui.guardian.GuardianUiState.Success) {
@@ -140,7 +144,10 @@ fun GuardianTabContent(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(if (strings.appName == "ميثاق") "اسم الولي: $guardianName" else "Guardian Name: $guardianName", fontWeight = FontWeight.Bold)
                     Text(if (strings.appName == "ميثاق") "بريد الولي: $guardianEmail" else "Guardian Email: $guardianEmail")
-                    Text(if (strings.appName == "ميثاق") "الحالة: $guardianStatus" else "Status: $guardianStatus", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        if (isArabic) "الحالة: $localizedGuardianStatus" else "Status: $localizedGuardianStatus",
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
             }
         }
@@ -175,7 +182,6 @@ fun GuardianTabContent(
 @Composable
 fun ModestyTabContent(
     currentUser: UserProfile,
-    targetUser: UserProfile?,
     onRefreshProfile: () -> Unit,
     isArabic: Boolean,
     profileEditViewModel: com.mithaq.app.ui.profile.ProfileEditViewModel,
@@ -185,16 +191,28 @@ fun ModestyTabContent(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val photoAccessManager = remember { com.mithaq.app.ui.photo.PhotoAccessManager(context) }
-    var photoState by remember { mutableStateOf(com.mithaq.app.ui.photo.PhotoAccessState.NONE) }
 
     var aboutYourselfText by remember { mutableStateOf(currentUser.aboutYourself) }
     var idealPartnerText by remember { mutableStateOf(currentUser.idealPartner) }
+    var displayNameText by remember(currentUser.uid) { mutableStateOf(currentUser.username) }
+    var savedDisplayName by remember(currentUser.uid) { mutableStateOf(currentUser.username) }
     var improvingBio by remember { mutableStateOf(false) }
     var savingBio by remember { mutableStateOf(false) }
 
-    LaunchedEffect(currentUser.aboutYourself, currentUser.idealPartner) {
-        aboutYourselfText = currentUser.aboutYourself
+    LaunchedEffect(currentUser.uid) {
+        try {
+            val canonicalFields = profileEditViewModel.loadCanonicalFields(currentUser.uid)
+            canonicalFields.displayName?.let {
+                displayNameText = it
+                savedDisplayName = it
+            }
+            canonicalFields.idealDay?.let { aboutYourselfText = it }
+        } catch (e: Exception) {
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+        }
+    }
+
+    LaunchedEffect(currentUser.idealPartner) {
         idealPartnerText = currentUser.idealPartner
     }
 
@@ -235,23 +253,14 @@ fun ModestyTabContent(
                     profileImageRef.putBytes(bytes).await()
                     profileImageRef.downloadUrl.await().toString()
                 } catch (e: Exception) {
-                    try {
-                        val inputStream = context.contentResolver.openInputStream(uri)
-                        val directory = java.io.File(context.filesDir, "profiles")
-                        if (!directory.exists()) {
-                            directory.mkdirs()
-                        }
-                        val localFile = java.io.File(directory, "${currentUser.uid}.jpg")
-                        val outputStream = java.io.FileOutputStream(localFile)
-                        inputStream?.use { input ->
-                            outputStream.use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                        android.net.Uri.fromFile(localFile).toString()
-                    } catch (ex: Exception) {
-                        uri.toString()
-                    }
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                    android.widget.Toast.makeText(
+                        context,
+                        if (isArabic) "فشل رفع الصورة. حاول مرة أخرى." else "Photo upload failed. Please try again.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    isUploadingImage = false
+                    return@launch
                 }
             }
 
@@ -272,7 +281,16 @@ fun ModestyTabContent(
                         isUploadingImage = false
                         onRefreshProfile()
                     },
-                    onError = {
+                    onError = { error ->
+                        android.widget.Toast.makeText(
+                            context,
+                            if (isArabic) {
+                                "فشل حفظ الصورة: ${error.localizedMessage}"
+                            } else {
+                                "Failed to save photo: ${error.localizedMessage}"
+                            },
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
                         isUploadingImage = false
                     }
                 )
@@ -303,7 +321,7 @@ fun ModestyTabContent(
         isUploadingImage = true
         coroutineScope.launch {
             val isMock = com.mithaq.app.Config.isMock()
-            val newIndex = currentUser.additionalImages.size
+            val uniqueSuffix = System.currentTimeMillis()
             val finalUrl = if (isMock) {
                 try {
                     val inputStream = context.contentResolver.openInputStream(uri)
@@ -311,7 +329,7 @@ fun ModestyTabContent(
                     if (!directory.exists()) {
                         directory.mkdirs()
                     }
-                    val localFile = java.io.File(directory, "${currentUser.uid}_additional_${newIndex}.jpg")
+                    val localFile = java.io.File(directory, "${currentUser.uid}_additional_${uniqueSuffix}.jpg")
                     val outputStream = java.io.FileOutputStream(localFile)
                     inputStream?.use { input ->
                         outputStream.use { output ->
@@ -325,37 +343,42 @@ fun ModestyTabContent(
             } else {
                 try {
                     val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
-                    val profileImageRef = storageRef.child("profiles/${currentUser.uid}_additional_${newIndex}.jpg")
+                    val profileImageRef = storageRef.child("profiles/${currentUser.uid}_additional_${uniqueSuffix}.jpg")
                     val inputStream = context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("Unable to open input stream")
                     val bytes = inputStream.readBytes()
                     inputStream.close()
                     profileImageRef.putBytes(bytes).await()
                     profileImageRef.downloadUrl.await().toString()
                 } catch (e: Exception) {
-                    try {
-                        val inputStream = context.contentResolver.openInputStream(uri)
-                        val directory = java.io.File(context.filesDir, "profiles")
-                        if (!directory.exists()) {
-                            directory.mkdirs()
-                        }
-                        val localFile = java.io.File(directory, "${currentUser.uid}_additional_${newIndex}.jpg")
-                        val outputStream = java.io.FileOutputStream(localFile)
-                        inputStream?.use { input ->
-                            outputStream.use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                        android.net.Uri.fromFile(localFile).toString()
-                    } catch (ex: Exception) {
-                        uri.toString()
-                    }
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                    android.widget.Toast.makeText(
+                        context,
+                        if (isArabic) "فشل رفع الصورة الإضافية. حاول مرة أخرى." else "Additional photo upload failed. Please try again.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    isUploadingImage = false
+                    return@launch
                 }
             }
 
-            val newList = currentUser.additionalImages + finalUrl
-            profileEditViewModel.updateAdditionalImages(newList, context)
-            isUploadingImage = false
-            onRefreshProfile()
+            try {
+                val newList = currentUser.additionalImages + finalUrl
+                profileEditViewModel.updateAdditionalImages(newList, context)
+                onRefreshProfile()
+            } catch (e: Exception) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                android.widget.Toast.makeText(
+                    context,
+                    if (isArabic) {
+                        "فشل حفظ الصورة الإضافية: ${e.localizedMessage}"
+                    } else {
+                        "Failed to save additional photo: ${e.localizedMessage}"
+                    },
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            } finally {
+                isUploadingImage = false
+            }
         }
     }
 
@@ -372,12 +395,6 @@ fun ModestyTabContent(
     ) { success ->
         if (success) {
             tempAdditionalCameraUri?.let { handleAdditionalImageUpload(it) }
-        }
-    }
-
-    LaunchedEffect(currentUser.uid, targetUser?.uid) {
-        if (targetUser != null) {
-            photoState = photoAccessManager.checkPhotoAccessState(currentUser.uid, targetUser.uid)
         }
     }
 
@@ -416,6 +433,7 @@ fun ModestyTabContent(
                 
                 var nameText by remember { mutableStateOf(currentUser.name) }
                 var savingName by remember { mutableStateOf(false) }
+                var savingDisplayName by remember { mutableStateOf(false) }
                 
                 OutlinedTextField(
                     value = nameText,
@@ -465,7 +483,15 @@ fun ModestyTabContent(
                                 ).show()
                                 onRefreshProfile()
                             } catch (e: Exception) {
-                                android.widget.Toast.makeText(context, "فشل حفظ الاسم: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                                android.widget.Toast.makeText(
+                                    context,
+                                    if (isArabic) {
+                                        "فشل حفظ الاسم: ${e.localizedMessage}"
+                                    } else {
+                                        "Failed to save name: ${e.localizedMessage}"
+                                    },
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
                             } finally {
                                 savingName = false
                             }
@@ -479,6 +505,76 @@ fun ModestyTabContent(
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     } else {
                         Text(if (isArabic) "حفظ الاسم" else "Save Name")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = displayNameText,
+                    onValueChange = { displayNameText = it },
+                    label = {
+                        Text(
+                            if (isArabic) {
+                                "الاسم المعروض للأعضاء"
+                            } else {
+                                "Display Name (shown to members)"
+                            }
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        savingDisplayName = true
+                        coroutineScope.launch {
+                            try {
+                                profileEditViewModel.updateDisplayName(displayNameText, context)
+                                savedDisplayName = displayNameText
+                                android.widget.Toast.makeText(
+                                    context,
+                                    if (isArabic) {
+                                        "تم تحديث الاسم المعروض بنجاح!"
+                                    } else {
+                                        "Display name updated successfully!"
+                                    },
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                                onRefreshProfile()
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    if (isArabic) {
+                                        "فشل حفظ الاسم المعروض: ${e.localizedMessage}"
+                                    } else {
+                                        "Failed to save display name: ${e.localizedMessage}"
+                                    },
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            } finally {
+                                savingDisplayName = false
+                            }
+                        }
+                    },
+                    enabled = !savingDisplayName &&
+                        displayNameText.isNotBlank() &&
+                        displayNameText != savedDisplayName,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    if (savingDisplayName) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(if (isArabic) "حفظ الاسم المعروض" else "Save Display Name")
                     }
                 }
             }
@@ -497,7 +593,19 @@ fun ModestyTabContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "الصورة الشخصية (أخ)" else "Profile Photo (Sister)",
+                    text = if (isArabic) {
+                        if (currentUser.gender == com.mithaq.app.model.Gender.MALE) {
+                            "الصورة الشخصية (أخ)"
+                        } else {
+                            "الصورة الشخصية (أخت)"
+                        }
+                    } else {
+                        if (currentUser.gender == com.mithaq.app.model.Gender.MALE) {
+                            "Profile Photo (Brother)"
+                        } else {
+                            "Profile Photo (Sister)"
+                        }
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -515,10 +623,11 @@ fun ModestyTabContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 var showImageEdit by remember { mutableStateOf(false) }
+                var additionalImagePendingDeletion by remember { mutableStateOf<String?>(null) }
                 if (!showImageEdit) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Button(onClick = { showImageEdit = true }) {
-                            Text(if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "تعديل الصورة الشخصية" else "Edit Profile Photo")
+                            Text(if (isArabic) "تعديل الصورة الشخصية" else "Edit Profile Photo")
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         if (isUploadingImage) {
@@ -567,7 +676,7 @@ fun ModestyTabContent(
                     var newImageUrl by remember { mutableStateOf(currentUser.imageUrl) }
                     
                     Text(
-                        text = if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "اختر رمزاً محتشماً:" else "Choose Modest Avatar:",
+                        text = if (isArabic) "اختر رمزاً محتشماً:" else "Choose Modest Avatar:",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -601,25 +710,12 @@ fun ModestyTabContent(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = if (newImageUrl.startsWith("avatar_")) "" else newImageUrl,
-                        onValueChange = { input ->
-                            newImageUrl = input.ifBlank {
-                                if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "avatar_brother_green" else "avatar_sister_teal"
-                            }
-                        },
-                        label = { Text(if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "أو رابط صورة مخصصة" else "Or Custom Image URL") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         TextButton(onClick = { showImageEdit = false }) {
-                            Text(if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "إلغاء" else "Cancel")
+                            Text(if (isArabic) "إلغاء" else "Cancel")
                         }
                         Button(
                             onClick = {
@@ -629,11 +725,22 @@ fun ModestyTabContent(
                                     onSuccess = {
                                         showImageEdit = false
                                         onRefreshProfile()
+                                    },
+                                    onError = { error ->
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            if (isArabic) {
+                                                "فشل حفظ الصورة: ${error.localizedMessage}"
+                                            } else {
+                                                "Failed to save photo: ${error.localizedMessage}"
+                                            },
+                                            android.widget.Toast.LENGTH_LONG
+                                        ).show()
                                     }
                                 )
                             }
                         ) {
-                            Text(if (currentUser.gender == com.mithaq.app.model.Gender.MALE) "حفظ" else "Save")
+                            Text(if (isArabic) "حفظ" else "Save")
                         }
                     }
                 }
@@ -680,9 +787,7 @@ fun ModestyTabContent(
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.error)
                                     .clickable {
-                                        val newList = currentUser.additionalImages.filter { it != img }
-                                        profileEditViewModel.updateAdditionalImages(newList, context)
-                                        onRefreshProfile()
+                                        additionalImagePendingDeletion = img
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -719,6 +824,69 @@ fun ModestyTabContent(
                             )
                         }
                     }
+                }
+
+                additionalImagePendingDeletion?.let { imageToDelete ->
+                    AlertDialog(
+                        onDismissRequest = { additionalImagePendingDeletion = null },
+                        title = {
+                            Text(if (isArabic) "حذف الصورة الإضافية" else "Delete Additional Photo")
+                        },
+                        text = {
+                            Text(
+                                if (isArabic) {
+                                    "هل أنت متأكد من حذف هذه الصورة؟"
+                                } else {
+                                    "Are you sure you want to delete this photo?"
+                                }
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        try {
+                                            // Remove the underlying Storage object too — otherwise
+                                            // "deleted" photos stay downloadable forever (privacy +
+                                            // storage cost).
+                                            try {
+                                                com.google.firebase.storage.FirebaseStorage.getInstance()
+                                                    .getReferenceFromUrl(imageToDelete).delete().await()
+                                            } catch (_: Exception) {
+                                                // Not a Firebase Storage URL (mock/local) or already gone.
+                                            }
+                                            val newList = currentUser.additionalImages
+                                                .filter { it != imageToDelete }
+                                            profileEditViewModel.updateAdditionalImages(newList, context)
+                                            onRefreshProfile()
+                                        } catch (e: Exception) {
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                if (isArabic) {
+                                                    "فشل حذف الصورة: ${e.localizedMessage}"
+                                                } else {
+                                                    "Failed to delete photo: ${e.localizedMessage}"
+                                                },
+                                                android.widget.Toast.LENGTH_LONG
+                                            ).show()
+                                        } finally {
+                                            additionalImagePendingDeletion = null
+                                        }
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = if (isArabic) "حذف" else "Delete",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { additionalImagePendingDeletion = null }) {
+                                Text(if (isArabic) "إلغاء" else "Cancel")
+                            }
+                        }
+                    )
                 }
 
                 if (showAdditionalSourceDialog) {
@@ -858,7 +1026,15 @@ fun ModestyTabContent(
                                 ).show()
                                 onRefreshProfile()
                             } catch(e: Exception) {
-                                android.widget.Toast.makeText(context, "فشل الحفظ: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                                android.widget.Toast.makeText(
+                                    context,
+                                    if (isArabic) {
+                                        "فشل الحفظ: ${e.localizedMessage}"
+                                    } else {
+                                        "Failed to save changes: ${e.localizedMessage}"
+                                    },
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
                             } finally {
                                 savingBio = false
                             }
@@ -1117,113 +1293,14 @@ fun ModestyTabContent(
         }
         // ------------------------------------------------------------------
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (targetUser != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.align(Alignment.Start)
-            ) {
-                Text(
-                    text = if (isArabic) "عرض صورة الشريك: ${targetUser.name}" else "Viewing Match's Photo: ${targetUser.name}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                VerificationBadge(status = targetUser.verificationStatus)
-            }
-            
-            PhotoAccessRequestCard(
-                isOwnProfile = false,
-                accessState = photoState,
-                onRequestAccessClicked = {
-                    coroutineScope.launch {
-                        val success = photoAccessManager.requestPhotoAccess(currentUser.uid, targetUser.uid)
-                        if (success) {
-                            photoState = com.mithaq.app.ui.photo.PhotoAccessState.PENDING
-                            onRefreshProfile()
-
-                            // Simulate target user (or Wali) approving the request after 3 seconds
-                            coroutineScope.launch {
-                                kotlinx.coroutines.delay(3000)
-                                val approveSuccess = photoAccessManager.approvePhotoAccess(targetUser.uid, currentUser.uid)
-                                if (approveSuccess) {
-                                    photoState = com.mithaq.app.ui.photo.PhotoAccessState.APPROVED
-                                    onRefreshProfile()
-                                    // Trigger notification
-                                    com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
-                                        context = context,
-                                        title = if (isArabic) "ميثاق - الموافقة على طلب الصور" else "Mithaq - Photo Access Approved",
-                                        body = if (isArabic) "تمت الموافقة على طلبك لرؤية الصورة الشخصية لـ ${targetUser.name}" 
-                                               else "Your request to view the profile photo of ${targetUser.name} has been approved."
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            )
-        } else {
-            Text(
-                text = if (isArabic) "اختر عضواً من تبويب البحث لعرض خيارات إلغاء قفل الصورة." else "Select a user on the Search tab to view their photo unlock options.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = if (isArabic) "طلبات مشاهدة صورتك المعلقة" else "Pending Requests to View Your Photo",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.align(Alignment.Start)
-        )
-
-        val requests = currentUser.photoAccessRequests
-        if (requests.isEmpty()) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(modifier = Modifier.padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = if (isArabic) "لا توجد طلبات معلقة حالياً." else "No pending requests.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        } else {
-            PhotoAccessRequestCard(
-                isOwnProfile = true,
-                accessState = com.mithaq.app.ui.photo.PhotoAccessState.NONE,
-                onRequestAccessClicked = {},
-                pendingRequests = requests,
-                onApproveClicked = { userId ->
-                    coroutineScope.launch {
-                        val success = photoAccessManager.approvePhotoAccess(currentUser.uid, userId)
-                        if (success) {
-                            onRefreshProfile()
-                            // Trigger notification
-                            com.mithaq.app.notification.MithaqFirebaseMessagingService.showLocalNotification(
-                                context = context,
-                                title = if (isArabic) "ميثاق - تم منح صلاحية الصورة" else "Mithaq - Photo Access Granted",
-                                body = if (isArabic) "لقد قمت بنجاح بمشاركة صورتك الشخصية مع الطرف الآخر." 
-                                       else "You have successfully shared your profile photo with the other member."
-                            )
-                        }
-                    }
-                }
-            )
-        }
-
         var devTapCount by remember { mutableStateOf(0) }
         var isDevMenuVisible by remember { mutableStateOf(false) }
 
-        if (isDevMenuVisible && !com.mithaq.app.Config.IS_PRODUCTION) {
+        if (
+            isDevMenuVisible &&
+            !com.mithaq.app.Config.IS_PRODUCTION &&
+            currentUser.isAdmin
+        ) {
             // ------------------ DEVELOPER OPTIONS & SETTINGS CARD ------------------
             Spacer(modifier = Modifier.height(24.dp))
             Card(
@@ -1429,19 +1506,22 @@ fun ModestyTabContent(
 
         Spacer(modifier = Modifier.height(32.dp))
         Text(
-            text = if (isArabic) "ميثاق v2.0" else "Mithaq v2.0",
+            text = if (isArabic) {
+                "ميثاق v${BuildConfig.VERSION_NAME}"
+            } else {
+                "Mithaq v${BuildConfig.VERSION_NAME}"
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier
                 .clickable {
-                    if (!com.mithaq.app.Config.IS_PRODUCTION) {
+                    if (!com.mithaq.app.Config.IS_PRODUCTION && currentUser.isAdmin) {
                         devTapCount++
                         if (devTapCount >= 5) {
                             isDevMenuVisible = true
-                            identityVerificationViewModel.updateMockRole(isWali = false, isAdmin = true, context = context)
                             android.widget.Toast.makeText(
                                 context,
-                                if (isArabic) "وضع المطور نشط الآن! وتمت ترقيتك إلى مسؤول (Admin)." else "Developer mode activated! You have been promoted to Admin.",
+                                if (isArabic) "وضع المطور نشط الآن!" else "Developer mode activated!",
                                 android.widget.Toast.LENGTH_LONG
                             ).show()
                         }
@@ -1492,7 +1572,6 @@ fun ProfileSettingsScreen(
         ) {
             ModestyTabContent(
                 currentUser = currentUser,
-                targetUser = null,
                 onRefreshProfile = onRefreshProfile,
                 isArabic = isArabic,
                 profileEditViewModel = profileEditViewModel,
