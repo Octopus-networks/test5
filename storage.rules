@@ -65,8 +65,17 @@ service firebase.storage {
           request.resource.contentType.matches('image/.*') ||
           request.resource.contentType.matches('video/.*')
         );
-      // Do not allow clients to replace verification evidence after submission.
-      allow update: if false;
+      // Re-submission after a rejection (or while still pending) overwrites the same
+      // object names, so updates are allowed UNLESS the account is already VERIFIED —
+      // approved evidence stays immutable.
+      allow update: if isOwner(userId) &&
+        validVerificationDocument(documentId) &&
+        request.resource.size < 20 * 1024 * 1024 &&
+        (
+          request.resource.contentType.matches('image/.*') ||
+          request.resource.contentType.matches('video/.*')
+        ) &&
+        firestore.get(/databases/(default)/documents/users/$(userId)).data.verificationStatus != 'VERIFIED';
       allow delete: if false;
     }
 

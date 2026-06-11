@@ -61,7 +61,15 @@ def main() -> None:
     assert_contains("voice media read", voices_storage, "canReadVoiceIntro(voiceId)")
 
     assert_contains("verification document names", verification_storage, "validVerificationDocument(documentId)")
-    assert_contains("verification updates", verification_storage, "allow update: if false;")
+    # Re-submission is allowed (rejected/pending members overwrite their own evidence),
+    # but approved evidence must stay immutable and updates must stay owner-scoped.
+    assert_contains("verification updates owner-scoped", verification_storage, "allow update: if isOwner(userId)")
+    assert_contains(
+        "verification updates locked after approval",
+        verification_storage,
+        ".data.verificationStatus != 'VERIFIED'",
+    )
+    assert_contains("verification deletes", verification_storage, "allow delete: if false;")
 
     print("Firebase security rules static checks passed")
 
