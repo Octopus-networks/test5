@@ -42,7 +42,10 @@ service firebase.storage {
         imageId.matches(request.auth.uid + '(_additional_[0-9]+)?\\.jpg') &&
         request.resource.size < 5 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*');
-      allow delete: if false;
+      // Owners may delete their own profile media only — the additional-photos
+      // delete flow removes the Storage object, not just the URL reference.
+      allow delete: if isAuthenticated() &&
+        imageId.matches(request.auth.uid + '(_additional_[0-9]+)?\\.jpg');
     }
 
     match /voices/{voiceId} {

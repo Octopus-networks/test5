@@ -110,7 +110,10 @@ exports.setVerificationStatus = onCall(secureCallable, async (request) => {
   }
   const reason = rawReason.slice(0, 300);
 
-  await requireAdminOrAssignedWali(request, targetUid);
+  // Identity decisions are ADMIN-ONLY: verification evidence (ID + selfie) is
+  // readable only by admins, so a wali must never be able to grant the identity
+  // badge for documents they cannot see. (Guardian verification is a separate flow.)
+  await requireAdmin(request);
   await db.collection("users").doc(targetUid).update({
     verificationStatus: status,
     verificationRejectionReason: status === "REJECTED" ? reason : FieldValue.delete(),
@@ -843,6 +846,14 @@ async function syncPublicProfile(userId) {
     userMeta = {};
   }
 
+  // Incognito must be enforced SERVER-side: a modified client can query the mirror
+  // directly, so filtering in the app is not enough. Incognito members simply have
+  // no publicProfiles document at all; toggling incognito off re-creates it below.
+  if (userMeta.isIncognito === true) {
+    await db.collection("publicProfiles").doc(userId).delete().catch(() => {});
+    return;
+  }
+
   const publicData = buildPublicProfile(userId, profile, isEmailVerified, userMeta, authCreatedAtMs);
   await db.collection("publicProfiles").doc(userId).set(publicData, { merge: true });
 }
@@ -881,7 +892,11 @@ exports.mirrorPublicProfileOnUserChange = onDocumentWritten(
 
     const beforeData = before && before.exists ? before.data() || {} : {};
     const afterData = after.data() || {};
-    const mirroredFields = ["verificationStatus", "guardianStatus"];
+    // isIncognito: the toggle must take effect immediately (server-enforced hiding).
+    // isPremium: admin grants should reflect in discovery without waiting for the
+    // member's next profile write. lastSeen is deliberately NOT mirrored here — it
+    // changes on every app resume and would rebuild the mirror constantly.
+    const mirroredFields = ["verificationStatus", "guardianStatus", "isIncognito", "isPremium"];
     const changed = mirroredFields.some((key) => beforeData[key] !== afterData[key]);
     if (!changed) {
       return;
