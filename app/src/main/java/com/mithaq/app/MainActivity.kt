@@ -1479,8 +1479,16 @@ fun MithaqAppNavigation(
                 onOpenPrayerSettings = {
                     currentScreen = "prayer_settings"
                 },
-                onOpenQibla = { /* Stage 2 stub */ },
+                onOpenQibla = { currentScreen = "qibla" },
                 onBack = { currentScreen = "profile_hub" }
+            )
+        }
+        "qibla" -> {
+            com.mithaq.app.ui.prayer.QiblaScreen(
+                currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
+                isArabic = isArabic,
+                onOpenPrayerSettings = { currentScreen = "prayer_settings" },
+                onBack = { currentScreen = "prayer_hub" }
             )
         }
         "profile_settings" -> {

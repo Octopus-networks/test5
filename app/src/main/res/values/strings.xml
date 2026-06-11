@@ -1048,4 +1048,10 @@
     <string name="prayer_hub_prayed">Prayed</string>
     <string name="prayer_hub_prayed_ar">صليت</string>
 
+    <!-- Qibla Compass -->
+    <string name="qibla_facing_correct">Facing the Qibla ✓</string>
+    <string name="qibla_facing_correct_ar">أنت باتجاه القبلة ✓</string>
+    <string name="qibla_calibrate">Figure 8 to calibrate</string>
+    <string name="qibla_calibrate_ar">حرّك هاتفك على شكل 8 للمعايرة</string>
+
 </resources>
