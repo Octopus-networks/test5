@@ -71,8 +71,8 @@ import com.mithaq.app.ui.match.CompatibilityBreakdownDialog
 import com.mithaq.app.ui.chat.ChaperonedVoiceCallScreen
 import com.mithaq.app.ui.chat.CallState
 import com.mithaq.app.security.SecureScreen
+import com.mithaq.app.data.repository.UserProfileRepository
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Warning
@@ -386,6 +386,7 @@ fun rememberUserProfileResolver(
 ): (String) -> UserProfile {
     val searchResults by searchViewModel.searchResults.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+    val userProfileRepository = remember { UserProfileRepository() }
     // Cache for profiles fetched asynchronously from Firestore (production mode)
     val profileCache = remember { mutableStateMapOf<String, UserProfile>() }
 
@@ -420,40 +421,8 @@ fun rememberUserProfileResolver(
                 )
                 coroutineScope.launch {
                     try {
-                        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        val doc = db.collection("users").document(uid).get().await()
-                        if (doc.exists()) {
-                            val genderStr = doc.getString("gender") ?: "FEMALE"
-                            val gender = if (genderStr.equals("MALE", ignoreCase = true)) Gender.MALE else Gender.FEMALE
-                            val sectStr = doc.getString("sect") ?: "SUNNI"
-                            val sect = try { com.mithaq.app.model.Sect.valueOf(sectStr.uppercase()) } catch (e: Exception) { com.mithaq.app.model.Sect.SUNNI }
-                            val prayerStr = doc.getString("prayerFrequency") ?: "ALWAYS"
-                            val prayer = try { com.mithaq.app.model.PrayerFrequency.valueOf(prayerStr.uppercase()) } catch (e: Exception) { com.mithaq.app.model.PrayerFrequency.ALWAYS }
-                            val modestyStr = doc.getString("modestyPreference") ?: "HIJAB"
-                            val modesty = try { com.mithaq.app.model.ModestyPreference.valueOf(modestyStr.uppercase()) } catch (e: Exception) { com.mithaq.app.model.ModestyPreference.HIJAB }
-                            val relocationStr = doc.getString("relocationWillingness") ?: "OPEN"
-                            val relocation = try { com.mithaq.app.model.RelocationWillingness.valueOf(relocationStr.uppercase()) } catch (e: Exception) { com.mithaq.app.model.RelocationWillingness.OPEN }
-                            profileCache[uid] = UserProfile(
-                                uid = uid,
-                                name = doc.getString("name") ?: "",
-                                gender = gender,
-                                age = doc.getLong("age")?.toInt() ?: 18,
-                                city = doc.getString("city") ?: "",
-                                country = doc.getString("country") ?: "",
-                                timezone = com.mithaq.app.util.CountryUtils.getTimezoneForProfile(
-                                    doc.getString("country") ?: "",
-                                    doc.getString("timezone")
-                                ),
-                                imageUrl = doc.getString("imageUrl") ?: "",
-                                sect = sect,
-                                prayerFrequency = prayer,
-                                modestyPreference = modesty,
-                                relocationWillingness = relocation,
-                                verificationStatus = doc.getString("verificationStatus") ?: "NONE",
-                                isPremium = doc.getBoolean("isPremium") ?: false,
-                                lastSeen = doc.getLong("lastSeen") ?: 0L,
-                                photoAccessApprovedUsers = doc.get("photoAccessApprovedUsers") as? List<String> ?: emptyList()
-                            )
+                        userProfileRepository.getProfileForResolver(uid)?.let { profile ->
+                            profileCache[uid] = profile
                         }
                     } catch (e: Exception) {
                         com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
