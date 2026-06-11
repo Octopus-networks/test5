@@ -43,6 +43,10 @@ import com.mithaq.app.util.AdhanScheduler
 import com.mithaq.app.util.PrayerManager
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import com.mithaq.app.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -479,16 +483,34 @@ fun AdhanSettingsSectionFixed(
         }
     }
 
-    val playSoundPreview = { soundKey: String ->
+    var showSoundDialog by remember { mutableStateOf(false) }
+
+    val playSoundPreview: (String) -> Unit = { soundKey ->
         mediaPlayer?.release()
-        // Simulate playing different sounds by playing default notification sound
-        // In a real app, you would play actual raw resources based on soundKey.
-        try {
-            val defaultSoundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-            mediaPlayer = MediaPlayer.create(context, defaultSoundUri)
-            mediaPlayer?.start()
-        } catch (e: Exception) {
-            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+        mediaPlayer = null
+        if (soundKey != "SILENT") {
+            try {
+                val resName = if (soundKey == "ADHAN_FULL") "adhan_short" else soundKey.lowercase(java.util.Locale.ROOT)
+                var resId = context.resources.getIdentifier(resName, "raw", context.packageName)
+                if (resId == 0 && soundKey.startsWith("ADHAN_")) {
+                    resId = context.resources.getIdentifier("adhan_short", "raw", context.packageName)
+                }
+                if (resId == 0 && soundKey.startsWith("ADHAN_")) {
+                    resId = context.resources.getIdentifier("takbeer", "raw", context.packageName)
+                }
+                
+                if (resId != 0) {
+                    val uri = android.net.Uri.parse("android.resource://${context.packageName}/$resId")
+                    mediaPlayer = MediaPlayer.create(context, uri)
+                    mediaPlayer?.start()
+                } else {
+                    val uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+                    mediaPlayer = MediaPlayer.create(context, uri)
+                    mediaPlayer?.start()
+                }
+            } catch (e: Exception) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+            }
         }
     }
 
@@ -502,13 +524,15 @@ fun AdhanSettingsSectionFixed(
         "ISNA" to if (isArabic) "الجمعية الإسلامية لأمريكا الشمالية" else "ISNA (North America)"
     )
 
-    val soundOptions = mapOf(
-        "TAKBEER" to if (isArabic) "تكبيرة صغيرة" else "Short Takbeer",
-        "ADHAN_FULL" to if (isArabic) "أذان كامل" else "Full Adhan",
-        "FULL_ADHAN_MECCA" to if (isArabic) "أذان الحرم المكي" else "Mecca Adhan",
-        "FULL_ADHAN_MEDINA" to if (isArabic) "أذان الحرم المدني" else "Medina Adhan",
-        "BIRD_CHIRP" to if (isArabic) "تغريد طيور" else "Bird Chirp",
-        "SILENT" to if (isArabic) "صامت (إشعار فقط)" else "Silent (Notification only)"
+    val soundOptions = listOf(
+        "TAKBEER" to (if (isArabic) "تكبيرة صغيرة" else "Short Takbeer"),
+        "ADHAN_FULL" to (if (isArabic) "أذان كامل" else "Full Adhan"),
+        "ADHAN_MAKKAH" to context.getString(if (isArabic) R.string.muezzin_makkah_ar else R.string.muezzin_makkah),
+        "ADHAN_MADINAH" to context.getString(if (isArabic) R.string.muezzin_madinah_ar else R.string.muezzin_madinah),
+        "ADHAN_EGYPT" to context.getString(if (isArabic) R.string.muezzin_egypt_ar else R.string.muezzin_egypt),
+        "ADHAN_AQSA" to context.getString(if (isArabic) R.string.muezzin_aqsa_ar else R.string.muezzin_aqsa),
+        "BIRD_CHIRP" to (if (isArabic) "تغريد طيور" else "Bird Chirp"),
+        "SILENT" to (if (isArabic) "صامت (إشعار فقط)" else "Silent (Notification only)")
     )
 
     val preReminderOptions = mapOf(
@@ -597,35 +621,133 @@ fun AdhanSettingsSectionFixed(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Sound Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = expandedSound,
-                    onExpandedChange = { expandedSound = !expandedSound }
+                // Sound Option Box (replaces dropdown)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showSoundDialog = true },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
                 ) {
-                    OutlinedTextField(
-                        readOnly = true,
-                        value = soundOptions[soundPattern] ?: soundPattern,
-                        onValueChange = { },
-                        label = { Text(if (isArabic) "صوت المؤذن / التنبيه" else "Adhan Sound / Alert") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSound) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedSound,
-                        onDismissRequest = { expandedSound = false }
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        soundOptions.forEach { (key, label) ->
-                            DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = {
-                                    soundPattern = key
-                                    expandedSound = false
-                                    if (key != "SILENT") playSoundPreview(key)
-                                }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isArabic) "صوت المؤذن / التنبيه" else "Adhan Sound / Alert",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = soundOptions.find { it.first == soundPattern }?.second ?: soundPattern,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
+                }
+
+                if (showSoundDialog) {
+                    var pending by remember { mutableStateOf(soundPattern) }
+                    
+                    AlertDialog(
+                        onDismissRequest = { 
+                            mediaPlayer?.release()
+                            mediaPlayer = null
+                            showSoundDialog = false 
+                        },
+                        title = { Text(text = if (isArabic) "صوت الإشعار" else "Adhan Sound") },
+                        text = {
+                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                soundOptions.forEach { (key, label) ->
+                                    val resName = if (key == "ADHAN_FULL") "adhan_short" else key.lowercase(java.util.Locale.ROOT)
+                                    val isAvailable = key == "SILENT" || key == "BIRD_CHIRP" || key == "TAKBEER" || context.resources.getIdentifier(resName, "raw", context.packageName) != 0
+                                    val hint = if (!isAvailable) {
+                                        " " + context.getString(if (isArabic) R.string.muezzin_not_added_ar else R.string.muezzin_not_added)
+                                    } else ""
+                                    
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { 
+                                                pending = key
+                                                playSoundPreview(key)
+                                            }
+                                            .padding(vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        RadioButton(
+                                            selected = key == pending,
+                                            onClick = { 
+                                                pending = key
+                                                playSoundPreview(key)
+                                            }
+                                        )
+                                        Text(
+                                            text = label + hint,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                mediaPlayer?.release()
+                                mediaPlayer = null
+                                soundPattern = pending
+                                showSoundDialog = false
+                                
+                                isSaving = true
+                                prefs.edit().putString("adhan_sound_pattern", soundPattern).apply()
+                                coroutineScope.launch {
+                                    val success = AdhanScheduler.enableAndScheduleAdhan(
+                                        context = context,
+                                        currentUser = currentUser,
+                                        authViewModel = authViewModel,
+                                        isEnabled = isEnabled,
+                                        calcMethod = calcMethod,
+                                        soundPattern = soundPattern
+                                    )
+                                    isSaving = false
+                                    if (!success && isEnabled && !AdhanScheduler.canScheduleExactAlarms(context)) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            if (isArabic) "فعّل صلاحية المنبهات الدقيقة ليتم التطبيق." else "Allow exact alarms for changes to take effect.",
+                                            android.widget.Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            context.getString(if (isArabic) R.string.muezzin_save_ar else R.string.muezzin_save) + " ✓",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }) {
+                                Text(text = context.getString(if (isArabic) R.string.muezzin_save_ar else R.string.muezzin_save))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = {
+                                mediaPlayer?.release()
+                                mediaPlayer = null
+                                showSoundDialog = false
+                            }) {
+                                Text(text = context.getString(if (isArabic) R.string.muezzin_cancel_ar else R.string.muezzin_cancel))
+                            }
+                        }
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

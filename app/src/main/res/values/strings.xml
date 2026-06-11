@@ -1054,4 +1054,20 @@
     <string name="qibla_calibrate">Figure 8 to calibrate</string>
     <string name="qibla_calibrate_ar">حرّك هاتفك على شكل 8 للمعايرة</string>
 
+    <!-- Muezzin Options -->
+    <string name="muezzin_makkah">Makkah</string>
+    <string name="muezzin_makkah_ar">مكة المكرمة</string>
+    <string name="muezzin_madinah">Madinah</string>
+    <string name="muezzin_madinah_ar">المدينة المنورة</string>
+    <string name="muezzin_egypt">Egyptian</string>
+    <string name="muezzin_egypt_ar">مصري</string>
+    <string name="muezzin_aqsa">Al-Aqsa</string>
+    <string name="muezzin_aqsa_ar">الأقصى</string>
+    <string name="muezzin_not_added">(file not added yet)</string>
+    <string name="muezzin_not_added_ar">(الملف غير مُضاف بعد)</string>
+    <string name="muezzin_cancel">Cancel</string>
+    <string name="muezzin_cancel_ar">إلغاء</string>
+    <string name="muezzin_save">Save</string>
+    <string name="muezzin_save_ar">حفظ</string>
+
 </resources>
