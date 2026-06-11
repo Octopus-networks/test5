@@ -27,6 +27,26 @@ class OnboardingViewModel(
         }
     }
 
+    suspend fun findMissingRequiredSteps(userId: String): List<String> {
+        return repository.findMissingRequiredSteps(userId)
+    }
+
+    fun startCompletionAudit(userId: String, missingStepIds: List<String>) {
+        val allSteps = MithaqOnboardingFlow.steps()
+        val subset = allSteps.filter { 
+            it.id in missingStepIds && it.type != QuestionType.SectionBreak && it.type != QuestionType.Summary 
+        }
+        _state.value = OnboardingState(
+            steps = subset,
+            currentStepIndex = 0,
+            answers = emptyMap(),
+            isLoading = false,
+            validationMessage = null,
+            isComplete = false,
+            isAuditMode = true
+        )
+    }
+
     fun saveCompletionCache(userId: String, completed: Boolean) {
         repository.saveCompletionCache(userId, completed)
     }

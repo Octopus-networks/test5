@@ -167,7 +167,8 @@ data class OnboardingState(
     val isLoading: Boolean = false,
     val isComplete: Boolean = false,
     val answeredQuestions: Int = 0,
-    val profileCompletionPercent: Int = 0
+    val profileCompletionPercent: Int = 0,
+    val isAuditMode: Boolean = false
 ) {
     val currentStep: OnboardingStep?
         get() = steps.getOrNull(currentStepIndex)
