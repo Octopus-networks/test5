@@ -155,8 +155,14 @@ const FREE_DAILY_CHAT_LIMIT = 3;
 exports.recordChatInitiation = onCall(secureCallable, async (request) => {
   const uid = requireAuth(request);
   const toUserId = requireString(request.data || {}, "toUserId");
+  // Structured denial logging: the CLI does not render HttpsError payloads, so each
+  // gate logs its reason before throwing — otherwise production failures are blind.
+  const deny = (code, reason, message) => {
+    console.warn(JSON.stringify({ fn: "recordChatInitiation", uid, toUserId, deny: reason }));
+    return new HttpsError(code, message);
+  };
   if (toUserId === uid) {
-    throw new HttpsError("invalid-argument", "Cannot request a chat with yourself.");
+    throw deny("invalid-argument", "self_request", "Cannot request a chat with yourself.");
   }
   const userSnap = await getUser(uid);
   const isPremium = userSnap.get("isPremium") === true;
@@ -165,13 +171,14 @@ exports.recordChatInitiation = onCall(secureCallable, async (request) => {
   // this callable (Admin SDK), so the rules-side noBlockBetween never sees them —
   // the gate has to live here. isBlockedBetween is best-effort fail-open.
   if (await isBlockedBetween(uid, toUserId)) {
-    throw new HttpsError("permission-denied", "You cannot send requests to this member.");
+    throw deny("permission-denied", "blocked", "You cannot send requests to this member.");
   }
 
   const relatedInterestRequestId = await acceptedInterestRequestIdBetween(uid, toUserId);
   if (!relatedInterestRequestId) {
-    throw new HttpsError(
+    throw deny(
       "failed-precondition",
+      "no_accepted_interest",
       "Accepted interest is required before requesting a chat.",
     );
   }
@@ -193,8 +200,9 @@ exports.recordChatInitiation = onCall(secureCallable, async (request) => {
       const snap = await tx.get(limitRef);
       const current = Number(snap.get("count")) || 0;
       if (current >= FREE_DAILY_CHAT_LIMIT) {
-        throw new HttpsError(
+        throw deny(
           "resource-exhausted",
+          "daily_limit",
           "Daily chat limit reached. Upgrade to Premium for unlimited chats.",
         );
       }
