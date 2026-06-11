@@ -72,7 +72,9 @@ fun PrayerHubScreen(
             val prefs = context.getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
             val method = prefs.getString("adhan_calculation_method", "MUSLIM_WORLD_LEAGUE") ?: "MUSLIM_WORLD_LEAGUE"
             val params = AdhanScheduler.calculationParametersFor(method)
-            val today = DateComponents.from(Date())
+            // Local calendar, not DateComponents.from(Date()) which is UTC-based and
+            // returns the previous day's times between local midnight and the UTC offset.
+            val today = AdhanScheduler.localDateComponents(Calendar.getInstance())
             val pt = PrayerTimes(
                 com.batoulapps.adhan.Coordinates(resolvedCoords.lat, resolvedCoords.lng),
                 today,
@@ -96,7 +98,7 @@ fun PrayerHubScreen(
                 val tomorrow = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
                 val tomPt = PrayerTimes(
                     com.batoulapps.adhan.Coordinates(resolvedCoords.lat, resolvedCoords.lng),
-                    DateComponents.from(tomorrow.time),
+                    AdhanScheduler.localDateComponents(tomorrow),
                     params
                 )
                 nPrayer = Prayer.FAJR to tomPt.fajr
@@ -181,7 +183,9 @@ fun PrayerHubScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val prefs = context.getSharedPreferences("mithaq_prefs", Context.MODE_PRIVATE)
-                val preRemind = prefs.getInt("adhan_pre_reminder_min", 0)
+                // Stored as a STRING by the settings screen — getInt on it throws
+                // ClassCastException and crashed the whole hub after saving settings.
+                val preRemind = prefs.getString("adhan_pre_reminder_min", "0")?.toIntOrNull() ?: 0
                 
                 FilterChip(
                     selected = false,
