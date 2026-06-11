@@ -35,8 +35,8 @@ android {
         applicationId = "com.mithaq.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 26
-        versionName = "2.1.5"
+        versionCode = 27
+        versionName = "2.1.6"
     }
 
     signingConfigs {
