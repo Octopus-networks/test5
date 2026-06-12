@@ -14,6 +14,8 @@ import com.mithaq.app.domain.model.UserModeration
 import com.mithaq.app.domain.model.UserPhoto
 import kotlinx.coroutines.tasks.await
 
+data class PendingVerification(val uid: String, val name: String)
+
 /**
  * Phase 12 — admin-only moderation data access.
  *
@@ -163,6 +165,22 @@ class AdminModerationRepository(
             AdminActionResult.Success
         } catch (e: Exception) {
             AdminActionResult.Error(e.localizedMessage ?: "Could not update user moderation.")
+        }
+    }
+
+    // ── Verification review ──────────────────────────────────────────────────────
+    suspend fun getPendingVerifications(limit: Long = 50): List<PendingVerification> {
+        return try {
+            firestore.collection("users")
+                .whereEqualTo("verificationStatus", "PENDING")
+                .limit(limit)
+                .get()
+                .await()
+                .documents
+                .map { doc -> PendingVerification(doc.id, doc.getString("name") ?: "Unknown") }
+        } catch (e: Exception) {
+            Log.w("AdminModerationRepo", "getPendingVerifications failed", e)
+            emptyList()
         }
     }
 

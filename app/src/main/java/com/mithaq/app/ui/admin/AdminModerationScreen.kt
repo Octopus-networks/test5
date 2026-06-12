@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -31,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -47,6 +50,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import kotlinx.coroutines.tasks.await
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mithaq.app.domain.model.ModerationStatus
 import com.mithaq.app.domain.model.PhotoStatus
@@ -114,6 +121,9 @@ fun AdminModerationScreen(
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = {
                     Text(if (isArabic) "إشراف الأعضاء" else "User mod")
                 })
+                Tab(selected = tab == 3, onClick = { tab = 3 }, text = {
+                    Text(if (isArabic) "التوثيق (${state.pendingVerifications.size})" else "Verification (${state.pendingVerifications.size})")
+                })
             }
 
             state.error?.let { error ->
@@ -137,6 +147,7 @@ fun AdminModerationScreen(
                 0 -> ReportsTab(state.reports, isArabic, viewModel)
                 1 -> PhotosTab(state.pendingPhotos, isArabic, viewModel)
                 2 -> ModerationTab(state.moderationEntries, isArabic)
+                3 -> VerificationTab(state.pendingVerifications, isArabic, viewModel)
             }
         }
     }
@@ -380,6 +391,162 @@ private fun ModCard(content: @Composable () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             content()
+        }
+    }
+}
+
+@Composable
+private fun VerificationTab(
+    verifications: List<com.mithaq.app.data.repository.PendingVerification>,
+    isArabic: Boolean,
+    viewModel: AdminModerationViewModel
+) {
+    if (verifications.isEmpty()) {
+        EmptyState(if (isArabic) "لا توجد طلبات توثيق بانتظار المراجعة" else "No verification requests pending review")
+        return
+    }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(verifications, key = { it.uid }) { user ->
+            var reason by remember(user.uid) { mutableStateOf("") }
+            var showRejectDialog by remember(user.uid) { mutableStateOf(false) }
+            
+            var idCardUrl by remember(user.uid) { mutableStateOf<String?>(null) }
+            var selfieUrl by remember(user.uid) { mutableStateOf<String?>(null) }
+            var selfieIsVideo by remember(user.uid) { mutableStateOf(false) }
+            
+            var idCardFailed by remember(user.uid) { mutableStateOf(false) }
+            var selfieFailed by remember(user.uid) { mutableStateOf(false) }
+            
+            LaunchedEffect(user.uid) {
+                val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
+                try {
+                    idCardUrl = storageRef.child("verification/${user.uid}/id_card.jpg").downloadUrl.await().toString()
+                } catch (e: Exception) {
+                    idCardFailed = true
+                }
+                
+                try {
+                    selfieUrl = storageRef.child("verification/${user.uid}/selfie_video.mp4").downloadUrl.await().toString()
+                    selfieIsVideo = true
+                } catch (e: Exception) {
+                    try {
+                        selfieUrl = storageRef.child("verification/${user.uid}/selfie.jpg").downloadUrl.await().toString()
+                        selfieIsVideo = false
+                    } catch (e2: Exception) {
+                        selfieFailed = true
+                    }
+                }
+            }
+
+            ModCard {
+                Text(
+                    text = "${user.name} (${user.uid})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // ID Card
+                    if (idCardFailed) {
+                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                            Text(if (isArabic) "غير متوفر" else "Not available", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                        }
+                    } else if (idCardUrl != null) {
+                        coil.compose.AsyncImage(
+                            model = idCardUrl,
+                            contentDescription = "ID Card",
+                            modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    
+                    // Selfie
+                    if (selfieFailed) {
+                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                            Text(if (isArabic) "غير متوفر" else "Not available", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                        }
+                    } else if (selfieUrl != null) {
+                        if (selfieIsVideo) {
+                            Box(
+                                modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(selfieUrl)).apply {
+                                        setDataAndType(android.net.Uri.parse(selfieUrl), "video/mp4")
+                                        flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    }
+                                    try { context.startActivity(intent) } catch (e: Exception) { }
+                                },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Play Video")
+                            }
+                        } else {
+                            coil.compose.AsyncImage(
+                                model = selfieUrl,
+                                contentDescription = "Selfie",
+                                modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        }
+                    } else {
+                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = { viewModel.reviewVerification(user.uid, "VERIFIED") },
+                        modifier = Modifier.weight(1f)
+                    ) { Text(if (isArabic) "قبول" else "Approve") }
+                    OutlinedButton(
+                        onClick = { showRejectDialog = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.weight(1f)
+                    ) { Text(if (isArabic) "رفض" else "Reject") }
+                }
+            }
+            
+            if (showRejectDialog) {
+                AlertDialog(
+                    onDismissRequest = { showRejectDialog = false },
+                    title = { Text(if (isArabic) "سبب الرفض" else "Rejection Reason") },
+                    text = {
+                        OutlinedTextField(
+                            value = reason,
+                            onValueChange = { reason = it },
+                            label = { Text(if (isArabic) "السبب (إلزامي)" else "Reason (Required)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                viewModel.reviewVerification(user.uid, "REJECTED", reason)
+                                showRejectDialog = false
+                            },
+                            enabled = reason.isNotBlank()
+                        ) {
+                            Text(if (isArabic) "تأكيد الرفض" else "Confirm Rejection")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showRejectDialog = false }) {
+                            Text(if (isArabic) "إلغاء" else "Cancel")
+                        }
+                    }
+                )
+            }
         }
     }
 }

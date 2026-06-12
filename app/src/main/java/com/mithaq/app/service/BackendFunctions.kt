@@ -7,10 +7,14 @@ object BackendFunctions {
     private val functions: FirebaseFunctions
         get() = FirebaseFunctions.getInstance("us-central1")
 
-    suspend fun setVerificationStatus(targetUid: String, status: String) {
+    suspend fun setVerificationStatus(targetUid: String, status: String, reason: String? = null) {
+        val payload = mutableMapOf<String, Any>("targetUid" to targetUid, "status" to status)
+        if (reason != null) {
+            payload["reason"] = reason
+        }
         functions
             .getHttpsCallable("setVerificationStatus")
-            .call(mapOf("targetUid" to targetUid, "status" to status))
+            .call(payload)
             .await()
     }
 
