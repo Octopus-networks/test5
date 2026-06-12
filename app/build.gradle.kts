@@ -46,6 +46,18 @@ android {
             keyAlias = "mithaq-debug"
             keyPassword = "android"
         }
+        // Release signing reads from local.properties (never committed); the keystore
+        // itself lives OUTSIDE the repo. Missing properties -> unsigned release build
+        // (CI/clean machines can still compile; only the owner's machine can sign).
+        create("mithaqRelease") {
+            val storePath = localProperties.getProperty("MITHAQ_RELEASE_STORE_FILE")
+            if (storePath != null) {
+                storeFile = file(storePath)
+                storePassword = localProperties.getProperty("MITHAQ_RELEASE_STORE_PASSWORD")
+                keyAlias = localProperties.getProperty("MITHAQ_RELEASE_KEY_ALIAS")
+                keyPassword = localProperties.getProperty("MITHAQ_RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -58,6 +70,9 @@ android {
             isMinifyEnabled = true   // Shrinks & obfuscates code — required for production
             isShrinkResources = true // Removes unused resources from the APK
             isDebuggable = false
+            if (localProperties.getProperty("MITHAQ_RELEASE_STORE_FILE") != null) {
+                signingConfig = signingConfigs.getByName("mithaqRelease")
+            }
             buildConfigField("boolean", "IS_PRODUCTION", "true")
             buildConfigField("String", "GEMINI_API_KEY", buildConfigString(""))
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -163,6 +178,10 @@ dependencies {
 
   // Biometric
   implementation(libs.androidx.biometric)
+
+  // EXIF orientation handling for the image-upload preprocessor (privacy: GPS/EXIF
+  // metadata is stripped by re-encoding; orientation must be applied first).
+  implementation("androidx.exifinterface:exifinterface:1.3.7")
 
   // Location & Permissions
   implementation("com.google.android.gms:play-services-location:21.0.1")
