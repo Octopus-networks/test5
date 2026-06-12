@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Query
 import com.mithaq.app.domain.model.UserBlock
 import kotlinx.coroutines.tasks.await
 
@@ -79,6 +80,8 @@ class BlockRepository(
         if (user?.uid != userId || !user.isEmailVerified) return emptyList()
         return firestore.collection("blocks")
             .whereEqualTo("blockerId", userId)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
             .documents

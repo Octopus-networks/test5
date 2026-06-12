@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.mithaq.app.domain.model.InterestRequest
 import kotlinx.coroutines.tasks.await
@@ -59,24 +60,24 @@ class InterestRequestRepository(
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("interestRequests")
             .whereEqualTo("fromUserId", userId)
-            .limit(100)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
             .documents
             .map { it.toInterestRequest() }
-            .sortedByDescending { it.updatedAt ?: it.createdAt }
     }
 
     suspend fun getReceivedInterestRequests(userId: String): List<InterestRequest> {
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("interestRequests")
             .whereEqualTo("toUserId", userId)
-            .limit(100)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
             .documents
             .map { it.toInterestRequest() }
-            .sortedByDescending { it.updatedAt ?: it.createdAt }
     }
 
     suspend fun cancelInterestRequest(requestId: String): InterestRequestResult {

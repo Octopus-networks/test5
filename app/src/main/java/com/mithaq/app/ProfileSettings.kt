@@ -247,9 +247,7 @@ fun ModestyTabContent(
                 try {
                     val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
                     val profileImageRef = storageRef.child("profiles/${currentUser.uid}.jpg")
-                    val inputStream = context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("Unable to open input stream")
-                    val bytes = inputStream.readBytes()
-                    inputStream.close()
+                    val bytes = com.mithaq.app.util.prepareForUpload(context, uri)
                     profileImageRef.putBytes(bytes).await()
                     profileImageRef.downloadUrl.await().toString()
                 } catch (e: Exception) {
@@ -344,9 +342,7 @@ fun ModestyTabContent(
                 try {
                     val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
                     val profileImageRef = storageRef.child("profiles/${currentUser.uid}_additional_${uniqueSuffix}.jpg")
-                    val inputStream = context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("Unable to open input stream")
-                    val bytes = inputStream.readBytes()
-                    inputStream.close()
+                    val bytes = com.mithaq.app.util.prepareForUpload(context, uri)
                     profileImageRef.putBytes(bytes).await()
                     profileImageRef.downloadUrl.await().toString()
                 } catch (e: Exception) {
@@ -1644,5 +1640,4 @@ fun ProfileSettingsScreen(
         }
     }
 }
-
 

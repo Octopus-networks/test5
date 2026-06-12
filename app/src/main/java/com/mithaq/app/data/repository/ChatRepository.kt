@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.mithaq.app.domain.model.ChatParticipantSummary
 import com.mithaq.app.domain.model.ChatRoom
@@ -127,6 +128,8 @@ class ChatRepository(
 
         val sentRegistration = firestore.collection("chatRequests")
             .whereEqualTo("fromUserId", userId)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     onError(error.localizedMessage ?: "Could not listen to sent chat requests.")
@@ -138,6 +141,8 @@ class ChatRepository(
 
         val receivedRegistration = firestore.collection("chatRequests")
             .whereEqualTo("toUserId", userId)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     onError(error.localizedMessage ?: "Could not listen to received chat requests.")
@@ -205,11 +210,15 @@ class ChatRepository(
     private suspend fun approvedChatIdsForUser(userId: String): List<String> {
         val sent = firestore.collection("chatRequests")
             .whereEqualTo("fromUserId", userId)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
             .documents
         val received = firestore.collection("chatRequests")
             .whereEqualTo("toUserId", userId)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
             .documents

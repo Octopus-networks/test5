@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -86,7 +87,11 @@ class AdminViewModel(
             if (isMock) return@launch
 
             try {
-                val snapshot = firestore.collection("users").get().await()
+                val snapshot = firestore.collection("users")
+                    .orderBy("lastSeen", Query.Direction.DESCENDING)
+                    .limit(100)
+                    .get()
+                    .await()
                 val profiles = snapshot.documents.mapNotNull { doc ->
                     try {
                         val uid = doc.id

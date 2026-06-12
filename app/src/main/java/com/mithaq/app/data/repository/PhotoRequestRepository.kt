@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.mithaq.app.domain.model.PhotoRequest
 import kotlinx.coroutines.tasks.await
@@ -62,24 +63,24 @@ class PhotoRequestRepository(
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("photoRequests")
             .whereEqualTo("fromUserId", userId)
-            .limit(100)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
             .documents
             .map { it.toPhotoRequest() }
-            .sortedByDescending { it.updatedAt ?: it.createdAt }
     }
 
     suspend fun getReceivedPhotoRequests(userId: String): List<PhotoRequest> {
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("photoRequests")
             .whereEqualTo("toUserId", userId)
-            .limit(100)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
             .documents
             .map { it.toPhotoRequest() }
-            .sortedByDescending { it.updatedAt ?: it.createdAt }
     }
 
     suspend fun cancelPhotoRequest(requestId: String): PhotoRequestResult {

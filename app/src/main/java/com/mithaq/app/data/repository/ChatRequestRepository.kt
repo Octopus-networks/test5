@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.functions.FirebaseFunctionsException
 import com.mithaq.app.domain.model.ChatRequest
 import com.mithaq.app.service.BackendFunctions
@@ -63,24 +64,24 @@ class ChatRequestRepository(
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("chatRequests")
             .whereEqualTo("fromUserId", userId)
-            .limit(100)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
             .documents
             .map { it.toChatRequest() }
-            .sortedByDescending { it.updatedAt ?: it.createdAt }
     }
 
     suspend fun getReceivedChatRequests(userId: String): List<ChatRequest> {
         if (!canReadForUser(userId)) return emptyList()
         return firestore.collection("chatRequests")
             .whereEqualTo("toUserId", userId)
-            .limit(100)
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
             .documents
             .map { it.toChatRequest() }
-            .sortedByDescending { it.updatedAt ?: it.createdAt }
     }
 
     suspend fun cancelChatRequest(requestId: String): ChatRequestResult {
