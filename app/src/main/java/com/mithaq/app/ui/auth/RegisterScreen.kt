@@ -61,69 +61,84 @@ fun RegisterScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
 
     // Step state: 1 to 7
-    var currentStep by remember { mutableStateOf(1) }
+    var currentStep by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(1) }
 
     // Screen 1: Account Setup & Oath
-    var username by remember { mutableStateOf("") }
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var username by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var name by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var email by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var age by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf(Gender.MALE) }
-    var oathChecked by remember { mutableStateOf(false) }
-    var imageUrl by remember { mutableStateOf("avatar_brother_green") }
+    var age by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var gender by androidx.compose.runtime.saveable.rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver(
+        save = { it.name },
+        restore = { runCatching { Gender.valueOf(it) }.getOrDefault(Gender.MALE) }
+    )) { mutableStateOf(Gender.MALE) }
+    var oathChecked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var imageUrl by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("avatar_brother_green") }
     var localImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     // Screen 2: Physical Attributes
-    var height by remember { mutableStateOf("170") }
-    var weight by remember { mutableStateOf("70") }
-    var skinColor by remember { mutableStateOf(if (isArabic) "حنطي" else "Medium") }
+    var height by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("170") }
+    var weight by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("70") }
+    var skinColor by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(if (isArabic) "حنطي" else "Medium") }
     var healthStatus by remember { mutableStateOf(emptyList<String>()) }
 
     // Screen 3: Demographics & Socio-Economic Status
-    var nationality by remember { mutableStateOf(if (isArabic) "السعودية" else "Saudi Arabia") }
-    var maritalStatus by remember { mutableStateOf("single") }
-    var educationLevel by remember { mutableStateOf("Bachelor") }
-    var jobTitle by remember { mutableStateOf("") }
-    var incomeLevel by remember { mutableStateOf("Medium") }
+    var nationality by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(if (isArabic) "السعودية" else "Saudi Arabia") }
+    var maritalStatus by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("single") }
+    var educationLevel by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Bachelor") }
+    var jobTitle by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var incomeLevel by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Medium") }
     var languagesSpoken by remember { mutableStateOf(emptyList<String>()) }
     
     // Previous search preference presets
-    var partnerGender by remember { mutableStateOf(Gender.FEMALE) }
-    var country by remember { mutableStateOf("Saudi Arabia") }
-    var stateProvince by remember { mutableStateOf("Riyadh Region") }
-    var city by remember { mutableStateOf("Riyadh") }
-    var minAgePreference by remember { mutableStateOf(20) }
-    var maxAgePreference by remember { mutableStateOf(35) }
+    var partnerGender by androidx.compose.runtime.saveable.rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver(
+        save = { it.name },
+        restore = { runCatching { Gender.valueOf(it) }.getOrDefault(Gender.FEMALE) }
+    )) { mutableStateOf(Gender.FEMALE) }
+    var country by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Saudi Arabia") }
+    var stateProvince by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Riyadh Region") }
+    var city by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Riyadh") }
+    var minAgePreference by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(20) }
+    var maxAgePreference by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(35) }
 
     // Screen 4: Religious & Lifestyle Habits
-    var sect by remember { mutableStateOf(Sect.SUNNI) }
-    var prayerFrequency by remember { mutableStateOf(PrayerFrequency.ALWAYS) }
-    var fastingHabit by remember { mutableStateOf(if (isArabic) "دائماً" else "Always") }
-    var smokeStatus by remember { mutableStateOf("dont_smoke") }
-    var alcoholStatus by remember { mutableStateOf("dont_drink") }
+    var sect by androidx.compose.runtime.saveable.rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver(
+        save = { it.name },
+        restore = { runCatching { Sect.valueOf(it) }.getOrDefault(Sect.SUNNI) }
+    )) { mutableStateOf(Sect.SUNNI) }
+    var prayerFrequency by androidx.compose.runtime.saveable.rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver(
+        save = { it.name },
+        restore = { runCatching { PrayerFrequency.valueOf(it) }.getOrDefault(PrayerFrequency.ALWAYS) }
+    )) { mutableStateOf(PrayerFrequency.ALWAYS) }
+    var fastingHabit by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(if (isArabic) "دائماً" else "Always") }
+    var smokeStatus by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("dont_smoke") }
+    var alcoholStatus by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("dont_drink") }
 
     // Screen 5: Marriage Logistics & Future Plans
-    var weddingTimeline by remember { mutableStateOf("Within 6 months") }
-    var livingSituation by remember { mutableStateOf("Independent") }
-    var relocationWillingness by remember { mutableStateOf(RelocationWillingness.OPEN) }
-    var haveChildren by remember { mutableStateOf("yes") }
+    var weddingTimeline by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Within 6 months") }
+    var livingSituation by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Independent") }
+    var relocationWillingness by androidx.compose.runtime.saveable.rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver(
+        save = { it.name },
+        restore = { runCatching { RelocationWillingness.valueOf(it) }.getOrDefault(RelocationWillingness.OPEN) }
+    )) { mutableStateOf(RelocationWillingness.OPEN) }
+    var haveChildren by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("yes") }
 
     // Screen 6: Cultural Views & Financial Responsibilities
-    var wifeWorking by remember { mutableStateOf("Open") }
-    var householdExpenses by remember { mutableStateOf("Shared") }
-    var aymaView by remember { mutableStateOf("Negotiable") }
-    var shabkaView by remember { mutableStateOf("Negotiable") }
-    var polygamyAcceptance by remember { mutableStateOf(false) }
+    var wifeWorking by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Open") }
+    var householdExpenses by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Shared") }
+    var aymaView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Negotiable") }
+    var shabkaView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Negotiable") }
+    var polygamyAcceptance by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
 
     // Screen 7: Profile Description & Privacy/Media
-    var aboutYourself by remember { mutableStateOf("") }
-    var idealPartner by remember { mutableStateOf("") }
-    var gpsLocationEnabled by remember { mutableStateOf(false) }
-    var blurPictures by remember { mutableStateOf(true) }
+    var aboutYourself by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var idealPartner by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var gpsLocationEnabled by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var blurPictures by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
     var additionalImages by remember { mutableStateOf(emptyList<String>()) }
-    var waliName by remember { mutableStateOf("") }
-    var waliEmail by remember { mutableStateOf("") }
+    var waliName by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var waliEmail by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
 
     val galleryLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()

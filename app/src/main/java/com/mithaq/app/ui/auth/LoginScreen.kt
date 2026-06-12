@@ -49,10 +49,10 @@ fun LoginScreen(
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     val authState by viewModel.authState.collectAsState()
 
-    var email by remember { mutableStateOf(if (com.mithaq.app.Config.IS_PRODUCTION) "" else "sarah@mithaq.com") }
+    var email by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(if (com.mithaq.app.Config.IS_PRODUCTION) "" else "sarah@mithaq.com") }
     var password by remember { mutableStateOf(if (com.mithaq.app.Config.IS_PRODUCTION) "" else "123456") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var isWali by remember { mutableStateOf(false) }
+    var passwordVisible by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var isWali by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
 
     var localError by remember { mutableStateOf<String?>(null) }
 

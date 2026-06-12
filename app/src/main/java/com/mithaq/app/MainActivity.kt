@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -146,8 +147,8 @@ class MainActivity : FragmentActivity() {
         ensureBackgroundServicesRunning()
 
         setContent {
-            var isArabic by remember { mutableStateOf(false) }
-            var isDarkMode by remember { mutableStateOf(false) }
+            var isArabic by rememberSaveable { mutableStateOf(false) }
+            var isDarkMode by rememberSaveable { mutableStateOf(false) }
             val biometricManager = remember { BiometricAuthManager(this) }
             // App Lock is opt-in per account (Security settings). Decided synchronously
             // BEFORE the first frame so users without App Lock never see the locked
@@ -762,14 +763,19 @@ fun MithaqAppNavigation(
     deepLinkData: String? = null,
     deepLinkNonce: Int = 0
 ) {
-    var currentScreen by remember { mutableStateOf(Routes.Splash) }
+    var currentScreen by rememberSaveable { mutableStateOf(Routes.Splash) }
     // ── Sequential back navigation ────────────────────────────────────────────
     // currentScreen is assigned from ~70 call sites, so visit history is recorded
     // by OBSERVING changes instead of rewriting every site. The system back button
     // then walks this history one screen at a time; the exit dialog appears only on
     // the root screens. Arriving at a root clears history (back from home = exit,
     // never deeper), and splash/auth surfaces are never recorded as "previous".
-    val screenBackStack = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    val screenBackStack = rememberSaveable(
+        saver = androidx.compose.runtime.saveable.listSaver(
+            save = { it.toList() },
+            restore = { androidx.compose.runtime.mutableStateListOf(*it.toTypedArray()) }
+        )
+    ) { androidx.compose.runtime.mutableStateListOf<String>() }
     var suppressNextHistoryPush by remember { mutableStateOf(false) }
     var lastScreenForHistory by remember { mutableStateOf(currentScreen) }
     val navRootScreens = remember { setOf(Routes.Home, Routes.Login, Routes.Entry, Routes.Splash) }
@@ -1448,7 +1454,7 @@ fun MithaqAppNavigation(
                     likesRepository = likesRepository,
                     searchViewModel = searchViewModel,
                     matchDetailViewModel = matchDetailViewModel,
-                    onBack = { currentScreen = "home" },
+                    onBack = popScreenHistory,
                     onNavigateToChat = { clickedPartner ->
                         initialTab = 2 // Chat Tab
                         initialChatUser = clickedPartner
@@ -1467,7 +1473,7 @@ fun MithaqAppNavigation(
                 AdminConsoleScreen(
                     authViewModel = authViewModel,
                     isArabic = isArabic,
-                    onBack = { currentScreen = "home" }
+                    onBack = popScreenHistory
                 )
             } else {
                 currentScreen = "home"
@@ -1481,7 +1487,7 @@ fun MithaqAppNavigation(
                 currentUserId = currentUserId,
                 isAdmin = currentUserProfile?.isAdmin == true,
                 isArabic = isArabic,
-                onBack = { currentScreen = "home" }
+                onBack = popScreenHistory
             )
         }
         "premium_store", "premium_store_platinum" -> {
@@ -1490,7 +1496,7 @@ fun MithaqAppNavigation(
                     viewModel = authViewModel,
                     isArabic = isArabic,
                     initialTab = premiumStoreInitialTab,
-                    onBack = { currentScreen = "home" }
+                    onBack = popScreenHistory
                 )
             } else {
                 BetaFeatureUnavailableScreen(
@@ -1511,7 +1517,7 @@ fun MithaqAppNavigation(
                     profileEditViewModel.saveQuestionnaireAnswers(answers)
                     currentScreen = "home"
                 },
-                onBack = { currentScreen = "home" }
+                onBack = popScreenHistory
             )
         }
         "prayer_hub" -> {
@@ -1544,7 +1550,7 @@ fun MithaqAppNavigation(
                 guardianViewModel = guardianViewModel,
                 profileSettingsViewModel = profileSettingsViewModel,
                 onNavigateToScreen = { target -> currentScreen = target },
-                onBack = { currentScreen = "home" }
+                onBack = popScreenHistory
             )
         }
         "stats" -> {
@@ -1557,7 +1563,7 @@ fun MithaqAppNavigation(
                 onPrayerStatsUpdated = { updatedProfile ->
                     authViewModel.updatePrayerStats(updatedProfile)
                 },
-                onBack = { currentScreen = "home" }
+                onBack = popScreenHistory
             )
         }
         "ai_matchmaker" -> {
@@ -1567,7 +1573,7 @@ fun MithaqAppNavigation(
                     currentUser = profile,
                     searchViewModel = searchViewModel,
                     isArabic = isArabic,
-                    onBack = { currentScreen = "home" },
+                    onBack = popScreenHistory,
                     onSelectMatch = { partner ->
                         selectedMatchProfile = partner
                         currentScreen = "match_detail"
@@ -1588,7 +1594,7 @@ fun MithaqAppNavigation(
             PrivacySettingsScreen(
                 currentUserId = currentUserId,
                 isArabic = isArabic,
-                onBack = { currentScreen = "home" }
+                onBack = popScreenHistory
             )
         }
         "guardian" -> {
@@ -1597,7 +1603,7 @@ fun MithaqAppNavigation(
                 viewModel = guardianViewModel,
                 isArabic = isArabic,
                 onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
-                onBack = { currentScreen = "home" }
+                onBack = popScreenHistory
             )
         }
         "photo_privacy" -> {
@@ -1605,7 +1611,7 @@ fun MithaqAppNavigation(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 isArabic = isArabic,
                 onRefreshProfile = { authViewModel.fetchCurrentUserProfile(currentUserId) },
-                onBack = { currentScreen = "home" }
+                onBack = popScreenHistory
             )
         }
         "prayer_settings" -> {
@@ -1613,8 +1619,6 @@ fun MithaqAppNavigation(
                 currentUser = currentUserProfile ?: UserProfile(uid = currentUserId, name = "User"),
                 authViewModel = authViewModel,
                 isArabic = isArabic,
-                // Reached from the prayer hub, the main experience, AND app settings —
-                // only the visit history knows which one to return to.
                 onBack = popScreenHistory
             )
         }
@@ -1633,7 +1637,7 @@ fun MithaqAppNavigation(
                 onLanguageChange = onLanguageChange,
                 isDarkMode = isDarkMode,
                 onDarkModeChange = onDarkModeChange,
-                onBack = { currentScreen = "home" },
+                onBack = popScreenHistory,
                 onLogout = {
                     authViewModel.signOut()
                     com.mithaq.app.notification.NotificationSyncWorker.cancel(context)

@@ -72,7 +72,10 @@ fun MithaqMainExperience(
     onOpenAnswersEditor: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember(currentUserId) { mutableStateOf(MithaqMainTab.Home) }
+    var selectedTab by androidx.compose.runtime.saveable.rememberSaveable(currentUserId, stateSaver = androidx.compose.runtime.saveable.Saver(
+        save = { it.name },
+        restore = { runCatching { MithaqMainTab.valueOf(it) }.getOrDefault(MithaqMainTab.Home) }
+    )) { mutableStateOf(MithaqMainTab.Home) }
     // System back from any bottom tab returns to Home first (standard Android pattern);
     // only the Home tab lets the outer handler show the exit dialog.
     androidx.activity.compose.BackHandler(enabled = selectedTab != MithaqMainTab.Home) {
