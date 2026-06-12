@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- shrinkResources cannot see resources resolved by NAME at runtime
+     (resources.getIdentifier). Without these keeps, release builds strip them:
+     - raw audio: AdhanReceiver / sound pickers resolve adhan_*, takbeer,
+       bird_chirp and the notif_* tones by name.
+     - onb_* strings: the data-driven onboarding JSON references string names. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/adhan_short,@raw/adhan_makkah,@raw/adhan_madinah,@raw/adhan_egypt,@raw/takbeer,@raw/bird_chirp,@raw/notif_marimba,@raw/notif_crystal,@raw/notif_aurora,@raw/notif_pebble,@raw/notif_chime,@raw/notif_ding,@raw/notif_soft,@string/onb_*" />
