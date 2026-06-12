@@ -70,7 +70,8 @@ enum class NotificationCategory(val key: String, val channelName: String) {
 object NotificationSoundPreferences {
     private const val PREFS = "mithaq_notification_sound"
     private const val KEY_DEFAULT = "selected_sound"
-    private const val CHANNEL_PREFIX = "mithaq_"
+    private const val CHANNEL_PREFIX = "mithaq_private_v2_"
+    private const val SERVER_PUSH_CHANNEL_ID = "mithaq_urgent_channel_v1"
 
     // Retired channel ids from earlier versions, removed so System settings stays clean.
     private val LEGACY_CHANNEL_IDS = listOf(
@@ -149,7 +150,7 @@ object NotificationSoundPreferences {
             enableLights(true)
             enableVibration(true)
             setShowBadge(true)
-            setLockscreenVisibility(Notification.VISIBILITY_PUBLIC)
+            setLockscreenVisibility(Notification.VISIBILITY_PRIVATE)
             vibrationPattern = longArrayOf(0, 500, 200, 500)
             val uri = soundUri(context, sound)
             if (uri == null) {
@@ -173,6 +174,27 @@ object NotificationSoundPreferences {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
         for (legacy in LEGACY_CHANNEL_IDS) nm.deleteNotificationChannel(legacy)
+        nm.notificationChannels
+            .filter { channel ->
+                channel.id.startsWith("mithaq_") &&
+                    !channel.id.startsWith(CHANNEL_PREFIX) &&
+                    // The server-push channel is mithaq_-prefixed but current — deleting
+                    // it here would recreate it below on every launch (settings churn).
+                    channel.id != SERVER_PUSH_CHANNEL_ID
+            }
+            .forEach { nm.deleteNotificationChannel(it.id) }
         for (category in NotificationCategory.entries) ensureChannel(context, category)
+        nm.createNotificationChannel(
+            NotificationChannel(
+                SERVER_PUSH_CHANNEL_ID,
+                "Mithaq messages and requests",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                enableLights(true)
+                enableVibration(true)
+                setShowBadge(true)
+                setLockscreenVisibility(Notification.VISIBILITY_PRIVATE)
+            }
+        )
     }
 }

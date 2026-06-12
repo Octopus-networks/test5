@@ -38,6 +38,7 @@ import com.mithaq.app.ui.theme.GlassBorderLight
 import com.mithaq.app.ui.theme.GlassSurfaceDark
 import com.mithaq.app.ui.theme.GlassSurfaceLight
 import com.mithaq.app.ui.match.IstikharaGuideDialog
+import com.mithaq.app.data.repository.SafetyWriteResult
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -801,21 +802,37 @@ fun MatchDetailScreen(
                             .clickable {
                                 coroutineScope.launch {
                                     val isMock = com.mithaq.app.Config.isMock()
-                                    if (isMock) {
+                                    val result = if (isMock) {
                                         val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
                                         val blockedStr = prefs.getString("blocked_users_${currentUser.uid}", "[]") ?: "[]"
                                         val array = org.json.JSONArray(blockedStr)
                                         array.put(partner.uid)
                                         prefs.edit().putString("blocked_users_${currentUser.uid}", array.toString()).apply()
+                                        SafetyWriteResult.Success("")
                                     } else {
                                         matchDetailViewModel.blockUser(currentUser.uid, partner.uid)
                                     }
-                                    android.widget.Toast.makeText(
-                                        context,
-                                        if (isArabic) "تم حظر العضو بنجاح" else "User blocked successfully",
-                                        android.widget.Toast.LENGTH_SHORT
-                                    ).show()
-                                    onBack()
+                                    when (result) {
+                                        is SafetyWriteResult.Success -> {
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                if (isArabic) "تم حظر العضو بنجاح" else "User blocked successfully",
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show()
+                                            onBack()
+                                        }
+                                        is SafetyWriteResult.Error -> {
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                if (isArabic) {
+                                                    "تعذر حظر العضو. حاول مرة أخرى."
+                                                } else {
+                                                    "Could not block this member. Please try again."
+                                                },
+                                                android.widget.Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                    }
                                 }
                             },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
@@ -854,7 +871,7 @@ fun MatchDetailScreen(
                             .clickable {
                                 coroutineScope.launch {
                                     val isMock = com.mithaq.app.Config.isMock()
-                                    if (isMock) {
+                                    val result = if (isMock) {
                                         val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
                                         val reportsStr = prefs.getString("user_reports", "[]") ?: "[]"
                                         val array = org.json.JSONArray(reportsStr)
@@ -865,15 +882,31 @@ fun MatchDetailScreen(
                                         }
                                         array.put(reportObj)
                                         prefs.edit().putString("user_reports", array.toString()).apply()
+                                        SafetyWriteResult.Success("")
                                     } else {
                                         matchDetailViewModel.reportUser(currentUser.uid, partner.uid)
                                     }
-                                    android.widget.Toast.makeText(
-                                        context,
-                                        if (isArabic) "تم إرسال التقرير للإدارة للمراجعة" else "Report submitted to admin for review",
-                                        android.widget.Toast.LENGTH_SHORT
-                                    ).show()
-                                    onBack()
+                                    when (result) {
+                                        is SafetyWriteResult.Success -> {
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                if (isArabic) "تم إرسال التقرير للإدارة للمراجعة" else "Report submitted to admin for review",
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show()
+                                            onBack()
+                                        }
+                                        is SafetyWriteResult.Error -> {
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                if (isArabic) {
+                                                    "تعذر إرسال التقرير. حاول مرة أخرى."
+                                                } else {
+                                                    "Could not submit the report. Please try again."
+                                                },
+                                                android.widget.Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                    }
                                 }
                             },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),

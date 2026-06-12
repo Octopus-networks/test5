@@ -66,7 +66,7 @@ fun MithaqTheme(
     isArabic: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = DarkColorScheme
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
 
     if (!view.isInEditMode) {
@@ -79,8 +79,8 @@ fun MithaqTheme(
                 
                 // Adjust status bar icon colors based on theme
                 val windowInsetsController = WindowCompat.getInsetsController(window, view)
-                windowInsetsController.isAppearanceLightStatusBars = false
-                windowInsetsController.isAppearanceLightNavigationBars = false
+                windowInsetsController.isAppearanceLightStatusBars = !darkTheme
+                windowInsetsController.isAppearanceLightNavigationBars = !darkTheme
             }
         }
     }

@@ -1640,8 +1640,21 @@ fun MithaqAppNavigation(
                     currentScreen = "login"
                 },
                 onDeleteAccount = {
-                    authViewModel.deleteCurrentUserAccount(context) {
-                        currentScreen = "login"
+                    authViewModel.deleteCurrentUserAccount(context) { deleted ->
+                        if (deleted) {
+                            com.mithaq.app.notification.NotificationSyncWorker.cancel(context)
+                            currentScreen = "login"
+                        } else {
+                            android.widget.Toast.makeText(
+                                context,
+                                if (isArabic) {
+                                    "تعذر حذف الحساب. تحقق من اتصالك وحاول مرة أخرى."
+                                } else {
+                                    "Could not delete your account. Check your connection and try again."
+                                },
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                 }
             )

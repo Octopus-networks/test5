@@ -4,6 +4,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import java.security.MessageDigest
+import kotlinx.coroutines.tasks.await
 
 /**
  * Phase 13A — FCM token foundation.
@@ -52,6 +53,20 @@ class FcmTokenRepository(
 
         // Legacy flat mirror — preserved so the current push flow is not broken.
         userDoc.update("fcmToken", token)
+    }
+
+    suspend fun unregisterToken(uid: String, token: String) {
+        if (uid.isBlank() || token.isBlank()) return
+
+        val userDoc = firestore.collection("users").document(uid)
+        val tokenDoc = userDoc.collection("fcmTokens").document(tokenIdFor(token))
+        firestore.runTransaction { transaction ->
+            val userSnapshot = transaction.get(userDoc)
+            transaction.delete(tokenDoc)
+            if (userSnapshot.getString("fcmToken") == token) {
+                transaction.update(userDoc, "fcmToken", FieldValue.delete())
+            }
+        }.await()
     }
 
     companion object {

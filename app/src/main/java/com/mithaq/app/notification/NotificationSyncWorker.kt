@@ -8,6 +8,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import kotlinx.coroutines.tasks.await
 import org.json.JSONArray
 import java.util.concurrent.TimeUnit
 
@@ -63,7 +64,7 @@ class NotificationSyncWorker(
 
     // ─── 2. New Chat Messages ─────────────────────────────────────────────────
 
-    private fun checkNewChatMessages() {
+    private suspend fun checkNewChatMessages() {
         val currentUid = currentUserId() ?: return
 
         val seenPrefs = context.getSharedPreferences("mithaq_badge_prefs", Context.MODE_PRIVATE)
@@ -132,16 +133,19 @@ class NotificationSyncWorker(
                     .whereEqualTo("recipientUid", currentUid)
                     .whereEqualTo("status", "PENDING")
                     .get()
-                    .addOnSuccessListener { snapshot ->
+                    .await()
+                    .let { snapshot ->
                         for (doc in snapshot.documents) {
                             val title = doc.getString("title") ?: "ميثاق"
                             val body = doc.getString("body") ?: ""
                             val category = NotificationCategory.fromType(doc.getString("type"))
                             MithaqFirebaseMessagingService.showLocalNotification(context, title, body, category)
-                            doc.reference.update("status", "DELIVERED")
+                            doc.reference.update("status", "DELIVERED").await()
                         }
                     }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                throw e
+            }
         }
     }
 

@@ -44,9 +44,12 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Background FCM notification-payload messages post on this channel; it is
+             created at startup with lock-screen-private visibility (the old
+             mithaq_messages_channel_v2 id is retired and deleted as legacy). -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="mithaq_messages_channel_v2" />
+            android:value="mithaq_urgent_channel_v1" />
 
         <service
             android:name=".notification.MithaqFirebaseMessagingService"

@@ -78,6 +78,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mithaq.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mithaq.app.domain.model.ChatMessage
 import com.mithaq.app.domain.model.ChatParticipantSummary
 import com.mithaq.app.domain.model.ChatRoom
@@ -337,7 +339,9 @@ private fun ChatScreen(
     viewModel: ChatMessageViewModel = viewModel(key = "mithaq_messages_${currentUserId}_${room.chatId}"),
     safetyViewModel: ChatSafetyViewModel = viewModel(key = "mithaq_chat_safety_${currentUserId}_${room.chatId}")
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle(
+        minActiveState = Lifecycle.State.RESUMED
+    )
     val safetyState by safetyViewModel.state.collectAsState()
     var draft by remember(room.chatId) { mutableStateOf("") }
     var showEmoji by remember(room.chatId) { mutableStateOf(false) }

@@ -1,11 +1,10 @@
 package com.mithaq.app.ui.match
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.mithaq.app.analytics.AppAnalytics
 import com.mithaq.app.data.repository.BlockRepository
 import com.mithaq.app.data.repository.ReportRepository
-import kotlinx.coroutines.launch
+import com.mithaq.app.data.repository.SafetyWriteResult
 
 class MatchDetailViewModel(
     private val blockRepository: BlockRepository = BlockRepository(),
@@ -17,15 +16,15 @@ class MatchDetailViewModel(
         AppAnalytics.matchViewed()
     }
 
-    fun blockUser(blockerId: String, blockedId: String) {
-        viewModelScope.launch {
-            blockRepository.blockUserDirect(blockerId, blockedId)
-        }
-    }
+    suspend fun blockUser(blockerId: String, blockedId: String): SafetyWriteResult =
+        blockRepository.blockUser(blockerId, blockedId)
 
-    fun reportUser(reporterId: String, reportedId: String) {
-        viewModelScope.launch {
-            reportRepository.reportUserDirect(reporterId, reportedId)
-        }
-    }
+    suspend fun reportUser(reporterId: String, reportedId: String): SafetyWriteResult =
+        reportRepository.reportUser(
+            reporterUserId = reporterId,
+            reportedUserId = reportedId,
+            chatId = "",
+            reason = "Spam / Inappropriate behavior",
+            details = ""
+        )
 }
