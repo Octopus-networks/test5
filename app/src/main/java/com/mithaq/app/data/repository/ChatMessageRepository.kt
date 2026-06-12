@@ -11,6 +11,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
 import com.mithaq.app.domain.model.ChatMessage
+import com.mithaq.app.util.prepareForUpload
 import kotlinx.coroutines.tasks.await
 import java.io.File
 
@@ -221,9 +222,12 @@ class ChatMessageRepository(
                 .collection("messages").document()
             val messageId = messageRef.id
             val storagePath = "chat_attachments/$chatId/$messageId"
-            val contentType = mimeType?.takeIf { it.startsWith("image/") } ?: "image/jpeg"
+            val contentType = "image/jpeg"
             val metadata = StorageMetadata.Builder().setContentType(contentType).build()
-            val snapshot = storage.reference.child(storagePath).putFile(imageUri, metadata).await()
+            val imageBytes = prepareForUpload(auth.app.applicationContext, imageUri)
+            val snapshot = storage.reference.child(storagePath)
+                .putBytes(imageBytes, metadata)
+                .await()
             val sizeBytes = snapshot.totalByteCount
 
             messageRef.set(
@@ -395,6 +399,8 @@ class ChatMessageRepository(
                 .collection("messages")
             val snapshot = messagesRef
                 .whereEqualTo("status", "sent")
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(100)
                 .get()
                 .await()
             

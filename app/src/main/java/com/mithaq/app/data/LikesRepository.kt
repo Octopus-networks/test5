@@ -3,6 +3,7 @@ package com.mithaq.app.data
 import android.content.Context
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 import org.json.JSONArray
 import org.json.JSONObject
@@ -183,6 +184,8 @@ class LikesRepository(private val context: Context) {
             try {
                 val snapshot = db.collection("likes")
                     .whereEqualTo("fromUid", userUid)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(50)
                     .get()
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("toUid") }
@@ -206,6 +209,8 @@ class LikesRepository(private val context: Context) {
             try {
                 val snapshot = db.collection("likes")
                     .whereEqualTo("toUid", userUid)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(50)
                     .get()
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("fromUid") }
@@ -230,11 +235,15 @@ class LikesRepository(private val context: Context) {
                 val snap1 = db.collection("likes")
                     .whereEqualTo("fromUid", userUid)
                     .whereEqualTo("isMutual", true)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(50)
                     .get()
                     .await()
                 val snap2 = db.collection("likes")
                     .whereEqualTo("toUid", userUid)
                     .whereEqualTo("isMutual", true)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(50)
                     .get()
                     .await()
                 val list1 = snap1.documents.mapNotNull { it.getString("toUid") }
@@ -326,6 +335,8 @@ class LikesRepository(private val context: Context) {
             try {
                 val snapshot = db.collection("profile_views")
                     .whereEqualTo("viewedUid", userUid)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(50)
                     .get()
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("viewerUid") }.distinct()
@@ -349,6 +360,8 @@ class LikesRepository(private val context: Context) {
             try {
                 val snapshot = db.collection("profile_views")
                     .whereEqualTo("viewerUid", userUid)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(50)
                     .get()
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("viewedUid") }.distinct()
@@ -449,6 +462,8 @@ class LikesRepository(private val context: Context) {
             try {
                 val snapshot = db.collection("favorites")
                     .whereEqualTo("userUid", userUid)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(50)
                     .get()
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("favoriteUserUid") }
@@ -472,6 +487,8 @@ class LikesRepository(private val context: Context) {
             try {
                 val snapshot = db.collection("favorites")
                     .whereEqualTo("favoriteUserUid", userUid)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(50)
                     .get()
                     .await()
                 return snapshot.documents.mapNotNull { it.getString("userUid") }

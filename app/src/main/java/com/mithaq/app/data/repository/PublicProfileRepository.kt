@@ -3,6 +3,7 @@ package com.mithaq.app.data.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.mithaq.app.domain.model.PublicProfile
 import kotlinx.coroutines.tasks.await
 
@@ -43,7 +44,8 @@ class PublicProfileRepository(
         val currentDirection = loadCurrentUserDirection(currentUserId)
         return firestore.collection("publicProfiles")
             .whereEqualTo("isEmailVerified", true)
-            .limit(limit * 5)
+            .orderBy("lastActiveAt", Query.Direction.DESCENDING)
+            .limit(100)
             .get()
             .await()
             .documents

@@ -14,6 +14,7 @@ import com.mithaq.app.data.local.UserDao
 import com.mithaq.app.data.local.MithaqDatabase
 import com.mithaq.app.data.local.toCached
 import com.mithaq.app.service.BackendFunctions
+import com.mithaq.app.util.prepareForUpload
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -108,18 +109,25 @@ class IdentityVerificationViewModel(
                         storageRef.child("verification/$userId/selfie.jpg")
                     }
 
-                    val idStream = context.contentResolver.openInputStream(idCardUri) ?: throw java.io.IOException("Cannot open ID card")
-                    val selfieStream = context.contentResolver.openInputStream(selfieUri) ?: throw java.io.IOException("Cannot open Selfie")
-
-                    idRef.putBytes(idStream.readBytes()).await()
-                    
-                    val metadata = com.google.firebase.storage.storageMetadata {
-                        contentType = if (isVideo) "video/mp4" else "image/jpeg"
+                    val imageMetadata = com.google.firebase.storage.storageMetadata {
+                        contentType = "image/jpeg"
                     }
-                    selfieRef.putBytes(selfieStream.readBytes(), metadata).await()
-                    
-                    idStream.close()
-                    selfieStream.close()
+                    idRef.putBytes(
+                        prepareForUpload(context, idCardUri),
+                        imageMetadata
+                    ).await()
+
+                    if (isVideo) {
+                        val videoMetadata = com.google.firebase.storage.storageMetadata {
+                            contentType = "video/mp4"
+                        }
+                        selfieRef.putFile(selfieUri, videoMetadata).await()
+                    } else {
+                        selfieRef.putBytes(
+                            prepareForUpload(context, selfieUri),
+                            imageMetadata
+                        ).await()
+                    }
 
                     firestore.collection("users").document(userId)
                         .update("verificationStatus", "PENDING").await()

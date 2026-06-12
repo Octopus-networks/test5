@@ -5,13 +5,16 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageMetadata
 import com.mithaq.app.domain.model.PhotoAccessLevel
 import com.mithaq.app.domain.model.PhotoStatus
 import com.mithaq.app.domain.model.PhotoType
 import com.mithaq.app.domain.model.PhotoVisibility
 import com.mithaq.app.domain.model.UserPhoto
+import com.mithaq.app.util.prepareForUpload
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
@@ -52,7 +55,13 @@ class PhotoRepository(
         val photoId = if (type == PhotoType.MAIN) MAIN_PHOTO_ID else "extra_${UUID.randomUUID()}"
         val storagePath = storagePathFor(userId, photoId)
         return try {
-            storage.reference.child(storagePath).putFile(imageUri).await()
+            val imageBytes = prepareForUpload(auth.app.applicationContext, imageUri)
+            val uploadMetadata = StorageMetadata.Builder()
+                .setContentType("image/jpeg")
+                .build()
+            storage.reference.child(storagePath)
+                .putBytes(imageBytes, uploadMetadata)
+                .await()
 
             val metadata = mapOf(
                 "photoId" to photoId,
@@ -77,11 +86,12 @@ class PhotoRepository(
         if (!user.isEmailVerified) return emptyList()
         return try {
             photosCollection(user.uid)
+                .orderBy("updatedAt", Query.Direction.DESCENDING)
+                .limit(50)
                 .get()
                 .await()
                 .documents
                 .map { it.toUserPhoto() }
-                .sortedByDescending { it.updatedAt ?: it.createdAt }
         } catch (e: Exception) {
             emptyList()
         }

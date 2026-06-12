@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.mithaq.app.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -260,6 +261,8 @@ class SearchViewModel(
 
                 val snapshot = firestore.collection("users")
                     .whereEqualTo("gender", oppositeGender)
+                    .orderBy("lastSeen", Query.Direction.DESCENDING)
+                    .limit(100)
                     .get()
                     .await()
 

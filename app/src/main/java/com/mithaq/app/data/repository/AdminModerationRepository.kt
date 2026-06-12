@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.mithaq.app.domain.model.ModerationStatus
 import com.mithaq.app.domain.model.PhotoStatus
@@ -48,12 +49,12 @@ class AdminModerationRepository(
         return try {
             firestore.collection("reports")
                 .whereEqualTo("status", ReportStatus.OPEN.raw)
-                .limit(limit)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(limit.coerceAtMost(50))
                 .get()
                 .await()
                 .documents
                 .map { it.toReport() }
-                .sortedByDescending { it.createdAt }
         } catch (e: Exception) {
             Log.w("AdminModerationRepo", "getOpenReports failed", e)
             emptyList()
@@ -87,13 +88,13 @@ class AdminModerationRepository(
         return try {
             firestore.collectionGroup("photos")
                 .whereEqualTo("status", PhotoStatus.PENDING_REVIEW.raw)
-                .limit(limit)
+                .orderBy("updatedAt", Query.Direction.DESCENDING)
+                .limit(limit.coerceAtMost(50))
                 .get()
                 .await()
                 .documents
                 .map { it.toUserPhoto() }
                 .filter { it.userId.isNotBlank() && it.photoId.isNotBlank() }
-                .sortedByDescending { it.updatedAt ?: it.createdAt }
         } catch (e: Exception) {
             // Usually a missing COLLECTION_GROUP index on photos.status — the thrown error carries a
             // one-click "create index" link. Logged so the live smoke test can diagnose it.
@@ -132,12 +133,12 @@ class AdminModerationRepository(
     suspend fun getUserModerationEntries(limit: Long = 50): List<UserModeration> {
         return try {
             firestore.collection("userModeration")
-                .limit(limit)
+                .orderBy("updatedAt", Query.Direction.DESCENDING)
+                .limit(limit.coerceAtMost(50))
                 .get()
                 .await()
                 .documents
                 .map { it.toUserModeration() }
-                .sortedByDescending { it.updatedAt }
         } catch (e: Exception) {
             Log.w("AdminModerationRepo", "getUserModerationEntries failed", e)
             emptyList()
@@ -173,7 +174,10 @@ class AdminModerationRepository(
         return try {
             firestore.collection("users")
                 .whereEqualTo("verificationStatus", "PENDING")
-                .limit(limit)
+                // No orderBy here ON PURPOSE: ordering by lastSeen EXCLUDES users whose
+                // doc lacks the field, and a pending verification must never be
+                // invisible to admins. The list is small (<=50) either way.
+                .limit(limit.coerceAtMost(50))
                 .get()
                 .await()
                 .documents

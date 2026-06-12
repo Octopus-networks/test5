@@ -1,5 +1,68 @@
 {
-  "indexes": [],
+  "indexes": [
+    { "collectionGroup": "likes", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "fromUid", "order": "ASCENDING" },
+      { "fieldPath": "timestamp", "order": "DESCENDING" } ] },
+    { "collectionGroup": "likes", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "toUid", "order": "ASCENDING" },
+      { "fieldPath": "timestamp", "order": "DESCENDING" } ] },
+    { "collectionGroup": "likes", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "fromUid", "order": "ASCENDING" },
+      { "fieldPath": "isMutual", "order": "ASCENDING" },
+      { "fieldPath": "timestamp", "order": "DESCENDING" } ] },
+    { "collectionGroup": "likes", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "toUid", "order": "ASCENDING" },
+      { "fieldPath": "isMutual", "order": "ASCENDING" },
+      { "fieldPath": "timestamp", "order": "DESCENDING" } ] },
+    { "collectionGroup": "profile_views", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "viewedUid", "order": "ASCENDING" },
+      { "fieldPath": "timestamp", "order": "DESCENDING" } ] },
+    { "collectionGroup": "profile_views", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "viewerUid", "order": "ASCENDING" },
+      { "fieldPath": "timestamp", "order": "DESCENDING" } ] },
+    { "collectionGroup": "favorites", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "userUid", "order": "ASCENDING" },
+      { "fieldPath": "timestamp", "order": "DESCENDING" } ] },
+    { "collectionGroup": "favorites", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "favoriteUserUid", "order": "ASCENDING" },
+      { "fieldPath": "timestamp", "order": "DESCENDING" } ] },
+    { "collectionGroup": "reports", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "users", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "gender", "order": "ASCENDING" },
+      { "fieldPath": "lastSeen", "order": "DESCENDING" } ] },
+    { "collectionGroup": "blocks", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "blockerId", "order": "ASCENDING" },
+      { "fieldPath": "timestamp", "order": "DESCENDING" } ] },
+    { "collectionGroup": "messages", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "chatRequests", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "fromUserId", "order": "ASCENDING" },
+      { "fieldPath": "updatedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "chatRequests", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "toUserId", "order": "ASCENDING" },
+      { "fieldPath": "updatedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "interestRequests", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "fromUserId", "order": "ASCENDING" },
+      { "fieldPath": "updatedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "interestRequests", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "toUserId", "order": "ASCENDING" },
+      { "fieldPath": "updatedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "photoRequests", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "fromUserId", "order": "ASCENDING" },
+      { "fieldPath": "updatedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "photoRequests", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "toUserId", "order": "ASCENDING" },
+      { "fieldPath": "updatedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "publicProfiles", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "isEmailVerified", "order": "ASCENDING" },
+      { "fieldPath": "lastActiveAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "photos", "queryScope": "COLLECTION_GROUP", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "updatedAt", "order": "DESCENDING" } ] }
+  ],
   "fieldOverrides": [
     {
       "collectionGroup": "photos",
