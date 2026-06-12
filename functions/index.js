@@ -273,12 +273,54 @@ exports.setUserRole = onCall(secureCallable, async (request) => {
   return { ok: true };
 });
 
+// Deletes every doc in `collection` where `field` == `value`, in pages. No cursor:
+// each committed batch shrinks the result set, so re-running the same query walks
+// the remainder. Single-field filters need no composite index.
+async function deleteDocsWhere(collection, field, value) {
+  const PAGE = 250;
+  for (;;) {
+    const snap = await db.collection(collection).where(field, "==", value).limit(PAGE).get();
+    if (snap.empty) {
+      return;
+    }
+    const batch = db.batch();
+    snap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    if (snap.size < PAGE) {
+      return;
+    }
+  }
+}
+
+// Chats need recursiveDelete (messages subcollection) plus their attachment prefix.
+async function deleteChatsForUser(targetUid, bucket) {
+  const PAGE = 100;
+  for (;;) {
+    const snap = await db.collection("chats")
+      .where("participantIds", "array-contains", targetUid)
+      .limit(PAGE)
+      .get();
+    if (snap.empty) {
+      return;
+    }
+    for (const doc of snap.docs) {
+      await bucket.deleteFiles({ prefix: `chat_attachments/${doc.id}/` }).catch(() => {});
+      await db.recursiveDelete(doc.ref);
+    }
+    if (snap.size < PAGE) {
+      return;
+    }
+  }
+}
+
 // Heavy accounts (many photos/subcollections) can exceed the default 60s budget.
 exports.deleteUserProfile = onCall({ ...secureCallable, timeoutSeconds: 300 }, async (request) => {
-  await requireAdmin(request);
+  const callerUid = requireAuth(request);
   const targetUid = requireString(request.data, "targetUid");
-  if (targetUid === request.auth.uid) {
-    throw new HttpsError("failed-precondition", "Admins cannot delete their own account here.");
+  // Members delete their OWN account (the in-app "delete my account" flow calls
+  // this); deleting anyone else stays admin-only.
+  if (targetUid !== callerUid) {
+    await requireAdmin(request);
   }
 
   // Auth first: kills sign-in immediately so the client cannot recreate data while
@@ -309,7 +351,28 @@ exports.deleteUserProfile = onCall({ ...secureCallable, timeoutSeconds: 300 }, a
     bucket.deleteFiles({ prefix: `verification/${targetUid}/` }),
   ]);
 
-  await db.collection("adminAuditLogs").add(auditPayload(request, "deleteUserProfile", targetUid));
+  // Shared-collection cleanup (Codex audit P1): chats the member participated in
+  // (messages subcollection + attachments included), requests in BOTH directions,
+  // likes, notifications, and blocks. Field names verified against rules/clients.
+  await deleteChatsForUser(targetUid, bucket);
+  await Promise.all([
+    deleteDocsWhere("interestRequests", "fromUserId", targetUid),
+    deleteDocsWhere("interestRequests", "toUserId", targetUid),
+    deleteDocsWhere("chatRequests", "fromUserId", targetUid),
+    deleteDocsWhere("chatRequests", "toUserId", targetUid),
+    deleteDocsWhere("photoRequests", "fromUserId", targetUid),
+    deleteDocsWhere("photoRequests", "toUserId", targetUid),
+    deleteDocsWhere("likes", "fromUid", targetUid),
+    deleteDocsWhere("likes", "toUid", targetUid),
+    deleteDocsWhere("notifications", "recipientUid", targetUid),
+    deleteDocsWhere("notifications", "senderUid", targetUid),
+    deleteDocsWhere("blocks", "blockerId", targetUid),
+    deleteDocsWhere("blocks", "blockedId", targetUid),
+  ]);
+
+  await db.collection("adminAuditLogs").add(auditPayload(request, "deleteUserProfile", targetUid, {
+    selfDelete: targetUid === callerUid,
+  }));
   return { ok: true };
 });
 
