@@ -149,8 +149,8 @@ fun WaliDashboardScreen(
         }
     }
 
-    suspend fun revokePhotoAccess(wardUid: String, approvedUserId: String, context: android.content.Context, isMock: Boolean) {
-        if (isMock) {
+    suspend fun revokePhotoAccess(wardUid: String, approvedUserId: String, context: android.content.Context, isMock: Boolean): Boolean {
+        return if (isMock) {
             val prefs = context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)
             val approvedStr = prefs.getString("photoAccessApprovedUsers_$wardUid", "[]") ?: "[]"
             val approvedArray = org.json.JSONArray(approvedStr)
@@ -166,6 +166,7 @@ fun WaliDashboardScreen(
             prefs.edit()
                 .putString("photoAccessApprovedUsers_$wardUid", newApprovedArray.toString())
                 .apply()
+            true
         } else {
             com.mithaq.app.ui.photo.PhotoAccessManager().revokePhotoAccess(wardUid, approvedUserId)
         }
@@ -448,8 +449,20 @@ fun WaliDashboardScreen(
                                     Button(
                                         onClick = {
                                             coroutineScope.launch {
-                                                revokePhotoAccess(wardUid, approvedId, context, isMock)
-                                                loadWardData()
+                                                val revoked = revokePhotoAccess(wardUid, approvedId, context, isMock)
+                                                if (revoked) {
+                                                    loadWardData()
+                                                } else {
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        if (isArabic) {
+                                                            "تعذر سحب صلاحية الصور. حاول مرة أخرى."
+                                                        } else {
+                                                            "Could not revoke photo access. Please try again."
+                                                        },
+                                                        android.widget.Toast.LENGTH_LONG
+                                                    ).show()
+                                                }
                                             }
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -465,4 +478,3 @@ fun WaliDashboardScreen(
     }
 }
 }
-

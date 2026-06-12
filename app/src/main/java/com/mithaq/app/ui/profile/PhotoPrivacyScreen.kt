@@ -160,8 +160,20 @@ fun PhotoPrivacyScreen(
                         onClick = {
                             scope.launch {
                                 working = true
-                                manager.revokePhotoAccess(currentUser.uid, uid)
-                                onRefreshProfile()
+                                val revoked = manager.revokePhotoAccess(currentUser.uid, uid)
+                                if (revoked) {
+                                    onRefreshProfile()
+                                } else {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        if (isArabic) {
+                                            "تعذر سحب صلاحية الصور. حاول مرة أخرى."
+                                        } else {
+                                            "Could not revoke photo access. Please try again."
+                                        },
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                }
                                 working = false
                             }
                         },

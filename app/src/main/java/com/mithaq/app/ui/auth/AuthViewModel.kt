@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.tasks.await
 import com.mithaq.app.data.local.MithaqDatabase
 import com.mithaq.app.data.local.CachedUserProfile
@@ -48,6 +49,7 @@ class AuthViewModel(
     private val passwordResetCooldownMs = 60_000L
     private var lastVerificationEmailSentAtMs = 0L
     private var lastPasswordResetSentAtMs = 0L
+    private var profileLoadGeneration = 0L
 
 
     private val db = context?.let { MithaqDatabase.getDatabase(it) }
@@ -426,13 +428,19 @@ class AuthViewModel(
     }
 
     fun fetchCurrentUserProfile(uid: String) {
+        val loadGeneration = ++profileLoadGeneration
         viewModelScope.launch {
+            fun isCurrentLoad(requireFirebaseUser: Boolean = false): Boolean {
+                return loadGeneration == profileLoadGeneration &&
+                    (!requireFirebaseUser || auth.currentUser?.uid == uid)
+            }
+
             val isOfflineSimulated = context?.getSharedPreferences("mithaq_dev_options", android.content.Context.MODE_PRIVATE)
                 ?.getBoolean("is_offline_simulated", false) ?: false
 
             if (isOfflineSimulated) {
                 val cached = userDao?.getUser(uid)
-                if (cached != null) {
+                if (cached != null && isCurrentLoad()) {
                     _currentUserProfile.value = cached.toDomain()
                 } else {
                     val fallback = UserProfile(
@@ -455,8 +463,10 @@ class AuthViewModel(
                         questionnaireAnswers = emptyMap(),
                         isIncognito = false
                     )
-                    _currentUserProfile.value = fallback
-                    userDao?.insertUser(fallback.toCached())
+                    if (isCurrentLoad()) {
+                        _currentUserProfile.value = fallback
+                        userDao?.insertUser(fallback.toCached())
+                    }
                 }
                 return@launch
             }
@@ -470,6 +480,7 @@ class AuthViewModel(
             if (isMock) {
                 val cached = userDao?.getUser(uid)
                 if (cached != null) {
+                    if (!isCurrentLoad()) return@launch
                     _currentUserProfile.value = cached.toDomain()
                     context?.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
                         putString("uid", cached.uid)
@@ -745,8 +756,10 @@ class AuthViewModel(
                         currentStreakDays = currentStreakDays
                     )
                     val finalProfile = profile.copy(seriousnessScore = calculateSeriousnessScore(profile))
-                    _currentUserProfile.value = finalProfile
-                    userDao?.insertUser(finalProfile.toCached())
+                    if (isCurrentLoad()) {
+                        _currentUserProfile.value = finalProfile
+                        userDao?.insertUser(finalProfile.toCached())
+                    }
                 } else {
                     val fallback = UserProfile(
                         uid = uid,
@@ -767,8 +780,10 @@ class AuthViewModel(
                         subscriptionPlan = "FREE",
                         questionnaireAnswers = emptyMap()
                     )
-                    _currentUserProfile.value = fallback
-                    userDao?.insertUser(fallback.toCached())
+                    if (isCurrentLoad()) {
+                        _currentUserProfile.value = fallback
+                        userDao?.insertUser(fallback.toCached())
+                    }
                 }
                 return@launch
             }
@@ -968,6 +983,7 @@ class AuthViewModel(
                         currentStreakDays = currentStreakDays
                     )
                     val finalProfile = profile.copy(seriousnessScore = calculateSeriousnessScore(profile))
+                    if (!isCurrentLoad(requireFirebaseUser = true)) return@launch
                     _currentUserProfile.value = finalProfile
                     userDao?.insertUser(finalProfile.toCached())
                     context?.getSharedPreferences("mithaq_prefs", android.content.Context.MODE_PRIVATE)?.edit()?.apply {
@@ -978,10 +994,13 @@ class AuthViewModel(
 
                     try {
                         val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+                        if (!isCurrentLoad(requireFirebaseUser = true)) return@launch
                         // Phase 13A: register under users/{uid}/fcmTokens/{tokenId} and keep the
                         // legacy flat users/{uid}.fcmToken mirror for the existing push flow.
                         com.mithaq.app.notification.FcmTokenRepository(firestore).registerToken(uid, token)
-                        _currentUserProfile.value = _currentUserProfile.value?.copy(fcmToken = token)
+                        _currentUserProfile.value = _currentUserProfile.value
+                            ?.takeIf { it.uid == uid }
+                            ?.copy(fcmToken = token)
                     } catch(e: Exception) {
                         // ignored
                     }
@@ -989,7 +1008,7 @@ class AuthViewModel(
             } catch (e: Exception) {
                 // Offline fallback from Room Cache
                 val cached = userDao?.getUser(uid)
-                if (cached != null) {
+                if (cached != null && isCurrentLoad(requireFirebaseUser = true)) {
                     _currentUserProfile.value = cached.toDomain()
                 }
             }
@@ -1399,9 +1418,38 @@ class AuthViewModel(
     }
 
     fun signOut() {
-        auth.signOut()
+        val signedOutUid = auth.currentUser?.uid
+        profileLoadGeneration++
         _currentUserProfile.value = null
         _authState.value = AuthState.Idle
+
+        if (signedOutUid.isNullOrBlank() || com.mithaq.app.Config.isMock()) {
+            auth.signOut()
+            return
+        }
+
+        viewModelScope.launch {
+            withTimeoutOrNull(2_500L) {
+                val messaging = com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                try {
+                    val token = messaging.token.await()
+                    com.mithaq.app.notification.FcmTokenRepository(firestore)
+                        .unregisterToken(signedOutUid, token)
+                } catch (e: Exception) {
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                }
+
+                try {
+                    messaging.deleteToken().await()
+                } catch (e: Exception) {
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                }
+            }
+
+            if (auth.currentUser?.uid == signedOutUid) {
+                auth.signOut()
+            }
+        }
     }
 
     fun resetState() {
@@ -1409,43 +1457,65 @@ class AuthViewModel(
     }
 
 
-    fun deleteCurrentUserAccount(context: android.content.Context, onComplete: () -> Unit) {
+    fun deleteCurrentUserAccount(
+        context: android.content.Context,
+        onResult: (Boolean) -> Unit
+    ) {
         val user = auth.currentUser
-        val uid = user?.uid ?: _currentUserProfile.value?.uid
+        val uid = user?.uid
+        if (uid == null) {
+            onResult(false)
+            return
+        }
+
         viewModelScope.launch {
-            if (uid != null) {
-                // 1. Delete from Firestore
-                val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
-                    auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
-                } catch (e: Exception) {
-                    true
-                }
-                if (!isMock) {
-                    try {
-                        firestore.collection("users").document(uid).delete().await()
-                    } catch (e: Exception) {
-                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
-                    }
-                }
-                // 2. Delete from local database (Room)
-                userDao?.deleteUser(uid)
+            val isMock = if (com.mithaq.app.Config.IS_PRODUCTION) false else try {
+                auth.app?.options?.apiKey == "mock-api-key-for-testing" || auth.app?.options?.apiKey?.contains("mock") == true
+            } catch (e: Exception) {
+                true
             }
-            // 3. Clear Shared Preferences
-            context.getSharedPreferences("mithaq_prefs", android.content.Context.MODE_PRIVATE).edit().clear().apply()
-            context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE).edit().clear().apply()
-            
-            // 4. Delete Firebase Auth User
-            if (user != null) {
+
+            if (!isMock) {
+                try {
+                    BackendFunctions.deleteUserProfile(uid)
+                } catch (e: Exception) {
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                    onResult(false)
+                    return@launch
+                }
+            } else {
                 try {
                     user.delete().await()
                 } catch (e: Exception) {
                     com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                    onResult(false)
+                    return@launch
                 }
             }
 
-            // 5. Sign Out & Reset State
-            signOut()
-            onComplete()
+            try {
+                userDao?.deleteUser(uid)
+            } catch (e: Exception) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+            }
+            context.getSharedPreferences("mithaq_prefs", android.content.Context.MODE_PRIVATE).edit().clear().apply()
+            context.getSharedPreferences("mithaq_mock_auth", android.content.Context.MODE_PRIVATE).edit().clear().apply()
+
+            if (!isMock) {
+                withTimeoutOrNull(2_500L) {
+                    try {
+                        com.google.firebase.messaging.FirebaseMessaging.getInstance().deleteToken().await()
+                    } catch (e: Exception) {
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                    }
+                }
+            }
+
+            profileLoadGeneration++
+            auth.signOut()
+            _currentUserProfile.value = null
+            _authState.value = AuthState.Idle
+            onResult(true)
         }
     }
 

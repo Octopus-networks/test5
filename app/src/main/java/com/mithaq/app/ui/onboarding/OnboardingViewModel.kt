@@ -146,7 +146,12 @@ class OnboardingViewModel(
             isComplete = false
         )
         viewModelScope.launch {
-            when (val result = repository.saveOnboardingAnswers(userId, current.answers, current.steps)) {
+            val persistenceSteps = if (current.isEditMode) {
+                MithaqOnboardingFlow.steps()
+            } else {
+                current.steps
+            }
+            when (val result = repository.saveOnboardingAnswers(userId, current.answers, persistenceSteps)) {
                 is OnboardingSaveResult.Success -> {
                     _state.value = _state.value.copy(
                         isLoading = false,

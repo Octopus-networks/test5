@@ -89,6 +89,7 @@ class MithaqFirebaseMessagingService : FirebaseMessagingService() {
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
                 .setVibrate(longArrayOf(0, 500, 200, 500))
 
             // Pre-O the sound is set on the builder; on Android 8+ the channel owns it.
