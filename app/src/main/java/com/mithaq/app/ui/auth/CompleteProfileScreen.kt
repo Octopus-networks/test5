@@ -44,33 +44,38 @@ fun CompleteProfileScreen(
     val strings = com.mithaq.app.ui.theme.LocalMithaqStrings.current
     val scrollState = rememberScrollState()
 
-    var currentStep by remember { mutableStateOf(1) }
-    var localError by remember { mutableStateOf<String?>(null) }
+    var currentStep by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(1) }
+    var localError by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    // Deliberately NOT saveable: restoring isLoading=true after process death (save
+    // coroutine gone) would strand the button in a disabled spinner forever.
     var isLoading by remember { mutableStateOf(false) }
     val currentProfile by profileEditViewModel.currentUserProfile.collectAsState()
 
     // Screen 1: Basics
-    var name by remember(currentProfile?.uid, currentProfile?.name) {
+    var name by androidx.compose.runtime.saveable.rememberSaveable(currentProfile?.uid, currentProfile?.name) {
         mutableStateOf(currentProfile?.name.orEmpty())
     }
-    var username by remember(currentProfile?.uid, currentProfile?.username) {
+    var username by androidx.compose.runtime.saveable.rememberSaveable(currentProfile?.uid, currentProfile?.username) {
         mutableStateOf(currentProfile?.username.orEmpty())
     }
-    var age by remember(currentProfile?.uid, currentProfile?.age) {
+    var age by androidx.compose.runtime.saveable.rememberSaveable(currentProfile?.uid, currentProfile?.age) {
         mutableStateOf(currentProfile?.age?.takeIf { it in 18..77 }?.toString() ?: "")
     }
-    var gender by remember(currentProfile?.uid, currentProfile?.gender) {
+    var gender by androidx.compose.runtime.saveable.rememberSaveable(currentProfile?.uid, currentProfile?.gender, stateSaver = androidx.compose.runtime.saveable.Saver(
+        save = { it.name },
+        restore = { runCatching { Gender.valueOf(it) }.getOrDefault(Gender.MALE) }
+    )) {
         mutableStateOf(currentProfile?.gender ?: Gender.MALE)
     }
-    var oathChecked by remember(currentProfile?.uid, currentProfile?.oathChecked) {
+    var oathChecked by androidx.compose.runtime.saveable.rememberSaveable(currentProfile?.uid, currentProfile?.oathChecked) {
         mutableStateOf(currentProfile?.oathChecked ?: false)
     }
 
     // Screen 2: Location
-    var country by remember(currentProfile?.uid, currentProfile?.country) {
+    var country by androidx.compose.runtime.saveable.rememberSaveable(currentProfile?.uid, currentProfile?.country) {
         mutableStateOf(currentProfile?.country?.takeIf { it.isNotBlank() } ?: "Saudi Arabia")
     }
-    var city by remember(currentProfile?.uid, currentProfile?.city) {
+    var city by androidx.compose.runtime.saveable.rememberSaveable(currentProfile?.uid, currentProfile?.city) {
         mutableStateOf(currentProfile?.city?.takeIf { it.isNotBlank() } ?: "Riyadh")
     }
 
