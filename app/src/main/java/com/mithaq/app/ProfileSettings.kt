@@ -1113,6 +1113,30 @@ fun ModestyTabContent(
                         )
                     }
                     else -> {
+                        if (currentUser.verificationStatus == "REJECTED") {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = if (isArabic) "لم يتم قبول طلب التوثيق" else "Your verification was not approved",
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    currentUser.verificationRejectionReason?.takeIf { it.isNotBlank() }?.let { reason ->
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = reason,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         var idCardUri by remember { mutableStateOf<android.net.Uri?>(null) }
                         var selfieUri by remember { mutableStateOf<android.net.Uri?>(null) }
                         var isSubmitting by remember { mutableStateOf(false) }

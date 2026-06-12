@@ -52,6 +52,7 @@ data class UserProfile(
     val isWaliAccount: Boolean = false,
     val wardUid: String? = null,
     val verificationStatus: String = "NONE", // "NONE", "PENDING", "VERIFIED"
+    val verificationRejectionReason: String? = null,
     val voiceIntroUrl: String? = null,
     val fcmToken: String? = null,
     val isAdmin: Boolean = false,

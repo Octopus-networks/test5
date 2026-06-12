@@ -26,6 +26,7 @@ data class AdminModerationUiState(
     val reports: List<Report> = emptyList(),
     val pendingPhotos: List<UserPhoto> = emptyList(),
     val moderationEntries: List<UserModeration> = emptyList(),
+    val pendingVerifications: List<com.mithaq.app.data.repository.PendingVerification> = emptyList(),
     val actionMessage: String? = null
 )
 
@@ -61,11 +62,13 @@ class AdminModerationViewModel(
             val reports = repository.getOpenReports()
             val photos = repository.getPendingPhotos()
             val mods = repository.getUserModerationEntries()
+            val verifications = repository.getPendingVerifications()
             _state.value = _state.value.copy(
                 isLoading = false,
                 reports = reports,
                 pendingPhotos = photos,
-                moderationEntries = mods
+                moderationEntries = mods,
+                pendingVerifications = verifications
             )
         }
     }
@@ -96,6 +99,22 @@ class AdminModerationViewModel(
         }
     }
 
+    fun reviewVerification(userId: String, status: String, reason: String? = null) {
+        if (!_state.value.authorized) return
+        if (status == "REJECTED" && reason.isNullOrBlank()) {
+            _state.value = _state.value.copy(error = "Rejection reason is required.")
+            return
+        }
+        viewModelScope.launch {
+            try {
+                com.mithaq.app.service.BackendFunctions.setVerificationStatus(userId, status, reason)
+                applyResult(AdminActionResult.Success)
+            } catch (e: Exception) {
+                applyResult(AdminActionResult.Error(e.localizedMessage ?: "Could not update verification status."))
+            }
+        }
+    }
+
     fun clearActionMessage() {
         _state.value = _state.value.copy(actionMessage = null)
     }
@@ -106,10 +125,12 @@ class AdminModerationViewModel(
                 val reports = repository.getOpenReports()
                 val photos = repository.getPendingPhotos()
                 val mods = repository.getUserModerationEntries()
+                val verifications = repository.getPendingVerifications()
                 _state.value = _state.value.copy(
                     reports = reports,
                     pendingPhotos = photos,
                     moderationEntries = mods,
+                    pendingVerifications = verifications,
                     actionMessage = "Done",
                     error = null
                 )

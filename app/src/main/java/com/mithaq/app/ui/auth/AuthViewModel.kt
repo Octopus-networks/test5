@@ -576,6 +576,7 @@ class AuthViewModel(
                     val isWaliAccount = prefs.getBoolean("isWaliAccount", false)
                     val wardUid = prefs.getString("wardUid", null)
                     val verificationStatus = prefs.getString("verificationStatus", "NONE") ?: "NONE"
+                    val verificationRejectionReason = prefs.getString("verificationRejectionReason", null)
                     val voiceIntroUrl = prefs.getString("voiceIntroUrl", null)
                     val fcmToken = prefs.getString("fcmToken", null)
                     val isAdmin = prefs.getBoolean("isAdmin", false)
@@ -703,6 +704,7 @@ class AuthViewModel(
                         isWaliAccount = isWaliAccount,
                         wardUid = wardUid,
                         verificationStatus = verificationStatus,
+                        verificationRejectionReason = verificationRejectionReason,
                         voiceIntroUrl = voiceIntroUrl,
                         fcmToken = fcmToken,
                         isAdmin = isAdmin,
@@ -848,6 +850,7 @@ class AuthViewModel(
                     }
 
                     val verificationStatus = doc.getString("verificationStatus") ?: "NONE"
+                    val verificationRejectionReason = doc.getString("verificationRejectionReason")
                     val voiceIntroUrl = doc.getString("voiceIntroUrl")
                     val fcmToken = doc.getString("fcmToken")
                     val isAdmin = doc.getBoolean("isAdmin") ?: false
@@ -932,6 +935,7 @@ class AuthViewModel(
                         isWaliAccount = isWaliAccount,
                         wardUid = wardUid,
                         verificationStatus = verificationStatus,
+                        verificationRejectionReason = verificationRejectionReason,
                         voiceIntroUrl = voiceIntroUrl,
                         fcmToken = fcmToken,
                         isAdmin = isAdmin,
