@@ -116,6 +116,7 @@ fun MatchDetailScreen(
                         imageUrl = if (isCompatible) imgUrl else "",
                         gender = partner.gender,
                         isBlurred = isBlurred,
+                        // Deliberate one-off hero pager shape — NOT consolidated to ImageCorners.
                         shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
                         modifier = Modifier.fillMaxSize()
                     )

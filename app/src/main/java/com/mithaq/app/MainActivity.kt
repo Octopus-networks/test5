@@ -664,7 +664,7 @@ private fun AccountHubContent(
                 imageUrl = currentUser.imageUrl,
                 gender = currentUser.gender,
                 isBlurred = false,
-                modifier = Modifier.size(64.dp),
+                modifier = Modifier.size(com.mithaq.app.ui.theme.AvatarSize.Large),
                 shape = CircleShape
             )
             Column(modifier = Modifier.weight(1f)) {

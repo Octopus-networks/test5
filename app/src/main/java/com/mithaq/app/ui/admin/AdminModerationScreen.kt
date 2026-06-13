@@ -453,31 +453,31 @@ private fun VerificationTab(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // ID Card
                     if (idCardFailed) {
-                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Small)), contentAlignment = Alignment.Center) {
                             Text(if (isArabic) "غير متوفر" else "Not available", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
                         }
                     } else if (idCardUrl != null) {
                         coil.compose.AsyncImage(
                             model = idCardUrl,
                             contentDescription = "ID Card",
-                            modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)),
+                            modifier = Modifier.size(100.dp).clip(RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Small)),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop
                         )
                     } else {
-                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Small)), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
                     }
                     
                     // Selfie
                     if (selfieFailed) {
-                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Small)), contentAlignment = Alignment.Center) {
                             Text(if (isArabic) "غير متوفر" else "Not available", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
                         }
                     } else if (selfieUrl != null) {
                         if (selfieIsVideo) {
                             Box(
-                                modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable {
+                                modifier = Modifier.size(100.dp).clip(RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Small)).background(MaterialTheme.colorScheme.surfaceVariant).clickable {
                                     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(selfieUrl)).apply {
                                         setDataAndType(android.net.Uri.parse(selfieUrl), "video/mp4")
                                         flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -492,12 +492,12 @@ private fun VerificationTab(
                             coil.compose.AsyncImage(
                                 model = selfieUrl,
                                 contentDescription = "Selfie",
-                                modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)),
+                                modifier = Modifier.size(100.dp).clip(RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Small)),
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
                             )
                         }
                     } else {
-                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(100.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Small)), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
                     }
