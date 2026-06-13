@@ -1197,7 +1197,7 @@ private fun ChatImageAttachment(message: ChatMessage) {
         modifier = Modifier
             .widthIn(max = 240.dp)
             .heightIn(min = 120.dp, max = 320.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Medium))
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)),
         contentAlignment = Alignment.Center
     ) {

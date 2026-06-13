@@ -31,6 +31,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.mithaq.app.ui.theme.ImageCorners
+import com.mithaq.app.ui.theme.AvatarSize
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
@@ -110,7 +112,7 @@ fun GridMatchCard(
             .height(220.dp)
             .padding(vertical = 4.dp)
             .let { if (!isCompatible) it.alpha(0.55f) else it },
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(ImageCorners.Small),
         onClick = {
             if (isCompatible) {
                 onSelectMatch(profile)
@@ -120,7 +122,7 @@ fun GridMatchCard(
         com.mithaq.app.ui.components.PremiumHighlight(
             profile = profile,
             modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(ImageCorners.Small)
         ) {
         Box(modifier = Modifier.fillMaxSize()) {
             UserProfileImage(
@@ -128,7 +130,7 @@ fun GridMatchCard(
                 gender = profile.gender,
                 isBlurred = isBlurred,
                 modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(ImageCorners.Small)
             )
 
             Box(
@@ -595,7 +597,7 @@ fun LikesTabContent(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(180.dp),
-                                    shape = RoundedCornerShape(16.dp)
+                                    shape = RoundedCornerShape(ImageCorners.Large)
                                 ) {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         UserProfileImage(
@@ -603,7 +605,8 @@ fun LikesTabContent(
                                             gender = partner.gender,
                                             isBlurred = true,
                                             blurRadius = 35.dp,
-                                            modifier = Modifier.fillMaxSize()
+                                            modifier = Modifier.fillMaxSize(),
+                                            shape = RoundedCornerShape(ImageCorners.Large)
                                         )
                                         Column(
                                             modifier = Modifier
@@ -699,7 +702,7 @@ fun LikesTabContent(
                                     val isAccessApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
                                     val isBlurred = if (isCompatible) !isAccessApproved else true
                                     
-                                    Box(modifier = Modifier.size(52.dp)) {
+                                    Box(modifier = Modifier.size(AvatarSize.Medium)) {
                                         UserProfileImage(
                                             imageUrl = if (isCompatible) partner.imageUrl else "",
                                             gender = partner.gender,
@@ -990,7 +993,7 @@ fun ViewsTabContent(
                                     val isAccessApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
                                     val isBlurred = if (isCompatible) !isAccessApproved else true
                                     
-                                    Box(modifier = Modifier.size(52.dp)) {
+                                    Box(modifier = Modifier.size(AvatarSize.Medium)) {
                                         UserProfileImage(
                                             imageUrl = if (isCompatible) partner.imageUrl else "",
                                             gender = partner.gender,
@@ -1213,7 +1216,7 @@ fun FavoritesTabContent(
                                     val isAccessApproved = partner.photoAccessApprovedUsers.contains(currentUser.uid)
                                     val isBlurred = if (isCompatible) !isAccessApproved else true
                                     
-                                    Box(modifier = Modifier.size(52.dp)) {
+                                    Box(modifier = Modifier.size(AvatarSize.Medium)) {
                                         UserProfileImage(
                                             imageUrl = if (isCompatible) partner.imageUrl else "",
                                             gender = partner.gender,

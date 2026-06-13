@@ -1112,7 +1112,7 @@ fun RegisterScreen(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(64.dp)
+                                            .size(com.mithaq.app.ui.theme.AvatarSize.Large)
                                             .clip(CircleShape)
                                             .background(MaterialTheme.colorScheme.surfaceVariant)
                                     ) {

@@ -84,7 +84,7 @@ fun SecurePhotoView(
         modifier = modifier
             .fillMaxWidth()
             .height(220.dp)
-            .clip(RoundedCornerShape(18.dp)),
+            .clip(RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Large)),
         contentAlignment = Alignment.Center
     ) {
         if (accessLevel == PhotoAccessLevel.FULL && bitmap != null) {
@@ -111,7 +111,7 @@ private fun SecurePhotoPlaceholder(mode: String, isArabic: Boolean) {
             .border(
                 1.dp,
                 softGold.copy(alpha = 0.22f),
-                RoundedCornerShape(18.dp)
+                RoundedCornerShape(com.mithaq.app.ui.theme.ImageCorners.Large)
             )
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

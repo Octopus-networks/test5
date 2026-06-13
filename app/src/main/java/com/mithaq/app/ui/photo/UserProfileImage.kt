@@ -9,6 +9,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -124,16 +125,12 @@ fun AvatarVector(
     gender: Gender,
     modifier: Modifier = Modifier
 ) {
-    // Pick background color based on the avatar option
-    val backgroundColor = when (avatarId) {
-        "avatar_brother_green" -> Color(0xFF1E5631)
-        "avatar_brother_blue" -> Color(0xFF1F4E5B)
-        "avatar_brother_brown" -> Color(0xFF5C4033)
-        "avatar_sister_teal" -> Color(0xFF1E6B65)
-        "avatar_sister_rose" -> Color(0xFF8A5A5C)
-        "avatar_sister_purple" -> Color(0xFF4A2F48)
-        else -> if (gender == Gender.MALE) Color(0xFF1E5631) else Color(0xFF1E6B65)
+    // Single source of truth: look up the background color from the canonical avatar lists.
+    val avatarColorMap = remember {
+        (BrotherhoodAvatars + SisterhoodAvatars).toMap()
     }
+    val backgroundColor = avatarColorMap[avatarId]
+        ?: if (gender == Gender.MALE) BrotherhoodAvatars.first().second else SisterhoodAvatars.first().second
 
     Canvas(modifier = modifier) {
         val w = size.width

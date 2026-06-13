@@ -32,6 +32,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.mithaq.app.ui.theme.ImageCorners
+import com.mithaq.app.ui.theme.AvatarSize
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
@@ -533,13 +535,13 @@ fun SearchTabContent(
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(ImageCorners.XLarge),
                         onClick = { onSelectMatch(topMatch) }
                     ) {
                         com.mithaq.app.ui.components.PremiumHighlight(
                             profile = topMatch,
                             modifier = Modifier.fillMaxSize(),
-                            shape = RoundedCornerShape(24.dp)
+                            shape = RoundedCornerShape(ImageCorners.XLarge)
                         ) {
                         Row(
                             modifier = Modifier
@@ -554,7 +556,7 @@ fun SearchTabContent(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 val isAccessApproved = topMatch.photoAccessApprovedUsers.contains(currentUser.uid)
-                                Box(modifier = Modifier.size(64.dp)) {
+                                Box(modifier = Modifier.size(AvatarSize.Large)) {
                                     UserProfileImage(
                                         imageUrl = topMatch.imageUrl,
                                         gender = topMatch.gender,
@@ -1021,7 +1023,7 @@ fun SearchTabContent(
                                         .height(280.dp)
                                         .padding(vertical = 8.dp)
                                         .let { if (!isCompatible) it.alpha(0.55f) else it },
-                                    shape = RoundedCornerShape(8.dp),
+                                    shape = RoundedCornerShape(ImageCorners.Small),
                                     onClick = { 
                                         if (isCompatible) {
                                             onSelectMatch(profile) 
@@ -1031,7 +1033,7 @@ fun SearchTabContent(
                                     com.mithaq.app.ui.components.PremiumHighlight(
                                         profile = profile,
                                         modifier = Modifier.fillMaxSize(),
-                                        shape = RoundedCornerShape(8.dp)
+                                        shape = RoundedCornerShape(ImageCorners.Small)
                                     ) {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         UserProfileImage(
@@ -1039,7 +1041,7 @@ fun SearchTabContent(
                                             gender = profile.gender,
                                             isBlurred = isBlurred,
                                             modifier = Modifier.fillMaxSize(),
-                                            shape = RoundedCornerShape(8.dp)
+                                            shape = RoundedCornerShape(ImageCorners.Small)
                                         )
                                         
                                         Box(

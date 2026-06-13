@@ -230,7 +230,7 @@ fun AiMatchmakerScreen(
                                             modifier = Modifier.padding(12.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Box(modifier = Modifier.size(40.dp)) {
+                                            Box(modifier = Modifier.size(com.mithaq.app.ui.theme.AvatarSize.Small)) {
                                                 val isAccessApproved = profile.photoAccessApprovedUsers.contains(currentUser.uid)
                                                 UserProfileImage(
                                                     imageUrl = profile.imageUrl,
