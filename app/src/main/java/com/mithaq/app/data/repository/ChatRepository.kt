@@ -44,13 +44,16 @@ class ChatRepository(
 
             val existing = findExistingChatRoomBetweenUsers(fromUserId, toUserId)
             if (existing != null) {
-                requestRef.set(
-                    mapOf(
-                        "createdChatId" to existing.chatId,
-                        "updatedAt" to FieldValue.serverTimestamp()
-                    ),
-                    SetOptions.merge()
-                ).await()
+                firestore.runBatch { batch ->
+                    batch.set(
+                        requestRef,
+                        mapOf(
+                            "createdChatId" to existing.chatId,
+                            "updatedAt" to FieldValue.serverTimestamp()
+                        ),
+                        SetOptions.merge()
+                    )
+                }.await()
                 return ChatRoomResult.Success(existing)
             }
 
@@ -72,15 +75,19 @@ class ChatRepository(
                 "createdAt" to FieldValue.serverTimestamp(),
                 "updatedAt" to FieldValue.serverTimestamp()
             )
-            firestore.collection("chats").document(chatId).set(roomData, SetOptions.merge()).await()
-            requestRef.set(
-                mapOf(
-                    "createdChatId" to chatId,
-                    "updatedAt" to FieldValue.serverTimestamp()
-                ),
-                SetOptions.merge()
-            ).await()
-            val createdRoom = firestore.collection("chats").document(chatId).get().await().toChatRoom()
+            val chatRef = firestore.collection("chats").document(chatId)
+            firestore.runBatch { batch ->
+                batch.set(chatRef, roomData, SetOptions.merge())
+                batch.set(
+                    requestRef,
+                    mapOf(
+                        "createdChatId" to chatId,
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    ),
+                    SetOptions.merge()
+                )
+            }.await()
+            val createdRoom = chatRef.get().await().toChatRoom()
             ChatRoomResult.Success(createdRoom)
         } catch (e: Exception) {
             ChatRoomResult.Error(e.localizedMessage ?: "Could not create chat room.")
