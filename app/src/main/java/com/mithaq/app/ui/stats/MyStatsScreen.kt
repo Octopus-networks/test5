@@ -80,7 +80,7 @@ fun MyStatsScreen(
                 title = { Text(if (isArabic) "إحصائياتي" else "My Stats") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = if (isArabic) "رجوع" else "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

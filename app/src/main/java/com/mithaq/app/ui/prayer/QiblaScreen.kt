@@ -98,7 +98,7 @@ fun QiblaScreen(
                 title = { Text(localizedString(isArabic, R.string.prayer_hub_qibla, R.string.prayer_hub_qibla_ar)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = if (isArabic) "رجوع" else "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)

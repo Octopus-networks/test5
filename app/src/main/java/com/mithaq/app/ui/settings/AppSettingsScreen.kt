@@ -70,7 +70,7 @@ fun AppSettingsScreen(
                 title = { Text(if (isArabic) "إعدادات التطبيق" else "App Settings") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = if (isArabic) "رجوع" else "Back")
                     }
                 }
             )
