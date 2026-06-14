@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
  */
 @Composable
 fun PhotoAccessRequestCard(
+    isArabic: Boolean,
     isOwnProfile: Boolean,
     accessState: PhotoAccessState,
     onRequestAccessClicked: () -> Unit,
@@ -47,7 +48,7 @@ fun PhotoAccessRequestCard(
                 // Profile Owner View: List requests
                 if (pendingRequests.isNotEmpty()) {
                     Text(
-                        text = "Photo Access Requests",
+                        text = if (isArabic) "طلبات الوصول للصور" else "Photo Access Requests",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -63,7 +64,7 @@ fun PhotoAccessRequestCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "$requesterName requests photo access",
+                                text = if (isArabic) "يطلب $requesterName الوصول للصور" else "$requesterName requests photo access",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -83,20 +84,20 @@ fun PhotoAccessRequestCard(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Approve", fontSize = 12.sp, color = Color.White)
+                                Text(if (isArabic) "موافقة" else "Approve", fontSize = 12.sp, color = Color.White)
                             }
                         }
                     }
                 } else {
                     // Default state
                     Text(
-                        text = "Photos Blurred by Default",
+                        text = if (isArabic) "الصور مموهة افتراضيًا" else "Photos Blurred by Default",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center
                     )
                     Text(
-                        text = "Your photos are blurred to preserve modesty. Serious matches will request permission to view them.",
+                        text = if (isArabic) "يتم تمويه صورك للحفاظ على الحشمة. سيطلب الأشخاص الجادون الإذن لرؤيتها." else "Your photos are blurred to preserve modesty. Serious matches will request permission to view them.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -115,12 +116,12 @@ fun PhotoAccessRequestCard(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Photo Blurred for Modesty",
+                            text = if (isArabic) "صورة مموهة للحشمة" else "Photo Blurred for Modesty",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Inquire seriously to view this profile photo.",
+                            text = if (isArabic) "اسأل بجدية لرؤية صورة الملف الشخصي." else "Inquire seriously to view this profile photo.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -132,7 +133,7 @@ fun PhotoAccessRequestCard(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Request Photo Access")
+                            Text(if (isArabic) "طلب رؤية الصورة" else "Request Photo Access")
                         }
                     }
 
@@ -145,13 +146,13 @@ fun PhotoAccessRequestCard(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Access Request Pending",
+                            text = if (isArabic) "طلب الوصول معلق" else "Access Request Pending",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFFFB300)
                         )
                         Text(
-                            text = "We will notify you once they accept your request.",
+                            text = if (isArabic) "سنقوم بإبلاغك بمجرد قبولهم لطلبك." else "We will notify you once they accept your request.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -173,7 +174,7 @@ fun PhotoAccessRequestCard(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Photo Unlocked",
+                                text = if (isArabic) "صورة مفتوحة" else "Photo Unlocked",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF00A86B)

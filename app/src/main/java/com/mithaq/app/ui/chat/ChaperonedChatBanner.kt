@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ChaperonedChatBanner(
     waliEmail: String?,
+    isArabic: Boolean,
     modifier: Modifier = Modifier,
     isChaperoned: Boolean = true
 ) {
@@ -56,7 +57,7 @@ fun ChaperonedChatBanner(
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Chaperoned Conversation",
+                    text = if (isArabic) "محادثة بوجود ولي" else "Chaperoned Conversation",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF00A86B)
